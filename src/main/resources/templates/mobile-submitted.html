@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Submitted</title>
+  <style>
+    :root { --ink:#1a1a1a; --green:#0f3d2e; --muted:#5a6b64; --line:#dfe6e3; --bg:#fff; --panel:#f4f8f6; }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) { --ink:#e8edeb; --green:#7fd1b0; --muted:#9bb0a7; --line:#2b3a34; --bg:#121714; --panel:#1a221e; }
+    }
+    :root[data-theme="dark"] { --ink:#e8edeb; --green:#7fd1b0; --muted:#9bb0a7; --line:#2b3a34; --bg:#121714; --panel:#1a221e; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink);
+           font:17px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+    .wrap { max-width:520px; margin:0 auto; padding:32px 16px 40px; }
+    h1 { font-size:21px; color:var(--green); margin:0 0 10px; }
+    p { margin:0 0 16px; }
+    .panel { background:var(--panel); border-radius:10px; padding:14px; font-size:15px; }
+    .state { margin-top:24px; padding-top:16px; border-top:1px solid var(--line);
+             font-size:14px; color:var(--muted); }
+    a { color:var(--green); display:inline-flex; align-items:center; min-height:44px; }
+    a:focus-visible { outline:3px solid var(--green); outline-offset:3px; border-radius:3px; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <main id="main">
+    <!-- Announced on arrival: this page is the proof the report was received, and a reporter
+         who cannot tell will send it again. -->
+    <h1 role="status">The Department has your report</h1>
+
+    <p th:text="${submission.getReportingPeriod().getLabel()} + ' was submitted on your entity''s behalf, in your name.'">
+      Submitted.
+    </p>
+
+    <div class="panel">
+      <span th:text="${answered} + ' of ' + ${total} + ' indicators answered.'">0 of 0</span>
+      <span th:if="${answered &lt; total}">
+        The rest are recorded as having no result this quarter.
+      </span>
+    </div>
+
+    <p class="state">
+      Waiting on the Department. A reviewer checks each figure against the evidence attached to it.
+      If anything is disputed it comes back to you against that indicator, not as a whole report.
+    </p>
+
+    <p><a th:href="@{/m}">Back to your reporting</a></p>
+  </main>
+</div>
+</body>
+</html>

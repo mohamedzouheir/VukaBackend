@@ -11,6 +11,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * The submission lifecycle, and the one place the human-in-the-loop rule is enforced.
@@ -171,7 +172,18 @@ public class SubmissionService {
             written++;
         }
 
-        extractions.findBySubmissionIdAndConfirmedFalse(submissionId)
+        // Only the extractions behind the targets actually confirmed in this call. This used to
+        // mark every unconfirmed extraction on the submission, which was survivable while the
+        // web confirmation screen was the one caller and sent all its rows at once. The mobile
+        // flow confirms one indicator per request, so the old behaviour would have stamped
+        // "a human confirmed this" on nineteen figures nobody had looked at yet. That is the
+        // exact claim this separation exists to make, so it is enforced per row.
+        Set<UUID> confirmedTargets = rows.stream()
+                .map(ConfirmedRow::targetId)
+                .collect(Collectors.toSet());
+
+        extractions.findBySubmissionIdAndConfirmedFalse(submissionId).stream()
+                .filter(e -> e.getTarget() != null && confirmedTargets.contains(e.getTarget().getId()))
                 .forEach(e -> { e.setConfirmed(true); extractions.save(e); });
 
         return written;

@@ -18,9 +18,16 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Turns a Firebase ID token into a Spring Security authentication.
+ *
+ * The token arrives one of two ways, because there are two kinds of client. The React
+ * dashboard and the API send an {@code Authorization: Bearer} header. A phone opening the
+ * server-rendered reporter surface sends the {@link AuthCookie}, because a browser navigation
+ * can send a cookie and cannot send a header. The header is checked first so an explicit
+ * credential always beats an ambient one.
  *
  * Two custom claims are read from the token and set by an administrator through
  * {@code UserAdminService}:
@@ -46,9 +53,8 @@ public class FirebaseTokenFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain chain) throws ServletException, IOException {
 
-        String header = request.getHeader("Authorization");
-        if (header != null && header.startsWith("Bearer ")) {
-            String idToken = header.substring(7);
+        String idToken = bearerToken(request).or(() -> AuthCookie.read(request)).orElse(null);
+        if (idToken != null) {
             try {
                 FirebaseToken token = firebaseAuth.verifyIdToken(idToken);
                 Map<String, Object> claims = token.getClaims();
@@ -73,11 +79,20 @@ public class FirebaseTokenFilter extends OncePerRequestFilter {
             } catch (FirebaseAuthException e) {
                 // An invalid token is not an error worth a stack trace: it is an
                 // unauthenticated request, and the security config will reject it.
+                // An expired cookie lands here too, and the entry point sends the
+                // reporter back to sign in and then on to the step they were reading.
                 log.debug("Rejected ID token: {}", e.getMessage());
                 SecurityContextHolder.clearContext();
             }
         }
         chain.doFilter(request, response);
+    }
+
+    private static Optional<String> bearerToken(HttpServletRequest request) {
+        String header = request.getHeader("Authorization");
+        return header != null && header.startsWith("Bearer ")
+                ? Optional.of(header.substring(7))
+                : Optional.empty();
     }
 
     /** Never filter the public citizen view or the health endpoint. */

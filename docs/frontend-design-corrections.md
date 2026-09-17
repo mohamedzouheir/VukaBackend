@@ -14,7 +14,9 @@ from the templates in `src/main/resources/templates/`.
 
 | Section | Claim in the document | State now |
 |---|---|---|
-| §3, J2 step 2 | "Signs in. One email field, one password field" | **Wrong.** No sign-in surface exists for `/m`, and the flow cannot authenticate from a browser at all. See the blocker below |
+| §3, J2 step 2 | "Signs in. One email field, one password field" | **Was wrong, now true.** `/m/signin` is exactly that. See the blocker section below |
+| §5, route gating | `/m/**` gated to `ENTITY_REPORTER` | **Was described but not enforced.** The config required only authentication. Now enforced |
+| §5, screen inventory | six Thymeleaf views | **Eight.** Sign-in and the submission receipt are new |
 | §10 | Design tokens, light only | **Incomplete.** Every template ships a dark theme. The token table needs its dark column |
 | §11 | Page weight table, six figures | **Superseded.** All six moved. All six still pass |
 | §11 | "Focus visible: 2px brand-light outline, never removed" | **Was false, now true.** `outline:none` was live in `mobile-step.html`. Now a 3px ring |
@@ -25,28 +27,48 @@ from the templates in `src/main/resources/templates/`.
 
 ---
 
-## The blocker, which belongs in the document before anything else
+## The blocker, now closed
 
-**The mobile reporter flow cannot currently be used from a browser.** Two independent faults:
+The mobile reporter flow could not be used from a browser at all. Two independent faults, both
+fixed:
 
-1. `FirebaseTokenFilter` authenticates only from an `Authorization: Bearer` header. A browser
-   navigating to `/m` cannot send one, so every page under `/m` answers 401. This is why J2 step 2
-   in §3 describes a sign-in screen that does not exist.
-2. The two form actions the templates post to, `POST /m/submission/{id}/step/{index}` and
-   `POST /m/submission/{id}/submit`, have no handler in `MobileController`. They would answer 405
-   even once a caller is authenticated.
+1. `FirebaseTokenFilter` read only an `Authorization: Bearer` header, which a browser navigation
+   cannot send, so every page under `/m` answered 401. It now also accepts the token from a
+   cookie, header first.
+2. `POST /m/submission/{id}/step/{index}` and `POST /m/submission/{id}/submit` had no handler, so
+   the templates posted into a 405. Both exist now, and both write through `SubmissionService` so
+   a figure captured on a phone lands with the same named confirmer as one parsed out of a
+   spreadsheet.
 
-The templates, the accessibility work and the page weight budget are real. The service layer
-behind them is real and wired end to end. What is missing is a browser-usable way to hold a
-session, which means accepting the token from a `SameSite` cookie and turning CSRF protection
-back on for the form surface. That is a security decision rather than a piece of plumbing, and it
-should be made deliberately.
+**§3, J2 step 2 is now accurate.** It describes "one email field, one password field" and that is
+what `/m/signin` is. The server exchanges the credentials for a Firebase ID token rather than the
+client SDK doing it, because the SDK is about 100KB on the one page whose argument is that it
+costs almost nothing to open. The honest cost, which belongs in the security conversation: the
+password transits our server. It is never logged and never stored.
 
-**Consequence for §12.** Demo path step 5, "Submit on a phone. Hand the phone to a judge", does
-not run today, and it is the step the inclusivity argument leans on hardest. It is also listed
-under **Never cut**. Either the cookie work happens or step 5 becomes a walkthrough of the
-citizen page instead, which does work on a judge's phone with no login and is the stronger
-opening in any case.
+**What the document should add to §5, route gating.** Two rows changed and one is a fix rather
+than an addition:
+
+| Pattern | Who reaches it |
+|---|---|
+| `/m/signin` | everyone, unauthenticated. The form has to be reachable to be used |
+| `/m/**` | `ENTITY_REPORTER` only, and this is now enforced rather than described |
+
+The second was the real hole. The document specified `ENTITY_REPORTER`; the configuration required
+only authentication, and `VukaPrincipal.canRead` returns true for every DSAC role. A reviewer could
+have confirmed a figure on an entity's behalf, which §2 lists under what a reviewer must never be
+able to do.
+
+**Two more things the document should carry.** CSRF protection is now on for `/m/**` and off for
+`/api/**`, because the first authenticates from a cookie the browser attaches by itself and the
+second from a bearer token it does not. The cookie is `HttpOnly`, `SameSite=Strict` and `Secure`
+when the request is, and holds the ID token only, never the refresh token, so a session lasts an
+hour. Expiry costs the reporter almost nothing because each step is written as it is answered and
+the sign-in redirect carries the path they were on, which is the same URL-carries-the-state
+property J2 step 5 already relies on.
+
+**Consequence for §12.** Demo path step 5, "Submit on a phone. Hand the phone to a judge", is back
+on the table, subject to the caveat in *What is still outstanding* below.
 
 ---
 
@@ -89,12 +111,18 @@ is what is actually served, and gzip is on in `application.yml` with a 512 byte 
 | Surface | Budget | Rendered | Gzipped | What is in it |
 |---|---|---|---|---|
 | `mobile-message.html` | 5KB | **694 B** | 465 B | one sentence, announced as a status |
-| `mobile-done.html` | 5KB | **1 976 B** | 988 B | submission summary |
-| `mobile-home.html` | 5KB | **2 447 B** | 1 061 B | period, indicator list, progress |
+| `mobile-done.html` | 5KB | **2 072 B** | 992 B | submission summary, before the irreversible click |
+| `mobile-submitted.html` | 5KB | **2 121 B** | 1 053 B | the receipt. New |
+| `mobile-home.html` | 5KB | **2 926 B** | 1 196 B | period, indicator list, progress, sign out |
+| `mobile-signin.html` | 5KB | **3 210 B** | 1 349 B | one email field, one password field. New |
 | `public-index.html` | 5KB | **3 224 B** | 1 380 B | every published entity, plus the language switcher |
 | `public-entity.html` | 5KB | **4 810 B** | 1 877 B | the full accountability chain, plus the language switcher |
-| `mobile-step.html` | 5KB | **4 846 B** | 1 886 B | one indicator, input, note |
+| `mobile-step.html` | 5KB | **4 942 B** | 1 888 B | one indicator, input, note |
 | React dashboard | 250KB gzipped | to build | | office users only, never on the reporter path |
+
+Eight surfaces now, not six. Figures include the hidden CSRF field injected into every form, which
+costs about 96 bytes. `mobile-step.html` has 178 bytes of headroom left against the budget, so the
+next thing added to it needs measuring rather than assuming.
 
 No web fonts, no icon fonts, no framework, no images on any low-bandwidth surface. Inline CSS,
 because a separate stylesheet is a second request and on a bad connection the second request is
@@ -215,11 +243,23 @@ which is the same rule §10 already applies to risk bands.
 
 ## What is still outstanding
 
-1. **The `/m` authentication blocker.** Nothing else on the mobile surface matters until a browser
-   can reach it. It also decides whether demo step 5 survives.
-2. **Native-speaker review of the five translations.**
-3. **Screen reader pass.** The markup is built for it and has not been tested with it. One hour
+1. **Nothing here has run against a live server.** There is no Maven on the build machine, so
+   none of this has been compiled, let alone exercised. The first thing to check on the mobile
+   flow is that the CSRF hidden field renders: view source on a step page and look for
+   `name="_csrf"`. Thymeleaf injects it through Spring Security's `RequestDataValueProcessor`
+   into any form with a `th:action`, which is the standard mechanism and the only one available
+   since Thymeleaf 3.1 removed request-attribute access from templates. If it is absent, every
+   POST under `/m` answers 403 and the field has to go in by hand. Budget ten minutes for this
+   before the dry run, not during it.
+2. **`FIREBASE_WEB_API_KEY_FILE` has to be set** for reporter sign-in to work at all, and it
+   points at a file holding the key rather than carrying the key itself. Unset, sign-in reports
+   that it is unavailable and the citizen view is unaffected.
+3. **There is no `/admin/**` rule in the security configuration.** §5 gates it to `ADMIN`. No
+   admin controller exists yet so the paths 404, but when one lands it inherits
+   `anyRequest().authenticated()` and a reporter reaches it. Add the rule before the screen.
+4. **Native-speaker review of the five translations.**
+5. **Screen reader pass.** The markup is built for it and has not been tested with it. One hour
    with VoiceOver would convert "built for" into "tested with", which is a materially stronger
    sentence in the room.
-4. **The reporter and reviewer surfaces are not translated**, and the document should say so
+6. **The reporter and reviewer surfaces are not translated**, and the document should say so
    rather than leaving the language claim to be read as covering the whole product.

@@ -72,6 +72,7 @@ First start runs the Flyway migrations and loads the real data described below. 
 | Surface | URL | Who |
 |---|---|---|
 | Citizen view | http://localhost:8080/public | Anyone, no login |
+| Reporter sign-in | http://localhost:8080/m/signin | Entity reporters |
 | Mobile submission | http://localhost:8080/m | Entity reporters |
 | Dashboard API | http://localhost:8080/api/dashboard/portfolio | DSAC roles |
 | Export | http://localhost:8080/api/export/submission/{id}/full.csv | Reporter (own) or DSAC |
@@ -104,6 +105,42 @@ entityId  the entity a reporter is bound to; omit for DSAC roles
 `entityId` lives on the token rather than in a request parameter precisely so a client cannot
 choose it. It is what stops one entity reading another's data, and every controller routes that
 check through `VukaPrincipal.canRead`.
+
+### Signing in on the reporter surface
+
+The React dashboard holds its token in memory and sends it as a header. A phone opening `/m`
+cannot: a browser navigation sends cookies and nothing else. So that surface has its own sign-in,
+and three decisions in it are worth knowing.
+
+**The server exchanges the password, not the phone.** `POST /m/signin` takes an email address and
+a password, calls Google's Identity Toolkit, and puts the returned ID token in a cookie. The
+alternative was the Firebase JavaScript SDK on the sign-in page, which is about 100KB on the one
+page whose whole argument is that it costs almost nothing to open. The cost of this choice, stated
+plainly: the password transits this server rather than going from the phone straight to Google. It
+is never logged and never stored. Set the key path to enable it:
+
+```bash
+export FIREBASE_WEB_API_KEY_FILE=/path/to/file/containing/the/web/api/key
+```
+
+The file holds the key, not the environment variable, so the value never appears in a process
+listing or an image layer. Leave it unset and sign-in is unavailable while the citizen view and
+the header-authenticated API carry on working.
+
+**The cookie is `HttpOnly`, `SameSite=Strict`, and `Secure` when the request is.** It holds the ID
+token only and never the refresh token, so a session lasts an hour and then the reporter signs in
+again. That is deliberate: a refresh token in a browser is a long-lived credential, and expiry
+costs almost nothing here because every step is written as it is answered and the step index is in
+the URL. An expired token redirects to sign-in carrying where you were, and sends you back there.
+
+**CSRF protection is on where the credential is ambient and off where it is not.** `/api/**` sends
+a bearer token that an attacker's page cannot make a browser attach, so a CSRF token there would
+be ceremony. `/m/**` authenticates from a cookie, so it gets a token as well as `SameSite=Strict`.
+Two independent defences, because SameSite is a browser behaviour and the token is ours.
+
+`/m/**` also requires `ENTITY_REPORTER` rather than merely a signed-in caller. It writes
+performance data, and `canRead` lets DSAC roles read everything, so authentication alone would
+have let a reviewer confirm a figure on an entity's behalf.
 
 ---
 
@@ -314,15 +351,19 @@ State these before someone finds them.
   integration.** Confirm the columns against DPME's current template before anyone relies on it.
 - **Evidence-to-target linking in the export** falls back to a filename convention where an
   extraction row does not carry the link. Good enough to demonstrate, not good enough to ship.
-- **The mobile reporter flow cannot currently be used from a browser.** `FirebaseTokenFilter`
-  authenticates only from an `Authorization: Bearer` header, which a browser navigating to `/m`
-  cannot send, so every page under `/m` answers 401. The two form actions those pages post to,
-  `POST /m/submission/{id}/step/{index}` and `POST /m/submission/{id}/submit`, also have no handler
-  in `MobileController`, so they would answer 405 even once a caller is authenticated. The
-  templates, the accessibility work and the page-weight budget are real and the flow is wired end
-  to end in the service layer; what is missing is a browser-usable way to hold a session. Resolving
-  it means accepting the token from a `SameSite` cookie and turning CSRF protection back on for the
-  form surface, which is a security decision worth making deliberately rather than in passing.
+- **The mobile reporter flow has never been exercised against a running server.** The 401 and 405
+  faults that made it unusable are fixed, and the reasoning is in *Signing in on the reporter
+  surface* above, but no request has been made against it. The specific thing to check first is
+  that the CSRF hidden field is actually rendered into the forms. Thymeleaf injects it through
+  Spring Security's `RequestDataValueProcessor` into any form with a `th:action`, which is the
+  standard mechanism and the only one available since Thymeleaf 3.1 removed request-attribute
+  access from templates. If that processor is not registered for any reason, every POST under `/m`
+  answers 403 and the fix is to add the field explicitly. View the page source once and look for
+  `name="_csrf"` before trusting the flow.
+- **There is no `/admin/**` rule in `SecurityConfig`.** The frontend design document gates it to
+  `ADMIN`. No admin controller exists yet, so the paths 404 today, but when one lands it will
+  inherit `anyRequest().authenticated()` and be reachable by any signed-in reporter unless the
+  rule is added first.
 - **The translations have not been reviewed by first-language speakers.** They are a working
   implementation of the language surface, not certified government text, and should go past PanSALB
   or a departmental translator before anything is published. Volunteer this rather than let it be

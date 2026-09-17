@@ -22,7 +22,10 @@
     a.card .t { font-weight:700; color:var(--green); font-size:17px; text-decoration:underline; }
     a.card .m { font-size:14px; color:var(--muted); margin-top:2px; }
     .none { color:var(--muted); font-size:15px; }
-    a:focus-visible { outline:3px solid var(--green); outline-offset:3px; border-radius:3px; }
+    .out { margin-top:28px; padding-top:16px; border-top:1px solid var(--line); }
+    .out button { background:none; border:none; padding:0; min-height:44px; font:inherit;
+                  font-size:14px; color:var(--green); text-decoration:underline; cursor:pointer; }
+    a:focus-visible, button:focus-visible { outline:3px solid var(--green); outline-offset:3px; border-radius:3px; }
     .skip { position:absolute; left:-9999px; }
     .skip:focus { position:fixed; left:8px; top:8px; z-index:10; padding:10px 14px;
                   background:var(--ink); color:var(--bg); border-radius:6px; }
@@ -53,6 +56,10 @@
       </li>
     </ul>
   </main>
+
+  <form class="out" th:action="@{/m/signout}" method="post">
+    <button type="submit">Sign out</button>
+  </form>
 </div>
 </body>
 </html>
