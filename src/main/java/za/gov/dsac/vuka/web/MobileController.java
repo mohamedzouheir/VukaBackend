@@ -71,7 +71,7 @@ public class MobileController {
      * connection loses nothing: the reporter reloads and is exactly where they were.
      */
     @GetMapping("/submission/{submissionId}/step/{index}")
-    public String step(@PathVariable UUID submissionId, @PathVariable int index,
+    public String step(@PathVariable("submissionId") UUID submissionId, @PathVariable("index") int index,
                        @AuthenticationPrincipal VukaPrincipal who, Model model) {
 
         Submission submission = ownSubmission(submissionId, who);
@@ -112,10 +112,10 @@ public class MobileController {
      * reload that replays a POST is how the same quarter gets submitted twice.
      */
     @PostMapping("/submission/{submissionId}/step/{index}")
-    public String saveStep(@PathVariable UUID submissionId, @PathVariable int index,
-                           @RequestParam BigDecimal actualValue,
-                           @RequestParam(required = false) BigDecimal spendToDate,
-                           @RequestParam(required = false) String varianceExplanation,
+    public String saveStep(@PathVariable("submissionId") UUID submissionId, @PathVariable("index") int index,
+                           @RequestParam("actualValue") BigDecimal actualValue,
+                           @RequestParam(name = "spendToDate", required = false) BigDecimal spendToDate,
+                           @RequestParam(name = "varianceExplanation", required = false) String varianceExplanation,
                            @AuthenticationPrincipal VukaPrincipal who, Model model) {
 
         Submission submission = ownSubmission(submissionId, who);
@@ -140,7 +140,7 @@ public class MobileController {
 
     /** Hands the period to DSAC. The one irreversible action on this surface. */
     @PostMapping("/submission/{submissionId}/submit")
-    public String submit(@PathVariable UUID submissionId,
+    public String submit(@PathVariable("submissionId") UUID submissionId,
                          @AuthenticationPrincipal VukaPrincipal who, Model model) {
 
         Submission submission = ownSubmission(submissionId, who);
@@ -161,7 +161,7 @@ public class MobileController {
      * exact failure, and a redirect target that survives a reload is the answer to it.
      */
     @GetMapping("/submission/{submissionId}/submitted")
-    public String submitted(@PathVariable UUID submissionId,
+    public String submitted(@PathVariable("submissionId") UUID submissionId,
                             @AuthenticationPrincipal VukaPrincipal who, Model model) {
 
         Submission submission = ownSubmission(submissionId, who);

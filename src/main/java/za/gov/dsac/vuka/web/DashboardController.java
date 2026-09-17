@@ -66,7 +66,7 @@ public class DashboardController {
 
     /** Every funded body, ranked by risk, each carrying the signals behind its score. */
     @GetMapping("/portfolio")
-    public List<PortfolioRow> portfolio(@RequestParam(required = false) UUID periodId) {
+    public List<PortfolioRow> portfolio(@RequestParam(name = "periodId", required = false) UUID periodId) {
         UUID period = periodId != null ? periodId : currentPeriodId();
         if (period == null) return List.of();
 
@@ -116,8 +116,8 @@ public class DashboardController {
                               boolean repeatFinding, String resolutionStatus) {}
 
     @GetMapping("/entity/{entityId}")
-    public ResponseEntity<EntityDetail> entity(@PathVariable UUID entityId,
-                                               @RequestParam(required = false) UUID periodId) {
+    public ResponseEntity<EntityDetail> entity(@PathVariable("entityId") UUID entityId,
+                                               @RequestParam(name = "periodId", required = false) UUID periodId) {
         PublicEntity e = entities.findById(entityId).orElse(null);
         if (e == null) return ResponseEntity.notFound().build();
 
@@ -177,7 +177,7 @@ public class DashboardController {
      * API does not expose a way to ask for it.
      */
     @GetMapping("/entity/{entityId}/peers")
-    public ResponseEntity<PeerComparison> peers(@PathVariable UUID entityId) {
+    public ResponseEntity<PeerComparison> peers(@PathVariable("entityId") UUID entityId) {
         PublicEntity e = entities.findById(entityId).orElse(null);
         FinancialYear fy = years.findByCurrentTrue().orElse(null);
         if (e == null || fy == null) return ResponseEntity.notFound().build();
@@ -208,7 +208,7 @@ public class DashboardController {
     /** Recomputes scores for every entity. Also runs nightly; this is the demo button. */
     @PostMapping("/recompute")
     @PreAuthorize("hasAnyRole('DSAC_REVIEWER','ADMIN')")
-    public Map<String, Object> recompute(@RequestParam(required = false) UUID periodId,
+    public Map<String, Object> recompute(@RequestParam(name = "periodId", required = false) UUID periodId,
                                          @AuthenticationPrincipal VukaPrincipal who) {
         UUID period = periodId != null ? periodId : currentPeriodId();
         if (period == null) return Map.of("computed", 0, "reason", "no current reporting period");

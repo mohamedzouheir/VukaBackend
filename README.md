@@ -57,15 +57,18 @@ SASCOC, The Sports Trust, Business and Arts South Africa and loveLife. They are 
 
 ## Run it
 
-You need **Java 21**, **Maven**, and **Docker** (for Postgres only).
+You need **Java 21** and **Docker** (for Postgres only). Maven comes with the repository.
 
 ```bash
 docker compose up -d          # Postgres on 5432
-mvn spring-boot:run
+./mvnw spring-boot:run
 ```
 
-There is no Maven wrapper checked in, so `mvn` has to be on the path. See the first known
-limitation below before assuming a clean first build.
+The Maven wrapper is checked in, so `mvn` does not have to be on the path: `./mvnw` downloads
+a pinned Maven 3.9.16 on first use and verifies it against a checksum in
+`.mvn/wrapper/maven-wrapper.properties`. Run it through the wrapper rather than through an IDE's
+own compiler, which is how the build loses the `-parameters` flag that Spring needs to read
+handler argument names.
 
 First start runs the Flyway migrations and loads the real data described below. Then:
 
@@ -249,7 +252,7 @@ Every score is stored with its signals, each carrying its raw value, its weight,
 and a plain-language description. The interface never shows the number alone.
 
 ```bash
-mvn test    # 17 tests, each encoding a claim the pitch makes
+./mvnw test    # 17 tests, each encoding a claim the pitch makes
 ```
 
 Two of them are the ones that matter: `RiskEngineTest` reproduces **Robben Island Museum as
@@ -328,7 +331,7 @@ blanket POPIA compliance for a system that mostly does not process personal info
 
 ## Deploying
 
-Ordinary Spring Boot application. `mvn package` produces a runnable jar.
+Ordinary Spring Boot application. `./mvnw package` produces a runnable jar.
 
 For data residency, Cloud SQL for PostgreSQL is available in `africa-south1` (Johannesburg), which
 keeps the POPIA and sovereignty answer short. The database is standard Postgres with Flyway
@@ -341,11 +344,13 @@ creation and cannot be changed afterwards.
 
 State these before someone finds them.
 
-- **Maven Central was unreachable in the environment this was built in**, so the full application
-  has never been compiled or run end to end. What *has* been verified: all 18 domain classes
-  compile, the risk engine's 17 tests pass, all 173 JPA-mapped columns exist in the migrations so
-  `ddl-auto: validate` will pass, and every repository call resolves to a declared method. Budget
-  time for a first `mvn spring-boot:run` finding something anyway.
+- **The application has not been exercised end to end against real data.** It now compiles in
+  full under `./mvnw clean test` and the risk engine's 17 tests pass, and it has booted far enough
+  to serve HTTP requests and reach the controller layer. What that does *not* cover: no run has
+  gone through the full reporter journey with Postgres seeded and Firebase configured. Also
+  verified statically: all 173 JPA-mapped columns exist in the migrations so `ddl-auto: validate`
+  will pass, and every repository call resolves to a declared method. Budget time for the first
+  real journey finding something anyway.
 - **Quarterly submission timing in the seed is illustrative**, as described above.
 - **The eQPRS export shape is our reading of a published reporting format, not a certified
   integration.** Confirm the columns against DPME's current template before anyone relies on it.

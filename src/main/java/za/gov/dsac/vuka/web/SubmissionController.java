@@ -59,7 +59,7 @@ public class SubmissionController {
 
     @PostMapping("/{submissionId}/upload")
     @PreAuthorize("hasRole('ENTITY_REPORTER')")
-    public ResponseEntity<?> upload(@PathVariable UUID submissionId,
+    public ResponseEntity<?> upload(@PathVariable("submissionId") UUID submissionId,
                                     @RequestParam("file") MultipartFile file,
                                     @AuthenticationPrincipal VukaPrincipal who) throws Exception {
         Submission s = submissions.findById(submissionId).orElse(null);
@@ -84,7 +84,7 @@ public class SubmissionController {
      * can open the source rather than taking the number on trust.
      */
     @GetMapping("/{submissionId}/extractions")
-    public ResponseEntity<List<ExtractionView>> extractions(@PathVariable UUID submissionId,
+    public ResponseEntity<List<ExtractionView>> extractions(@PathVariable("submissionId") UUID submissionId,
                                                             @AuthenticationPrincipal VukaPrincipal who) {
         Submission s = submissions.findById(submissionId).orElse(null);
         if (s == null) return ResponseEntity.notFound().build();
@@ -115,7 +115,7 @@ public class SubmissionController {
      */
     @PostMapping("/{submissionId}/confirm")
     @PreAuthorize("hasRole('ENTITY_REPORTER')")
-    public ResponseEntity<?> confirm(@PathVariable UUID submissionId,
+    public ResponseEntity<?> confirm(@PathVariable("submissionId") UUID submissionId,
                                      @RequestBody ConfirmRequest req,
                                      @AuthenticationPrincipal VukaPrincipal who) {
         Submission s = submissions.findById(submissionId).orElse(null);
@@ -135,7 +135,7 @@ public class SubmissionController {
 
     @PostMapping("/{submissionId}/submit")
     @PreAuthorize("hasRole('ENTITY_REPORTER')")
-    public ResponseEntity<?> submit(@PathVariable UUID submissionId,
+    public ResponseEntity<?> submit(@PathVariable("submissionId") UUID submissionId,
                                     @AuthenticationPrincipal VukaPrincipal who) {
         Submission s = submissions.findById(submissionId).orElse(null);
         if (s == null) return ResponseEntity.notFound().build();
@@ -156,7 +156,7 @@ public class SubmissionController {
      */
     @PostMapping("/{submissionId}/review")
     @PreAuthorize("hasAnyRole('DSAC_REVIEWER','ADMIN')")
-    public ResponseEntity<?> review(@PathVariable UUID submissionId,
+    public ResponseEntity<?> review(@PathVariable("submissionId") UUID submissionId,
                                     @RequestBody ReviewRequest req,
                                     @AuthenticationPrincipal VukaPrincipal who) {
         Submission s = submissions.findById(submissionId).orElse(null);
