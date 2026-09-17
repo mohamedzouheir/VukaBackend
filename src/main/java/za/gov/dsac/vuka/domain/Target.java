@@ -79,28 +79,22 @@ public class Target {
     @Column(precision = 18, scale = 2)
     private BigDecimal annualTarget;
 
-    /** Q1 target. */
-    @Column(precision = 18, scale = 2)
+    @Column(name = "q1_target", precision = 18, scale = 2)
     private BigDecimal q1Target;
 
-    /** Q2 target. */
-    @Column(precision = 18, scale = 2)
+    @Column(name = "q2_target", precision = 18, scale = 2)
     private BigDecimal q2Target;
 
-    /** Q3 target. */
-    @Column(precision = 18, scale = 2)
+    @Column(name = "q3_target", precision = 18, scale = 2)
     private BigDecimal q3Target;
 
-    /** Q4 target. */
-    @Column(precision = 18, scale = 2)
+    @Column(name = "q4_target", precision = 18, scale = 2)
     private BigDecimal q4Target;
-
     /** Allocation divided by annual target. The denominator of the planned versus actual comparison. */
-    @Column(precision = 18, scale = 2)
+    @Column(name = "planned_unit_cost", precision = 18, scale = 2)
     private BigDecimal plannedUnitCost;
 
-    /** Times restated mid-year. Feeds the churn signal. Derived from the version chain. */
-    @Column(nullable = false)
+    @Column(name = "revision_count", nullable = false)
     private int revisionCount;
 
     // ------------------------------------------------------------------
