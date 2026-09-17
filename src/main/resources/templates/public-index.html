@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Public entity performance — DSAC</title>
+  <style>
+    :root { --ink:#1a1a1a; --green:#0f3d2e; --muted:#5a6b64; --line:#dfe6e3; --bg:#fff; }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) { --ink:#e8edeb; --green:#7fd1b0; --muted:#9bb0a7; --line:#2b3a34; --bg:#121714; }
+    }
+    :root[data-theme="dark"] { --ink:#e8edeb; --green:#7fd1b0; --muted:#9bb0a7; --line:#2b3a34; --bg:#121714; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink);
+           font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+    .wrap { max-width:640px; margin:0 auto; padding:24px 16px 48px; }
+    h1 { font-size:22px; margin:0 0 6px; color:var(--green); }
+    p.lede { color:var(--muted); font-size:15px; margin:0 0 24px; }
+    a.row { display:block; padding:14px 0; border-bottom:1px solid var(--line);
+            text-decoration:none; color:var(--ink); }
+    a.row .nm { font-weight:600; color:var(--green); }
+    a.row .meta { font-size:13px; color:var(--muted); }
+    .empty { color:var(--muted); font-size:15px; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Public entity performance</h1>
+  <p class="lede">
+    What each funded body received, what it committed to deliver, and what it reported.
+    Department of Sport, Arts and Culture.
+  </p>
+
+  <div th:if="${#lists.isEmpty(entities)}" class="empty">
+    No entity records have been approved for publication yet.
+  </div>
+
+  <a class="row" th:each="e : ${entities}" th:href="@{'/public/entity/' + ${e.entityId()}}">
+    <div class="nm" th:text="${e.name()}">Entity</div>
+    <div class="meta">
+      <span th:text="${e.sector()}">Sector</span> ·
+      <span th:text="'R ' + ${#numbers.formatDecimal(e.totalAllocation(), 0, 'WHITESPACE', 0, 'POINT')} + ' allocated'">R0</span> ·
+      <span th:text="${e.targetsAchieved()} + ' of ' + ${e.targetsCommitted()} + ' targets achieved'">0 of 0</span>
+    </div>
+  </a>
+</div>
+</body>
+</html>

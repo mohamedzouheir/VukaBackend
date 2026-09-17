@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title th:text="${e.name()} + ' — public performance record'">Entity performance</title>
+  <!--
+    Deliberately one file with inline styles and no scripts.
+    The audience is a citizen on a low-end phone paying for data.
+    Everything here is already approved for publication by DSAC.
+  -->
+  <style>
+    :root { --ink:#1a1a1a; --green:#0f3d2e; --muted:#5a6b64; --line:#dfe6e3; --bg:#fff; --panel:#f4f8f6; }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) { --ink:#e8edeb; --green:#7fd1b0; --muted:#9bb0a7; --line:#2b3a34; --bg:#121714; --panel:#1a221e; }
+    }
+    :root[data-theme="dark"] { --ink:#e8edeb; --green:#7fd1b0; --muted:#9bb0a7; --line:#2b3a34; --bg:#121714; --panel:#1a221e; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink);
+           font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+    .wrap { max-width:640px; margin:0 auto; padding:24px 16px 48px; }
+    .kicker { font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin:0 0 6px; }
+    h1 { font-size:24px; line-height:1.25; margin:0 0 4px; color:var(--green); }
+    .sector { color:var(--muted); font-size:14px; margin:0 0 20px; }
+    .mandate { font-size:15px; margin:0 0 24px; }
+    .money { background:var(--panel); border-radius:10px; padding:16px; margin:0 0 20px; }
+    .money .label { font-size:13px; color:var(--muted); margin:0 0 2px; }
+    .money .value { font-size:28px; font-weight:700; color:var(--green); }
+    .money .year { font-size:13px; color:var(--muted); }
+    h2 { font-size:15px; margin:24px 0 10px; color:var(--green); }
+    table { width:100%; border-collapse:collapse; font-size:15px; }
+    td { padding:9px 0; border-bottom:1px solid var(--line); }
+    td.n { text-align:right; font-variant-numeric:tabular-nums; font-weight:600; }
+    .foot { margin-top:28px; padding-top:16px; border-top:1px solid var(--line);
+            font-size:13px; color:var(--muted); }
+    a { color:var(--green); }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <p class="kicker">Public performance record</p>
+  <h1 th:text="${e.name()}">Entity name</h1>
+  <p class="sector" th:text="${e.sector()}">Sector</p>
+  <p class="mandate" th:text="${e.mandate()}">Mandate</p>
+
+  <div class="money">
+    <p class="label">Public funds allocated</p>
+    <div class="value" th:text="'R ' + ${#numbers.formatDecimal(e.totalAllocation(), 0, 'WHITESPACE', 0, 'POINT')}">R 0</div>
+    <p class="year" th:text="'Financial year ' + ${e.financialYearLabel()}">Financial year</p>
+  </div>
+
+  <h2>What was promised, and what was delivered</h2>
+  <table>
+    <tr><td>Targets committed to this year</td><td class="n" th:text="${e.targetsCommitted()}">0</td></tr>
+    <tr><td>Achieved</td><td class="n" th:text="${e.targetsAchieved()}">0</td></tr>
+    <tr><td>In progress</td><td class="n" th:text="${e.targetsInProgress()}">0</td></tr>
+    <tr><td>Not met</td><td class="n" th:text="${e.targetsMissed()}">0</td></tr>
+    <tr><td>Not yet started</td><td class="n" th:text="${e.targetsNotStarted()}">0</td></tr>
+  </table>
+
+  <p class="foot">
+    <span th:if="${e.lastReportedAt() != null}"
+          th:text="'Last reported to the Department on ' + ${#temporals.format(e.lastReportedAt(), 'd MMMM yyyy')} + '.'">
+      Last reported.
+    </span>
+    <span th:if="${e.lastReportedAt() == null}">
+      This entity has not yet submitted an approved report for this year.
+    </span>
+    <br><br>
+    Figures are as reported by the entity and reviewed by the Department of Sport, Arts and Culture.
+    Published with departmental approval.
+    <br><br>
+    <a href="/public">All published entities</a>
+  </p>
+</div>
+</body>
+</html>

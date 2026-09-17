@@ -1,0 +1,14 @@
+# Postgres for local development. Nothing else needs containerising.
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: vuka
+      POSTGRES_USER: vuka
+      POSTGRES_PASSWORD: vuka
+    ports:
+      - "5432:5432"
+    volumes:
+      - vuka-pg:/var/lib/postgresql/data
+volumes:
+  vuka-pg:

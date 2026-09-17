@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Report an indicator</title>
+  <!--
+    One indicator per screen.
+    The step index lives in the URL, not in session state, so a dropped connection
+    loses nothing: reload and you are exactly where you were. That is the whole
+    design requirement for an NPO reporting from a phone on patchy mobile data.
+  -->
+  <style>
+    :root { --ink:#1a1a1a; --green:#0f3d2e; --muted:#5a6b64; --line:#dfe6e3; --bg:#fff; --panel:#f4f8f6; --yellow:#fff8c4; }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) { --ink:#e8edeb; --green:#7fd1b0; --muted:#9bb0a7; --line:#2b3a34; --bg:#121714; --panel:#1a221e; --yellow:#3a3520; }
+    }
+    :root[data-theme="dark"] { --ink:#e8edeb; --green:#7fd1b0; --muted:#9bb0a7; --line:#2b3a34; --bg:#121714; --panel:#1a221e; --yellow:#3a3520; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink);
+           font:17px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+    .wrap { max-width:520px; margin:0 auto; padding:16px 16px 40px; }
+    .progress { font-size:13px; color:var(--muted); margin:0 0 4px; }
+    .bar { height:4px; background:var(--line); border-radius:2px; overflow:hidden; margin:0 0 20px; }
+    .bar i { display:block; height:100%; background:var(--green); }
+    .ref { font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); margin:0 0 4px; }
+    h1 { font-size:19px; line-height:1.35; margin:0 0 14px; color:var(--green); }
+    .target { background:var(--panel); border-radius:10px; padding:14px; margin:0 0 20px; }
+    .target .l { font-size:13px; color:var(--muted); }
+    .target .v { font-size:22px; font-weight:700; }
+    label { display:block; font-size:14px; font-weight:600; margin:16px 0 6px; }
+    .hint { font-size:13px; color:var(--muted); font-weight:400; margin:0 0 6px; }
+    input, textarea {
+      width:100%; padding:14px; font-size:17px; border:2px solid var(--line);
+      border-radius:8px; background:var(--yellow); color:var(--ink); font-family:inherit;
+    }
+    input:focus, textarea:focus { outline:none; border-color:var(--green); }
+    textarea { min-height:90px; }
+    .actions { display:flex; gap:10px; margin-top:24px; }
+    button, .btn {
+      flex:1; padding:16px; font-size:17px; font-weight:600; border-radius:8px;
+      border:none; cursor:pointer; text-align:center; text-decoration:none;
+      background:var(--green); color:#fff;
+    }
+    .btn.ghost { background:transparent; color:var(--green); border:2px solid var(--line); }
+    .saved { font-size:13px; color:var(--muted); margin-top:14px; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <p class="progress">
+    Indicator <span th:text="${index + 1}">1</span> of <span th:text="${total}">10</span>
+    · <span th:text="${submission.getReportingPeriod().getLabel()}">Q2</span>
+  </p>
+  <div class="bar"><i th:style="'width:' + ${((index + 1) * 100) / total} + '%'"></i></div>
+
+  <p class="ref" th:text="${target.getIndicatorRef()}">1.1.1</p>
+  <h1 th:text="${target.getIndicator()}">Indicator wording</h1>
+
+  <div class="target">
+    <div class="l">Target for this quarter</div>
+    <div class="v">
+      <span th:text="${quarterTarget}">12</span>
+      <span style="font-size:15px;font-weight:400" th:text="${target.getUnitOfMeasure()}">programmes</span>
+    </div>
+  </div>
+
+  <form th:action="@{'/m/submission/' + ${submission.getId()} + '/step/' + ${index}}" method="post">
+    <label for="actual">How many did you actually deliver?</label>
+    <div class="hint">Enter a number only.</div>
+    <input id="actual" name="actualValue" type="number" inputmode="decimal" step="any"
+           th:value="${existing != null} ? ${existing.getActualValue()} : ''" required>
+
+    <label for="spend">How much has been spent on this so far?</label>
+    <div class="hint">In rand. A best estimate is fine.</div>
+    <input id="spend" name="spendToDate" type="number" inputmode="decimal" step="any"
+           th:value="${existing != null} ? ${existing.getSpendToDate()} : ''">
+
+    <label for="why">If you did not reach the target, why not?</label>
+    <div class="hint">One or two sentences. Leave blank if the target was met.</div>
+    <textarea id="why" name="varianceExplanation"
+              th:text="${existing != null} ? ${existing.getVarianceExplanation()} : ''"></textarea>
+
+    <div class="actions">
+      <a class="btn ghost" th:if="${index > 0}"
+         th:href="@{'/m/submission/' + ${submission.getId()} + '/step/' + ${index - 1}}">Back</a>
+      <button type="submit">Save and next</button>
+    </div>
+  </form>
+
+  <p class="saved">Your answers are saved as you go. If you lose signal, open this page again and continue.</p>
+</div>
+</body>
+</html>

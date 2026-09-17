@@ -1,0 +1,50 @@
+spring:
+  application:
+    name: vuka
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/vuka}
+    username: ${DB_USER:vuka}
+    password: ${DB_PASSWORD:vuka}
+
+  jpa:
+    hibernate:
+      # Flyway owns the schema. Hibernate only validates that the mapping matches it,
+      # so a drifted entity fails loudly at startup rather than silently at 3am.
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+    open-in-view: false
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+
+  servlet:
+    multipart:
+      max-file-size: 15MB
+      max-request-size: 20MB
+
+  thymeleaf:
+    cache: false
+
+server:
+  port: ${PORT:8080}
+  compression:
+    # The low-bandwidth surfaces depend on this. Do not turn it off.
+    enabled: true
+    mime-types: text/html,text/css,application/javascript,application/json
+    min-response-size: 512
+
+vuka:
+  firebase:
+    # Leave blank on Cloud Run: application default credentials are used instead.
+    credentials-path: ${FIREBASE_CREDENTIALS:}
+  seed:
+    # Loads realistic DSAC entities and three years of history on first start.
+    enabled: ${SEED_ENABLED:true}
+
+logging:
+  level:
+    za.gov.dsac.vuka: DEBUG

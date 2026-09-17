@@ -1,0 +1,53 @@
+# Published audit outcomes and performance against targets.
+#
+# Every row here comes from a published annual report or from the Auditor-General's briefing
+# to the Portfolio Committee on Sport, Arts and Culture. Nothing is estimated. An entity with
+# no published figure we could reach has no row, and the risk engine treats an absent row as
+# absence of evidence rather than as evidence of absence.
+#
+# This file is the difference between a risk score that is circular and a risk score that is a
+# finding. Computed over invented history it proves nothing. Computed over this, it reproduces
+# what the Auditor-General already said, which is the only way to show the arithmetic works.
+#
+# Portfolio position for 2024/25, from AGSA's briefing (PMG committee meeting 41948):
+#   29 auditees, 13 clean, 10 unqualified with findings, 5 qualified, 1 outstanding.
+#   The five qualified: NLSA, Iziko, Boxing SA, National Heritage Council, Mandela Bay.
+#   The one outstanding: Robben Island Museum.
+#   Roughly R70 million irregular expenditure for the year against about R800 million
+#   cumulative unresolved, and one material irregularity of R7.5 million.
+#
+# outcome uses AGSA's own vocabulary. UNQUALIFIED means a clean audit, unqualified with no
+# material findings. UNQUALIFIED_WITH_FINDINGS is what the reports call "unqualified with
+# findings". OUTSTANDING means the audit was not completed and the auditee was excluded from
+# the portfolio outcomes, which is a materially worse position than a bad opinion.
+#
+# Blank findingsTotal or findingsRepeat means not published, not zero. Annual reports rarely
+# carry a numeric count of findings; that count lives in AGSA management reports, which are
+# not public. Do not fill these with zeroes.
+#
+shortName,financialYear,outcome,findingsTotal,findingsRepeat,targetsAchieved,targetsTotal,note
+SAHRA,2023/24,UNQUALIFIED,0,0,19,19,Third consecutive clean audit
+SAHRA,2024/25,UNQUALIFIED,0,0,18,19,Fourth consecutive clean audit. No findings requiring management action
+NAC,2023/24,UNQUALIFIED,,,10,12,
+NAC,2024/25,UNQUALIFIED_WITH_FINDINGS,,,21,25,Material findings reported on predetermined objectives
+NFVF,2023/24,UNQUALIFIED,,,,,No irregular fruitless or wasteful expenditure
+Iziko,2023/24,QUALIFIED,,,18,20,Qualified on the heritage assets register
+Iziko,2024/25,QUALIFIED,,1,16,20,Same basis as prior year. 86 percent of prior findings resolved
+Ditsong,2023/24,UNQUALIFIED_WITH_FINDINGS,,1,22,27,Material findings on both performance information and compliance
+Ditsong,2024/25,UNQUALIFIED_WITH_FINDINGS,2,,,,Two material findings raised and resolved. Liquidity ratio 0.31
+RobbenIsland,2023/24,UNQUALIFIED,,,45,58,Clean audit
+RobbenIsland,2024/25,OUTSTANDING,,,,,Annual financial statements submitted 9 August 2025 after the statutory deadline. Audit not completed and the entity was excluded from the portfolio audit outcomes. Cause on record: instability in the finance unit including disciplinary proceedings against the CFO and resignations of key finance staff
+FreedomPark,2023/24,QUALIFIED,,,,,Material misstatements in depreciation and the cash flow statement
+FreedomPark,2024/25,UNQUALIFIED,,,27,30,Liabilities exceed assets by R5 billion driven by an operating lease liability with Public Works. Going concern dependent on continued DSAC support
+MarketTheatre,2023/24,UNQUALIFIED_WITH_FINDINGS,1,,36,41,One compliance finding. Irregular expenditure R664 952. No findings on performance information
+MarketTheatre,2024/25,UNQUALIFIED,0,0,32,40,First clean audit in over a decade
+PanSALB,2024/25,UNQUALIFIED,,,24,31,Expenditure 113.6 percent of the adjusted budget
+BoxingSA,2024/25,QUALIFIED,,1,16,18,Qualified on unverifiable revenue declarations and debt collection. No consequence management for irregular expenditure
+NLSA,2024/25,QUALIFIED,,2,14,18,Qualified on heritage assets not properly accounted for. AGSA cites a cycle of qualified audit outcomes
+NHC,2024/25,QUALIFIED,,,,,Qualified on insufficient controls over prepayments
+MandelaBay,2024/25,QUALIFIED,,,,,Named among the five qualified auditees in the portfolio
+PACOFS,2024/25,UNQUALIFIED,,,16,22,Third consecutive unqualified opinion. Emphasis of matter on irregular expenditure R4 412 486 and material underspending
+Playhouse,2024/25,UNQUALIFIED,,,22,22,Irregular expenditure R7 909 143 disclosed
+Artscape,2024/25,UNQUALIFIED,,,12,12,
+SAIDS,2023/24,UNQUALIFIED,,,,,Clean audit
+SAIDS,2024/25,UNQUALIFIED,0,0,17,23,Clean audit. Financial statements accepted as submitted. Cumulative irregular expenditure R23.725 million

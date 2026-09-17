@@ -1,0 +1,50 @@
+# The bodies funded through Vote 37, Sport, Arts and Culture.
+#
+# Allocations are the real transfer figures from Estimates of National Expenditure 2026,
+# Vote 37, Table 37.3 "Vote transfers and subsidies trends and estimates", pages 803 to 806,
+# in R'000, current plus capital combined.
+#   2023/24 and 2024/25  audited outcome
+#   2025/26              adjusted appropriation
+#   2026/27              medium term expenditure estimate
+# Portfolio total 2026/27: R2 257 830 thousand, inside a vote of R6 617.3 million.
+#
+# PFMA schedule from National Treasury, "Public institutions listed in PFMA Schedules 1, 2,
+# 3A, 3B, 3C and 3D as at 21 November 2025". Every DSAC entity is Schedule 3A except PanSALB,
+# which is a Schedule 1 constitutional institution.
+#
+# The schedule is not cosmetic. A Schedule 3A entity reports performance to its executive
+# authority under Treasury Regulation 30.2.1, which prescribes no deadline and no system.
+# That gap is the reason this product exists.
+#
+# publiclyVisible is a departmental decision, not ours. It is set false for every entity here
+# and DSAC turns it on. See PublicationService.
+#
+shortName,name,pfmaSchedule,sector,sizeBand,alloc2023_24,alloc2024_25,alloc2025_26,alloc2026_27,publiclyVisible
+Artscape,Artscape,SCHEDULE_3A,ARTS,MEDIUM,72958,70071,78605,73801,false
+SAST,The South African State Theatre,SCHEDULE_3A,ARTS,MEDIUM,79766,76939,86988,83371,false
+Playhouse,The Playhouse Company,SCHEDULE_3A,ARTS,MEDIUM,55405,61142,64866,57121,false
+PACOFS,Performing Arts Centre of the Free State,SCHEDULE_3A,ARTS,MEDIUM,52242,59139,61793,54663,false
+MarketTheatre,Market Theatre Foundation,SCHEDULE_3A,ARTS,MEDIUM,56706,59215,63987,57445,false
+MandelaBay,Mandela Bay Theatre Complex,SCHEDULE_3A,ARTS,SMALL,23000,35516,50147,35876,false
+NAC,National Arts Council of South Africa,SCHEDULE_3A,ARTS,LARGE,313487,262443,244654,297212,false
+NFVF,National Film and Video Foundation,SCHEDULE_3A,ARTS,LARGE,331983,310510,383707,338047,false
+Ditsong,Ditsong Museums of South Africa,SCHEDULE_3A,HERITAGE,LARGE,109976,114831,123976,124346,false
+NatMuseum,National Museum Bloemfontein,SCHEDULE_3A,HERITAGE,MEDIUM,63331,63909,67646,69519,false
+Amazwi,Amazwi South African Museum of Literature,SCHEDULE_3A,HERITAGE,SMALL,19227,18476,21377,16909,false
+RobbenIsland,Robben Island Museum,SCHEDULE_3A,HERITAGE,MEDIUM,92458,88970,100024,96799,false
+FreedomPark,Freedom Park,SCHEDULE_3A,HERITAGE,MEDIUM,105341,110973,115393,114075,false
+NelsonMandelaMuseum,Nelson Mandela Museum,SCHEDULE_3A,HERITAGE,SMALL,46046,35130,42973,38189,false
+KZNMuseum,KwaZulu-Natal Museum,SCHEDULE_3A,HERITAGE,SMALL,46306,43750,45522,46461,false
+uMsunduzi,uMsunduzi Museum,SCHEDULE_3A,HERITAGE,SMALL,27613,23991,31423,25998,false
+WHAG,William Humphreys Art Gallery,SCHEDULE_3A,HERITAGE,SMALL,12454,11931,12464,13007,false
+WarMuseum,War Museum of the Boer Republics,SCHEDULE_3A,HERITAGE,SMALL,28754,19526,18976,18907,false
+Iziko,Iziko Museums of South Africa,SCHEDULE_3A,HERITAGE,MEDIUM,128003,108759,117583,110607,false
+Luthuli,Luthuli Museum,SCHEDULE_3A,HERITAGE,SMALL,17689,17814,18601,19369,false
+Taalmuseum,Die Afrikaanse Taalmuseum en -monument,SCHEDULE_3A,LANGUAGE,SMALL,16182,13453,19650,13345,false
+SAHRA,South African Heritage Resources Agency,SCHEDULE_3A,HERITAGE,MEDIUM,73718,79459,75762,74953,false
+NHC,National Heritage Council of South Africa,SCHEDULE_3A,HERITAGE,MEDIUM,136301,99217,100657,107683,false
+NLSA,National Library of South Africa,SCHEDULE_3A,LIBRARIES,LARGE,127953,128820,132999,137898,false
+SALB,South African Library for the Blind,SCHEDULE_3A,LIBRARIES,SMALL,43888,37494,38539,39220,false
+PanSALB,Pan South African Language Board,SCHEDULE_1,LANGUAGE,LARGE,119716,127399,131714,139212,false
+SAIDS,South African Institute for Drug-Free Sport,SCHEDULE_3A,SPORT,SMALL,31281,29775,31009,32274,false
+BoxingSA,Boxing South Africa,SCHEDULE_3A,SPORT,SMALL,24463,19971,20731,21523,false
