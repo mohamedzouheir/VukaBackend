@@ -29,6 +29,14 @@ spring:
   thymeleaf:
     cache: false
 
+  messages:
+    basename: messages
+    encoding: UTF-8
+    # A key missing from a translation falls back to messages.properties, which is English.
+    # Left on the default, it would fall back to the server's locale instead, so a missing
+    # isiZulu string on a machine set to Afrikaans would render in Afrikaans.
+    fallback-to-system-locale: false
+
 server:
   port: ${PORT:8080}
   compression:

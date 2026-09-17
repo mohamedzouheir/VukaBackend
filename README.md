@@ -61,8 +61,11 @@ You need **Java 21**, **Maven**, and **Docker** (for Postgres only).
 
 ```bash
 docker compose up -d          # Postgres on 5432
-./mvnw spring-boot:run        # or: mvn spring-boot:run
+mvn spring-boot:run
 ```
+
+There is no Maven wrapper checked in, so `mvn` has to be on the path. See the first known
+limitation below before assuming a clean first build.
 
 First start runs the Flyway migrations and loads the real data described below. Then:
 
@@ -229,12 +232,47 @@ and the absence is the design decision.
 
 ## The low-bandwidth surfaces
 
-Server-rendered Thymeleaf, no JavaScript framework, every page under 5KB before compression. Some
-of the funded bodies are very small and may be a few people working from a phone on mobile data; a
-reporting system they cannot use produces late submissions and empty dashboards.
+Server-rendered Thymeleaf, no JavaScript framework, every page under 5KB before compression and
+under 2KB once gzip is on. Response compression is configured in `application.yml`; do not turn it
+off.
+
+**Two different arguments, and they should not be confused.** The citizen page is a genuine
+bandwidth case: no login, no training, a low-end phone, prepaid data, and a reader who may never
+come back if the first page costs them a megabyte. The reporter flow is a *capacity* case rather
+than a connectivity one. A finance officer at a large museum is at a desk on institutional wifi,
+and claiming otherwise invites a judge to say so. What is true is that six of the funded bodies are
+two or three people for whom reporting competes directly with delivering the service, and ten short
+screens they can finish on a phone between other work is a different proposition to an afternoon
+with a spreadsheet. Requirement (d) asks for full functionality on mobile devices in any case.
 
 The mobile flow puts one indicator per screen and carries the step index in the URL rather than in
 session state, so a dropped connection loses nothing.
+
+### Accessibility
+
+Criterion 4 names three groups: varying digital literacy, persons with disabilities, and
+low-bandwidth or resource-constrained environments. Page weight only answers the third.
+
+Every server-rendered page has a skip link, a `main` landmark, a visible focus ring, list and table
+semantics rather than styled `div`s, and form hints wired to their inputs through
+`aria-describedby`. Two things were fixed rather than added. `input:focus` carried `outline:none`,
+which leaves a keyboard or switch user with no way to tell which field they are in, and the colour
+pair on primary buttons was white on `--green`, which is 12:1 in light mode but **1.8:1 in dark
+mode** and failed badly. Button text is now `--on-green`, which inverts with the theme and holds
+10:1 either way. The muted and heading colours were checked and already passed at 5.6:1 and above.
+
+### Language
+
+The citizen pages are served in English, Afrikaans, isiZulu, isiXhosa and Sesotho. The language is
+a `lang` query parameter rather than a cookie or a session, for the same reason the mobile flow
+keeps its step index in the URL: the page stays cacheable, a forwarded link opens in the language it
+was shared in, and a surface built to be narrow and non-personal does not start storing preferences
+about readers who never signed in. `LocaleConfig` holds the supported set; adding a language is a
+properties file and one list entry.
+
+Five of twelve official languages is a demonstration that the surface carries languages, not a
+claim that the set is complete. The remaining seven are a translation job rather than an
+engineering one, and that is the honest way to put it.
 
 ---
 
@@ -276,3 +314,16 @@ State these before someone finds them.
   integration.** Confirm the columns against DPME's current template before anyone relies on it.
 - **Evidence-to-target linking in the export** falls back to a filename convention where an
   extraction row does not carry the link. Good enough to demonstrate, not good enough to ship.
+- **The mobile reporter flow cannot currently be used from a browser.** `FirebaseTokenFilter`
+  authenticates only from an `Authorization: Bearer` header, which a browser navigating to `/m`
+  cannot send, so every page under `/m` answers 401. The two form actions those pages post to,
+  `POST /m/submission/{id}/step/{index}` and `POST /m/submission/{id}/submit`, also have no handler
+  in `MobileController`, so they would answer 405 even once a caller is authenticated. The
+  templates, the accessibility work and the page-weight budget are real and the flow is wired end
+  to end in the service layer; what is missing is a browser-usable way to hold a session. Resolving
+  it means accepting the token from a `SameSite` cookie and turning CSRF protection back on for the
+  form surface, which is a security decision worth making deliberately rather than in passing.
+- **The translations have not been reviewed by first-language speakers.** They are a working
+  implementation of the language surface, not certified government text, and should go past PanSALB
+  or a departmental translator before anything is published. Volunteer this rather than let it be
+  discovered.
