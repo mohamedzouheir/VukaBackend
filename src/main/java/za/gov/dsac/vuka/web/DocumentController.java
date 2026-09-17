@@ -65,7 +65,7 @@ public class DocumentController {
      */
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ENTITY_REPORTER','DSAC_REVIEWER','DSAC_EXECUTIVE','ADMIN')")
-    public ResponseEntity<?> document(@PathVariable UUID id,
+    public ResponseEntity<?> document(@PathVariable("id") UUID id,
                                       @AuthenticationPrincipal VukaPrincipal who) {
 
         DocumentRecord doc = documents.findById(id).orElse(null);

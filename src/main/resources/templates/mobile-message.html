@@ -11,5 +11,12 @@
     .wrap { max-width:520px; margin:0 auto; padding:40px 16px; }
   </style>
 </head>
-<body><div class="wrap"><p th:text="${message}">Message</p></div></body>
+<body>
+<div class="wrap">
+  <main id="main">
+    <!-- Announced when this page replaces a form the reporter was working in. -->
+    <p role="status" th:text="${message}">Message</p>
+  </main>
+</div>
+</body>
 </html>

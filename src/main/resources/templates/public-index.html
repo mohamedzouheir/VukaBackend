@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<html th:lang="${#locale.language}" lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Public entity performance — DSAC</title>
+  <title th:text="#{page.index.title}">Public entity performance</title>
   <style>
     :root { --ink:#1a1a1a; --green:#0f3d2e; --muted:#5a6b64; --line:#dfe6e3; --bg:#fff; }
     @media (prefers-color-scheme: dark) {
@@ -16,33 +16,65 @@
     .wrap { max-width:640px; margin:0 auto; padding:24px 16px 48px; }
     h1 { font-size:22px; margin:0 0 6px; color:var(--green); }
     p.lede { color:var(--muted); font-size:15px; margin:0 0 24px; }
+    ul.list { list-style:none; margin:0; padding:0; }
     a.row { display:block; padding:14px 0; border-bottom:1px solid var(--line);
             text-decoration:none; color:var(--ink); }
-    a.row .nm { font-weight:600; color:var(--green); }
+    a.row .nm { font-weight:600; color:var(--green); text-decoration:underline; }
     a.row .meta { font-size:13px; color:var(--muted); }
     .empty { color:var(--muted); font-size:15px; }
+    /* Focus has to stay visible. Removing the outline is the single most common way a
+       keyboard user loses their place on a page, and the citizen surface has no other
+       way to navigate. */
+    a:focus-visible { outline:3px solid var(--green); outline-offset:3px; border-radius:3px; }
+    .skip { position:absolute; left:-9999px; }
+    .skip:focus { position:fixed; left:8px; top:8px; z-index:10; padding:10px 14px;
+                  background:var(--ink); color:var(--bg); border-radius:6px; }
+    nav.langs { margin:28px 0 0; padding-top:16px; border-top:1px solid var(--line);
+                font-size:14px; }
+    nav.langs .lbl { color:var(--muted); font-size:13px; display:block; margin-bottom:6px; }
+    /* 44px minimum: these are the smallest touch targets on the public surface. */
+    nav.langs a { color:var(--green); margin-right:16px; display:inline-flex;
+                  align-items:center; min-height:44px; }
+    nav.langs a[aria-current] { font-weight:700; text-decoration:none; }
   </style>
 </head>
 <body>
+<a class="skip" href="#main" th:text="#{common.skip}">Skip to the main content</a>
 <div class="wrap">
-  <h1>Public entity performance</h1>
-  <p class="lede">
-    What each funded body received, what it committed to deliver, and what it reported.
-    Department of Sport, Arts and Culture.
-  </p>
+  <main id="main">
+    <h1 th:text="#{page.index.title}">Public entity performance</h1>
+    <p class="lede" th:text="#{page.index.lede}">
+      What each funded body received, what it committed to deliver, and what it reported.
+    </p>
 
-  <div th:if="${#lists.isEmpty(entities)}" class="empty">
-    No entity records have been approved for publication yet.
-  </div>
+    <p th:if="${#lists.isEmpty(entities)}" class="empty" th:text="#{page.index.empty}">
+      No entity records have been approved for publication yet.
+    </p>
 
-  <a class="row" th:each="e : ${entities}" th:href="@{'/public/entity/' + ${e.entityId()}}">
-    <div class="nm" th:text="${e.name()}">Entity</div>
-    <div class="meta">
-      <span th:text="${e.sector()}">Sector</span> ·
-      <span th:text="'R ' + ${#numbers.formatDecimal(e.totalAllocation(), 0, 'WHITESPACE', 0, 'POINT')} + ' allocated'">R0</span> ·
-      <span th:text="${e.targetsAchieved()} + ' of ' + ${e.targetsCommitted()} + ' targets achieved'">0 of 0</span>
-    </div>
-  </a>
+    <ul class="list" th:unless="${#lists.isEmpty(entities)}">
+      <li th:each="e : ${entities}">
+        <a class="row" th:href="@{/public/entity/{id}(id=${e.entityId()}, lang=${#locale.language})}">
+          <span class="nm" th:text="${e.name()}">Entity</span>
+          <span class="meta">
+            <span th:text="${e.sector()}">Sector</span>
+            <span aria-hidden="true">&#183;</span>
+            <span th:text="'R ' + ${#numbers.formatDecimal(e.totalAllocation(), 0, 'WHITESPACE', 0, 'POINT')} + ' ' + #{page.index.allocated}">R0</span>
+            <span aria-hidden="true">&#183;</span>
+            <span th:text="#{page.index.targets(${e.targetsAchieved()}, ${e.targetsCommitted()})}">0 of 0</span>
+          </span>
+        </a>
+      </li>
+    </ul>
+  </main>
+
+  <nav class="langs" th:attr="aria-label=#{common.language}">
+    <span class="lbl" th:text="#{common.language}">Language</span>
+    <a th:each="l : ${languages}"
+       th:href="@{${path}(lang=${l.tag()})}"
+       th:lang="${l.tag()}"
+       th:text="${l.name()}"
+       th:attr="aria-current=${#locale.language == l.tag()} ? 'true' : null">English</a>
+  </nav>
 </div>
 </body>
 </html>

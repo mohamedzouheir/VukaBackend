@@ -77,7 +77,7 @@ public class AdminController {
     @PostMapping("/entities/{entityId}/publication")
     @Transactional
     public ResponseEntity<PublicationResponse> setPublication(
-            @PathVariable UUID entityId,
+            @PathVariable("entityId") UUID entityId,
             @RequestBody PublicationRequest req,
             @AuthenticationPrincipal VukaPrincipal who) {
 

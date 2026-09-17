@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign in</title>
+  <style>
+    :root { --ink:#1a1a1a; --green:#0f3d2e; --on-green:#fff; --muted:#5a6b64; --line:#dfe6e3; --bg:#fff; --yellow:#fff8c4; --bad:#a32e2e; }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) { --ink:#e8edeb; --green:#7fd1b0; --on-green:#121714; --muted:#9bb0a7; --line:#2b3a34; --bg:#121714; --yellow:#3a3520; --bad:#f2a2a2; }
+    }
+    :root[data-theme="dark"] { --ink:#e8edeb; --green:#7fd1b0; --on-green:#121714; --muted:#9bb0a7; --line:#2b3a34; --bg:#121714; --yellow:#3a3520; --bad:#f2a2a2; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink);
+           font:17px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+    .wrap { max-width:520px; margin:0 auto; padding:32px 16px 40px; }
+    h1 { font-size:20px; margin:0 0 4px; color:var(--green); }
+    p.lede { font-size:14px; color:var(--muted); margin:0 0 20px; }
+    label { display:block; font-size:14px; font-weight:600; margin:16px 0 6px; }
+    input { width:100%; padding:14px; font-size:17px; border:2px solid var(--line);
+            border-radius:8px; background:var(--yellow); color:var(--ink); font-family:inherit; }
+    /* Do not put outline:none back. A colour change alone is not a focus indicator. */
+    input:focus { border-color:var(--green); outline:3px solid var(--green); outline-offset:1px; }
+    button { width:100%; margin-top:24px; padding:16px; font-size:17px; font-weight:600;
+             border:none; border-radius:8px; background:var(--green); color:var(--on-green); cursor:pointer; }
+    /* Ring in --ink: a green ring on a green button is invisible. */
+    button:focus-visible { outline:3px solid var(--ink); outline-offset:3px; }
+    .error { margin:0 0 16px; padding:12px 14px; border-left:4px solid var(--bad);
+             background:var(--yellow); color:var(--ink); font-size:15px; }
+    .note { margin-top:20px; font-size:13px; color:var(--muted); }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <main id="main">
+    <h1>Vuka</h1>
+    <p class="lede">Quarterly reporting for the Department of Sport, Arts and Culture.</p>
+
+    <!-- role=alert so a screen reader announces a failed attempt rather than leaving the
+         reporter to work out why the page came back. -->
+    <p class="error" role="alert" th:if="${error}" id="signin-error" th:text="${error}">Error</p>
+
+    <form th:action="@{/m/signin}" method="post">
+      <input type="hidden" name="next" th:value="${next}">
+
+      <label for="email">Email address</label>
+      <input id="email" name="email" type="email" inputmode="email" autocomplete="username"
+             th:value="${email}" th:attr="aria-describedby=${error} ? 'signin-error' : null"
+             autocapitalize="none" spellcheck="false" required>
+
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required>
+
+      <button type="submit">Sign in</button>
+    </form>
+
+    <p class="note">If you do not have an account, the Department issues one for your entity.</p>
+  </main>
+</div>
+</body>
+</html>

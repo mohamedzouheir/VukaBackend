@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatus;
+import za.gov.dsac.vuka.config.LocaleConfig;
 import za.gov.dsac.vuka.service.PublicationService;
 
 import java.util.UUID;
@@ -32,6 +33,7 @@ public class PublicController {
     @GetMapping
     public String index(Model model) {
         model.addAttribute("entities", publication.publishedEntities());
+        languages(model, "/public");
         return "public-index";
     }
 
@@ -42,12 +44,25 @@ public class PublicController {
      * public surface should not confirm what exists behind it.
      */
     @GetMapping("/entity/{id}")
-    public String entity(@PathVariable UUID id, Model model) {
+    public String entity(@PathVariable("id") UUID id, Model model) {
         var view = publication.findPublished(id);
         if (view == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
         model.addAttribute("e", view);
+        languages(model, "/public/entity/" + id);
         return "public-entity";
+    }
+
+    /**
+     * Feeds the language switcher.
+     *
+     * <p>The path is passed in rather than read from the request because Thymeleaf 3.1 removed
+     * the servlet objects from the expression context. It is also the better shape: the switcher
+     * links back to the page you are on, and the controller is the thing that knows what that is.
+     */
+    private static void languages(Model model, String path) {
+        model.addAttribute("languages", LocaleConfig.SUPPORTED);
+        model.addAttribute("path", path);
     }
 }

@@ -29,8 +29,20 @@ spring:
   thymeleaf:
     cache: false
 
+  messages:
+    basename: messages
+    encoding: UTF-8
+    # A key missing from a translation falls back to messages.properties, which is English.
+    # Left on the default, it would fall back to the server's locale instead, so a missing
+    # isiZulu string on a machine set to Afrikaans would render in Afrikaans.
+    fallback-to-system-locale: false
+
 server:
   port: ${PORT:8080}
+  # Behind a proxy or on Cloud Run, this is what makes request.isSecure() tell the truth, and
+  # the auth cookie takes its Secure flag from exactly that. Without it the cookie ships
+  # without Secure on an https deployment.
+  forward-headers-strategy: framework
   compression:
     # The low-bandwidth surfaces depend on this. Do not turn it off.
     enabled: true
@@ -43,6 +55,11 @@ vuka:
     # With no usable credential the application still starts, /public works, and every
     # authenticated endpoint answers 401. It fails closed rather than refusing to boot.
     credentials-path: ${FIREBASE_CREDENTIALS:}
+    # Path to a file holding the Firebase Web API key, not the key itself, so the value never
+    # sits in an environment variable, a process listing or an image layer. Needed only by the
+    # server-rendered reporter sign-in; leave it unset and the citizen view and the
+    # token-header API carry on working.
+    web-api-key-path: ${FIREBASE_WEB_API_KEY_FILE:}
 
   dev-auth:
     # A local sign in that skips Firebase entirely, so the four role journeys can be walked
@@ -50,6 +67,7 @@ vuka:
     # exist, so there is no code path to bypass. It must never be true in a deployed
     # environment, and the application logs a warning on every start where it is.
     enabled: ${VUKA_DEV_AUTH:false}
+
   seed:
     # Loads realistic DSAC entities and three years of history on first start.
     enabled: ${SEED_ENABLED:true}

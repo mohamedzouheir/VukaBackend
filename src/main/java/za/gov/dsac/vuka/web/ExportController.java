@@ -55,7 +55,7 @@ public class ExportController {
     /** The full record, provenance included. This is the one an auditor would want. */
     @GetMapping("/submission/{submissionId}/json")
     @PreAuthorize("hasAnyRole('ENTITY_REPORTER','DSAC_REVIEWER','DSAC_EXECUTIVE','ADMIN')")
-    public ExportService.QuarterlyExport json(@PathVariable UUID submissionId,
+    public ExportService.QuarterlyExport json(@PathVariable("submissionId") UUID submissionId,
                                               @AuthenticationPrincipal VukaPrincipal principal) {
         return exportService.build(authorised(submissionId, principal));
     }
@@ -69,7 +69,7 @@ public class ExportController {
      */
     @GetMapping("/submission/{submissionId}/eqprs.csv")
     @PreAuthorize("hasAnyRole('ENTITY_REPORTER','DSAC_REVIEWER','DSAC_EXECUTIVE','ADMIN')")
-    public ResponseEntity<byte[]> eqprs(@PathVariable UUID submissionId,
+    public ResponseEntity<byte[]> eqprs(@PathVariable("submissionId") UUID submissionId,
                                         @AuthenticationPrincipal VukaPrincipal principal) {
         Submission s = authorised(submissionId, principal);
         ExportService.QuarterlyExport export = exportService.build(s);
@@ -96,7 +96,7 @@ public class ExportController {
      */
     @GetMapping("/submission/{submissionId}/full.csv")
     @PreAuthorize("hasAnyRole('ENTITY_REPORTER','DSAC_REVIEWER','DSAC_EXECUTIVE','ADMIN')")
-    public ResponseEntity<byte[]> full(@PathVariable UUID submissionId,
+    public ResponseEntity<byte[]> full(@PathVariable("submissionId") UUID submissionId,
                                        @AuthenticationPrincipal VukaPrincipal principal) {
         ExportService.QuarterlyExport e = exportService.build(authorised(submissionId, principal));
 
