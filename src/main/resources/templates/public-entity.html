@@ -47,6 +47,10 @@
     nav.langs .lbl { color:var(--muted); font-size:13px; display:block; margin-bottom:6px; }
     /* 44px minimum on every tappable control, including these. */
     nav.langs a, .foot a { display:inline-flex; align-items:center; min-height:44px; }
+    /* th:each repeats the anchor with no whitespace between iterations, so without a margin
+       the five language names render as one unreadable word. The index page carries the same
+       rule; this page had lost it. */
+    nav.langs a { margin-right:16px; }
     nav.langs a[aria-current] { font-weight:700; text-decoration:none; }
   </style>
 </head>
