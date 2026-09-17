@@ -15,4 +15,9 @@ public interface SubmissionRepository extends JpaRepository<Submission, UUID> {
     List<Submission> findByEntityIdOrderByCreatedAtDesc(UUID entityId);
     Optional<Submission> findByEntityIdAndReportingPeriodId(UUID entityId, UUID reportingPeriodId);
     List<Submission> findByStatus(Enums.SubmissionStatus status);
+
+    /** Every filing for one period. The review queue reads this once rather than per entity. */
+    List<Submission> findByReportingPeriodId(UUID reportingPeriodId);
+
+    List<Submission> findAllByOrderByCreatedAtDesc();
 }

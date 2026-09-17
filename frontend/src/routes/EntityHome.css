@@ -1,0 +1,18 @@
+.prior { list-style: none; margin: 0; padding: 0; }
+.prior li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--rule);
+  font-size: 0.9375rem;
+}
+.prior li:last-child { border-bottom: 0; }
+.prior .spacer { flex: 1 1 auto; }
+.prior-period { font-weight: 650; min-width: 9rem; }
+.prior-late { color: var(--band-high); font-weight: 650; }
+
+.returned { border-left: 3px solid var(--band-high); }
+.returned > * + * { margin-top: var(--space-2); }
+.returned p { margin: 0; }

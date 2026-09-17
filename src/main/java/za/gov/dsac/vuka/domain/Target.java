@@ -79,20 +79,28 @@ public class Target {
     @Column(precision = 18, scale = 2)
     private BigDecimal annualTarget;
 
-    /** Q1 target. */
-    @Column(precision = 18, scale = 2)
+    /**
+     * Quarterly targets.
+     *
+     * <p>The column name is explicit, and it has to be. Spring's
+     * {@code CamelCaseToUnderscoresNamingStrategy} only inserts an underscore between a
+     * <em>lowercase</em> letter and an uppercase one, so {@code q1Target} derives as
+     * {@code q1target} rather than {@code q1_target}: the character before the T is a digit, not a
+     * lowercase letter. The migration spells these {@code q1_target} because that is the readable
+     * name, so the mapping says so rather than relying on a convention that does not apply here.
+     * Getting this wrong fails at startup under {@code ddl-auto: validate}, which is the good
+     * outcome, and it is what happened on the first real run.
+     */
+    @Column(name = "q1_target", precision = 18, scale = 2)
     private BigDecimal q1Target;
 
-    /** Q2 target. */
-    @Column(precision = 18, scale = 2)
+    @Column(name = "q2_target", precision = 18, scale = 2)
     private BigDecimal q2Target;
 
-    /** Q3 target. */
-    @Column(precision = 18, scale = 2)
+    @Column(name = "q3_target", precision = 18, scale = 2)
     private BigDecimal q3Target;
 
-    /** Q4 target. */
-    @Column(precision = 18, scale = 2)
+    @Column(name = "q4_target", precision = 18, scale = 2)
     private BigDecimal q4Target;
 
     /** Allocation divided by annual target. The denominator of the planned versus actual comparison. */

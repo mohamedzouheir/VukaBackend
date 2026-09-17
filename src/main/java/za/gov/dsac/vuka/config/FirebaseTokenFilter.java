@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -36,9 +37,16 @@ public class FirebaseTokenFilter extends OncePerRequestFilter {
 
     private static final Logger log = LoggerFactory.getLogger(FirebaseTokenFilter.class);
 
-    private final FirebaseAuth firebaseAuth;
+    /**
+     * The verifier, which may be absent.
+     *
+     * <p>Absent where no Firebase credential could be loaded. The filter then verifies nothing and
+     * sets no principal, so every authenticated endpoint answers 401. An absent verifier fails
+     * closed, which is the only acceptable way for it to fail.
+     */
+    private final ObjectProvider<FirebaseAuth> firebaseAuth;
 
-    public FirebaseTokenFilter(FirebaseAuth firebaseAuth) {
+    public FirebaseTokenFilter(ObjectProvider<FirebaseAuth> firebaseAuth) {
         this.firebaseAuth = firebaseAuth;
     }
 
@@ -47,10 +55,12 @@ public class FirebaseTokenFilter extends OncePerRequestFilter {
                                     FilterChain chain) throws ServletException, IOException {
 
         String header = request.getHeader("Authorization");
-        if (header != null && header.startsWith("Bearer ")) {
+        FirebaseAuth verifier = firebaseAuth.getIfAvailable();
+
+        if (verifier != null && header != null && header.startsWith("Bearer ")) {
             String idToken = header.substring(7);
             try {
-                FirebaseToken token = firebaseAuth.verifyIdToken(idToken);
+                FirebaseToken token = verifier.verifyIdToken(idToken);
                 Map<String, Object> claims = token.getClaims();
 
                 String role = claims.get("role") == null ? null : claims.get("role").toString();

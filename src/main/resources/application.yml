@@ -40,7 +40,16 @@ server:
 vuka:
   firebase:
     # Leave blank on Cloud Run: application default credentials are used instead.
+    # With no usable credential the application still starts, /public works, and every
+    # authenticated endpoint answers 401. It fails closed rather than refusing to boot.
     credentials-path: ${FIREBASE_CREDENTIALS:}
+
+  dev-auth:
+    # A local sign in that skips Firebase entirely, so the four role journeys can be walked
+    # on a laptop with no Firebase project attached. With this false the filter bean does not
+    # exist, so there is no code path to bypass. It must never be true in a deployed
+    # environment, and the application logs a warning on every start where it is.
+    enabled: ${VUKA_DEV_AUTH:false}
   seed:
     # Loads realistic DSAC entities and three years of history on first start.
     enabled: ${SEED_ENABLED:true}

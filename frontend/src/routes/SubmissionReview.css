@@ -1,0 +1,15 @@
+.sr-head { background: var(--canvas-sunk); }
+
+.sr-foot { position: sticky; bottom: var(--space-3); box-shadow: 0 -2px 8px rgba(26,26,26,0.06); }
+
+.sr-disputes { list-style: none; margin: 0; padding: 0; }
+.sr-disputes li {
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--rule);
+  font-size: 0.875rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sr-disputes li:last-child { border-bottom: 0; }
+.sr-disputes em { color: var(--ink-muted); }

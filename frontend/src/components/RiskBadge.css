@@ -1,0 +1,43 @@
+.risk-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 4px 10px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--canvas);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--ink);
+  min-height: 0;
+}
+.risk-badge-button { cursor: pointer; }
+.risk-badge-button:hover { background: var(--canvas-sunk); }
+
+.risk-swatch {
+  width: 12px; height: 12px;
+  border-radius: 2px;
+  flex: none;
+}
+
+.risk-score { font-weight: 700; font-size: 1.0625rem; }
+
+.risk-word {
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  font-weight: 650;
+  color: var(--ink-muted);
+}
+
+.risk-move {
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+  padding-left: var(--space-1);
+  border-left: 1px solid var(--rule);
+}
+
+.risk-sm { padding: 2px 8px; }
+.risk-sm .risk-score { font-size: 0.9375rem; }
+.risk-sm .risk-swatch { width: 10px; height: 10px; }
+
+.risk-unscored .risk-word { color: var(--ink-muted); }
