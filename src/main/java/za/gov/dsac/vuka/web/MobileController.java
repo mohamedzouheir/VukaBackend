@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.*;
 import za.gov.dsac.vuka.config.VukaPrincipal;
 import za.gov.dsac.vuka.domain.*;
 import za.gov.dsac.vuka.repository.*;
+import za.gov.dsac.vuka.service.SubmissionService;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -34,15 +35,15 @@ public class MobileController {
 
     private final TargetRepository targets;
     private final SubmissionRepository submissions;
-    private final ReportingPeriodRepository periods;
     private final TargetResultRepository results;
+    private final SubmissionService submissionService;
 
     public MobileController(TargetRepository targets, SubmissionRepository submissions,
-                            ReportingPeriodRepository periods, TargetResultRepository results) {
+                            TargetResultRepository results, SubmissionService submissionService) {
         this.targets = targets;
         this.submissions = submissions;
-        this.periods = periods;
         this.results = results;
+        this.submissionService = submissionService;
     }
 
     /** Landing: what is outstanding for this reporter's entity. */
@@ -73,15 +74,15 @@ public class MobileController {
     public String step(@PathVariable UUID submissionId, @PathVariable int index,
                        @AuthenticationPrincipal VukaPrincipal who, Model model) {
 
-        Submission submission = submissions.findById(submissionId).orElseThrow();
-        if (!who.canRead(submission.getEntity().getId().toString())) {
-            model.addAttribute("message", "Not your entity.");
+        Submission submission = ownSubmission(submissionId, who);
+        if (submission == null) {
+            // "Not your entity" was the message here, and it confirmed that the submission
+            // exists. That is a disclosure about another entity, so both cases read the same now.
+            model.addAttribute("message", "Not found.");
             return "mobile-message";
         }
 
-        UUID fyId = submission.getReportingPeriod().getFinancialYear().getId();
-        List<Target> list = targets.findByEntityIdAndFinancialYearId(
-                submission.getEntity().getId(), fyId);
+        List<Target> list = targetsFor(submission);
 
         if (index >= list.size()) {
             model.addAttribute("submission", submission);
@@ -95,9 +96,115 @@ public class MobileController {
         model.addAttribute("index", index);
         model.addAttribute("total", list.size());
         model.addAttribute("quarterTarget", quarterTarget(t, submission.getReportingPeriod().getQuarter()));
-        model.addAttribute("existing",
-                results.findByTargetId(t.getId()).stream().findFirst().orElse(null));
+        model.addAttribute("existing", latestAnswer(submissionId, t.getId()));
         return "mobile-step";
+    }
+
+    /**
+     * Saves one indicator and moves to the next.
+     *
+     * <p>Writes through {@link SubmissionService#confirm} rather than touching the repositories,
+     * so a figure captured on a phone lands in exactly the same place, with the same named
+     * confirmer on it, as one parsed out of a spreadsheet. There is one write path for
+     * performance data and this is it.
+     *
+     * <p>Redirects rather than rendering. A reporter on a failing connection reloads, and a
+     * reload that replays a POST is how the same quarter gets submitted twice.
+     */
+    @PostMapping("/submission/{submissionId}/step/{index}")
+    public String saveStep(@PathVariable UUID submissionId, @PathVariable int index,
+                           @RequestParam BigDecimal actualValue,
+                           @RequestParam(required = false) BigDecimal spendToDate,
+                           @RequestParam(required = false) String varianceExplanation,
+                           @AuthenticationPrincipal VukaPrincipal who, Model model) {
+
+        Submission submission = ownSubmission(submissionId, who);
+        if (submission == null) {
+            model.addAttribute("message", "Not found.");
+            return "mobile-message";
+        }
+
+        List<Target> list = targetsFor(submission);
+        if (index < 0 || index >= list.size()) {
+            model.addAttribute("message", "That indicator is not part of this report.");
+            return "mobile-message";
+        }
+
+        submissionService.confirm(submissionId,
+                List.of(new SubmissionService.ConfirmedRow(
+                        list.get(index).getId(), actualValue, spendToDate, varianceExplanation)),
+                who);
+
+        return "redirect:/m/submission/" + submissionId + "/step/" + (index + 1);
+    }
+
+    /** Hands the period to DSAC. The one irreversible action on this surface. */
+    @PostMapping("/submission/{submissionId}/submit")
+    public String submit(@PathVariable UUID submissionId,
+                         @AuthenticationPrincipal VukaPrincipal who, Model model) {
+
+        Submission submission = ownSubmission(submissionId, who);
+        if (submission == null) {
+            model.addAttribute("message", "Not found.");
+            return "mobile-message";
+        }
+
+        submissionService.submit(submissionId, who);
+        return "redirect:/m/submission/" + submissionId + "/submitted";
+    }
+
+    /**
+     * The receipt.
+     *
+     * <p>Its own page rather than a flash message, because a reporter who cannot see that the
+     * department has their report will send it again. The frontend design document names that
+     * exact failure, and a redirect target that survives a reload is the answer to it.
+     */
+    @GetMapping("/submission/{submissionId}/submitted")
+    public String submitted(@PathVariable UUID submissionId,
+                            @AuthenticationPrincipal VukaPrincipal who, Model model) {
+
+        Submission submission = ownSubmission(submissionId, who);
+        if (submission == null) {
+            model.addAttribute("message", "Not found.");
+            return "mobile-message";
+        }
+
+        List<Target> list = targetsFor(submission);
+        long answered = list.stream()
+                .filter(t -> latestAnswer(submissionId, t.getId()) != null)
+                .count();
+
+        model.addAttribute("submission", submission);
+        model.addAttribute("total", list.size());
+        model.addAttribute("answered", answered);
+        return "mobile-submitted";
+    }
+
+    // ------------------------------------------------------------------
+
+    /**
+     * The submission, or null when it is not this reporter's.
+     *
+     * <p>Null rather than a distinguishable refusal, and the callers render "Not found" for both
+     * cases. Telling a caller that a submission exists but belongs to someone else is itself a
+     * disclosure about another entity, which is the same rule ExportController follows.
+     */
+    private Submission ownSubmission(UUID submissionId, VukaPrincipal who) {
+        Submission submission = submissions.findById(submissionId).orElse(null);
+        if (submission == null) return null;
+        return who.canRead(submission.getEntity().getId().toString()) ? submission : null;
+    }
+
+    private List<Target> targetsFor(Submission submission) {
+        return targets.findByEntityIdAndFinancialYearId(
+                submission.getEntity().getId(),
+                submission.getReportingPeriod().getFinancialYear().getId());
+    }
+
+    private TargetResult latestAnswer(UUID submissionId, UUID targetId) {
+        return results.findBySubmissionIdAndTargetIdOrderByConfirmedAtDesc(submissionId, targetId)
+                .stream().findFirst().orElse(null);
     }
 
     private BigDecimal quarterTarget(Target t, Integer q) {

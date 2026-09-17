@@ -5,42 +5,61 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Your reporting</title>
   <style>
-    :root { --ink:#1a1a1a; --green:#0f3d2e; --muted:#5a6b64; --line:#dfe6e3; --bg:#fff; --panel:#f4f8f6; }
+    :root { --ink:#1a1a1a; --green:#0f3d2e; --on-green:#fff; --muted:#5a6b64; --line:#dfe6e3; --bg:#fff; --panel:#f4f8f6; }
     @media (prefers-color-scheme: dark) {
-      :root:not([data-theme="light"]) { --ink:#e8edeb; --green:#7fd1b0; --muted:#9bb0a7; --line:#2b3a34; --bg:#121714; --panel:#1a221e; }
+      :root:not([data-theme="light"]) { --ink:#e8edeb; --green:#7fd1b0; --on-green:#121714; --muted:#9bb0a7; --line:#2b3a34; --bg:#121714; --panel:#1a221e; }
     }
-    :root[data-theme="dark"] { --ink:#e8edeb; --green:#7fd1b0; --muted:#9bb0a7; --line:#2b3a34; --bg:#121714; --panel:#1a221e; }
+    :root[data-theme="dark"] { --ink:#e8edeb; --green:#7fd1b0; --on-green:#121714; --muted:#9bb0a7; --line:#2b3a34; --bg:#121714; --panel:#1a221e; }
     * { box-sizing:border-box; }
     body { margin:0; background:var(--bg); color:var(--ink);
            font:17px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
     .wrap { max-width:520px; margin:0 auto; padding:20px 16px 40px; }
     h1 { font-size:20px; margin:0 0 4px; color:var(--green); }
     p.lede { font-size:14px; color:var(--muted); margin:0 0 22px; }
+    ul.list { list-style:none; margin:0; padding:0; }
     a.card { display:block; background:var(--panel); border-radius:10px; padding:16px;
              margin:0 0 12px; text-decoration:none; color:var(--ink); }
-    a.card .t { font-weight:700; color:var(--green); font-size:17px; }
+    a.card .t { font-weight:700; color:var(--green); font-size:17px; text-decoration:underline; }
     a.card .m { font-size:14px; color:var(--muted); margin-top:2px; }
     .none { color:var(--muted); font-size:15px; }
+    .out { margin-top:28px; padding-top:16px; border-top:1px solid var(--line); }
+    .out button { background:none; border:none; padding:0; min-height:44px; font:inherit;
+                  font-size:14px; color:var(--green); text-decoration:underline; cursor:pointer; }
+    a:focus-visible, button:focus-visible { outline:3px solid var(--green); outline-offset:3px; border-radius:3px; }
+    .skip { position:absolute; left:-9999px; }
+    .skip:focus { position:fixed; left:8px; top:8px; z-index:10; padding:10px 14px;
+                  background:var(--ink); color:var(--bg); border-radius:6px; }
   </style>
 </head>
 <body>
+<a class="skip" href="#main">Skip to the main content</a>
 <div class="wrap">
-  <h1>Your reporting</h1>
-  <p class="lede" th:text="'Signed in as ' + ${who.name()}">Signed in</p>
+  <main id="main">
+    <h1>Your reporting</h1>
+    <p class="lede" th:text="'Signed in as ' + ${who.name()}">Signed in</p>
 
-  <div th:if="${#lists.isEmpty(open)}" class="none">
-    Nothing outstanding. When a reporting period opens you will see it here.
-  </div>
+    <p th:if="${#lists.isEmpty(open)}" class="none">
+      Nothing outstanding. When a reporting period opens you will see it here.
+    </p>
 
-  <a class="card" th:each="s : ${open}" th:href="@{'/m/submission/' + ${s.getId()} + '/step/0'}">
-    <div class="t" th:text="${s.getReportingPeriod().getLabel()}">Q2 2026/27</div>
-    <div class="m">
-      <span th:if="${s.getStatus().name() == 'RETURNED'}">Returned for correction — tap to fix</span>
-      <span th:if="${s.getStatus().name() == 'DRAFT'}">In progress — tap to continue</span>
-      <span th:if="${s.getReportingPeriod().getRegulatoryDeadline() != null}"
-            th:text="' · due ' + ${#temporals.format(s.getReportingPeriod().getRegulatoryDeadline(), 'd MMM')}"></span>
-    </div>
-  </a>
+    <ul class="list" th:unless="${#lists.isEmpty(open)}">
+      <li th:each="s : ${open}">
+        <a class="card" th:href="@{'/m/submission/' + ${s.getId()} + '/step/0'}">
+          <span class="t" th:text="${s.getReportingPeriod().getLabel()}">Q2 2026/27</span>
+          <span class="m">
+            <span th:if="${s.getStatus().name() == 'RETURNED'}">Returned for correction. Tap to fix.</span>
+            <span th:if="${s.getStatus().name() == 'DRAFT'}">In progress. Tap to continue.</span>
+            <span th:if="${s.getReportingPeriod().getRegulatoryDeadline() != null}"
+                  th:text="'Due ' + ${#temporals.format(s.getReportingPeriod().getRegulatoryDeadline(), 'd MMMM')} + '.'"></span>
+          </span>
+        </a>
+      </li>
+    </ul>
+  </main>
+
+  <form class="out" th:action="@{/m/signout}" method="post">
+    <button type="submit">Sign out</button>
+  </form>
 </div>
 </body>
 </html>

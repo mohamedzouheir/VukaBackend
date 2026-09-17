@@ -29,8 +29,20 @@ spring:
   thymeleaf:
     cache: false
 
+  messages:
+    basename: messages
+    encoding: UTF-8
+    # A key missing from a translation falls back to messages.properties, which is English.
+    # Left on the default, it would fall back to the server's locale instead, so a missing
+    # isiZulu string on a machine set to Afrikaans would render in Afrikaans.
+    fallback-to-system-locale: false
+
 server:
   port: ${PORT:8080}
+  # Behind a proxy or on Cloud Run, this is what makes request.isSecure() tell the truth, and
+  # the auth cookie takes its Secure flag from exactly that. Without it the cookie ships
+  # without Secure on an https deployment.
+  forward-headers-strategy: framework
   compression:
     # The low-bandwidth surfaces depend on this. Do not turn it off.
     enabled: true
@@ -41,6 +53,11 @@ vuka:
   firebase:
     # Leave blank on Cloud Run: application default credentials are used instead.
     credentials-path: ${FIREBASE_CREDENTIALS:}
+    # Path to a file holding the Firebase Web API key, not the key itself, so the value never
+    # sits in an environment variable, a process listing or an image layer. Needed only by the
+    # server-rendered reporter sign-in; leave it unset and the citizen view and the
+    # token-header API carry on working.
+    web-api-key-path: ${FIREBASE_WEB_API_KEY_FILE:}
   seed:
     # Loads realistic DSAC entities and three years of history on first start.
     enabled: ${SEED_ENABLED:true}

@@ -61,14 +61,18 @@ You need **Java 21**, **Maven**, and **Docker** (for Postgres only).
 
 ```bash
 docker compose up -d          # Postgres on 5432
-./mvnw spring-boot:run        # or: mvn spring-boot:run
+mvn spring-boot:run
 ```
+
+There is no Maven wrapper checked in, so `mvn` has to be on the path. See the first known
+limitation below before assuming a clean first build.
 
 First start runs the Flyway migrations and loads the real data described below. Then:
 
 | Surface | URL | Who |
 |---|---|---|
 | Citizen view | http://localhost:8080/public | Anyone, no login |
+| Reporter sign-in | http://localhost:8080/m/signin | Entity reporters |
 | Mobile submission | http://localhost:8080/m | Entity reporters |
 | Dashboard API | http://localhost:8080/api/dashboard/portfolio | DSAC roles |
 | Export | http://localhost:8080/api/export/submission/{id}/full.csv | Reporter (own) or DSAC |
@@ -101,6 +105,42 @@ entityId  the entity a reporter is bound to; omit for DSAC roles
 `entityId` lives on the token rather than in a request parameter precisely so a client cannot
 choose it. It is what stops one entity reading another's data, and every controller routes that
 check through `VukaPrincipal.canRead`.
+
+### Signing in on the reporter surface
+
+The React dashboard holds its token in memory and sends it as a header. A phone opening `/m`
+cannot: a browser navigation sends cookies and nothing else. So that surface has its own sign-in,
+and three decisions in it are worth knowing.
+
+**The server exchanges the password, not the phone.** `POST /m/signin` takes an email address and
+a password, calls Google's Identity Toolkit, and puts the returned ID token in a cookie. The
+alternative was the Firebase JavaScript SDK on the sign-in page, which is about 100KB on the one
+page whose whole argument is that it costs almost nothing to open. The cost of this choice, stated
+plainly: the password transits this server rather than going from the phone straight to Google. It
+is never logged and never stored. Set the key path to enable it:
+
+```bash
+export FIREBASE_WEB_API_KEY_FILE=/path/to/file/containing/the/web/api/key
+```
+
+The file holds the key, not the environment variable, so the value never appears in a process
+listing or an image layer. Leave it unset and sign-in is unavailable while the citizen view and
+the header-authenticated API carry on working.
+
+**The cookie is `HttpOnly`, `SameSite=Strict`, and `Secure` when the request is.** It holds the ID
+token only and never the refresh token, so a session lasts an hour and then the reporter signs in
+again. That is deliberate: a refresh token in a browser is a long-lived credential, and expiry
+costs almost nothing here because every step is written as it is answered and the step index is in
+the URL. An expired token redirects to sign-in carrying where you were, and sends you back there.
+
+**CSRF protection is on where the credential is ambient and off where it is not.** `/api/**` sends
+a bearer token that an attacker's page cannot make a browser attach, so a CSRF token there would
+be ceremony. `/m/**` authenticates from a cookie, so it gets a token as well as `SameSite=Strict`.
+Two independent defences, because SameSite is a browser behaviour and the token is ours.
+
+`/m/**` also requires `ENTITY_REPORTER` rather than merely a signed-in caller. It writes
+performance data, and `canRead` lets DSAC roles read everything, so authentication alone would
+have let a reviewer confirm a figure on an entity's behalf.
 
 ---
 
@@ -229,12 +269,47 @@ and the absence is the design decision.
 
 ## The low-bandwidth surfaces
 
-Server-rendered Thymeleaf, no JavaScript framework, every page under 5KB before compression. Some
-of the funded bodies are very small and may be a few people working from a phone on mobile data; a
-reporting system they cannot use produces late submissions and empty dashboards.
+Server-rendered Thymeleaf, no JavaScript framework, every page under 5KB before compression and
+under 2KB once gzip is on. Response compression is configured in `application.yml`; do not turn it
+off.
+
+**Two different arguments, and they should not be confused.** The citizen page is a genuine
+bandwidth case: no login, no training, a low-end phone, prepaid data, and a reader who may never
+come back if the first page costs them a megabyte. The reporter flow is a *capacity* case rather
+than a connectivity one. A finance officer at a large museum is at a desk on institutional wifi,
+and claiming otherwise invites a judge to say so. What is true is that six of the funded bodies are
+two or three people for whom reporting competes directly with delivering the service, and ten short
+screens they can finish on a phone between other work is a different proposition to an afternoon
+with a spreadsheet. Requirement (d) asks for full functionality on mobile devices in any case.
 
 The mobile flow puts one indicator per screen and carries the step index in the URL rather than in
 session state, so a dropped connection loses nothing.
+
+### Accessibility
+
+Criterion 4 names three groups: varying digital literacy, persons with disabilities, and
+low-bandwidth or resource-constrained environments. Page weight only answers the third.
+
+Every server-rendered page has a skip link, a `main` landmark, a visible focus ring, list and table
+semantics rather than styled `div`s, and form hints wired to their inputs through
+`aria-describedby`. Two things were fixed rather than added. `input:focus` carried `outline:none`,
+which leaves a keyboard or switch user with no way to tell which field they are in, and the colour
+pair on primary buttons was white on `--green`, which is 12:1 in light mode but **1.8:1 in dark
+mode** and failed badly. Button text is now `--on-green`, which inverts with the theme and holds
+10:1 either way. The muted and heading colours were checked and already passed at 5.6:1 and above.
+
+### Language
+
+The citizen pages are served in English, Afrikaans, isiZulu, isiXhosa and Sesotho. The language is
+a `lang` query parameter rather than a cookie or a session, for the same reason the mobile flow
+keeps its step index in the URL: the page stays cacheable, a forwarded link opens in the language it
+was shared in, and a surface built to be narrow and non-personal does not start storing preferences
+about readers who never signed in. `LocaleConfig` holds the supported set; adding a language is a
+properties file and one list entry.
+
+Five of twelve official languages is a demonstration that the surface carries languages, not a
+claim that the set is complete. The remaining seven are a translation job rather than an
+engineering one, and that is the honest way to put it.
 
 ---
 
@@ -276,3 +351,20 @@ State these before someone finds them.
   integration.** Confirm the columns against DPME's current template before anyone relies on it.
 - **Evidence-to-target linking in the export** falls back to a filename convention where an
   extraction row does not carry the link. Good enough to demonstrate, not good enough to ship.
+- **The mobile reporter flow has never been exercised against a running server.** The 401 and 405
+  faults that made it unusable are fixed, and the reasoning is in *Signing in on the reporter
+  surface* above, but no request has been made against it. The specific thing to check first is
+  that the CSRF hidden field is actually rendered into the forms. Thymeleaf injects it through
+  Spring Security's `RequestDataValueProcessor` into any form with a `th:action`, which is the
+  standard mechanism and the only one available since Thymeleaf 3.1 removed request-attribute
+  access from templates. If that processor is not registered for any reason, every POST under `/m`
+  answers 403 and the fix is to add the field explicitly. View the page source once and look for
+  `name="_csrf"` before trusting the flow.
+- **There is no `/admin/**` rule in `SecurityConfig`.** The frontend design document gates it to
+  `ADMIN`. No admin controller exists yet, so the paths 404 today, but when one lands it will
+  inherit `anyRequest().authenticated()` and be reachable by any signed-in reporter unless the
+  rule is added first.
+- **The translations have not been reviewed by first-language speakers.** They are a working
+  implementation of the language surface, not certified government text, and should go past PanSALB
+  or a departmental translator before anything is published. Volunteer this rather than let it be
+  discovered.

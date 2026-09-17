@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<html th:lang="${#locale.language}" lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title th:text="${e.name()} + ' — public performance record'">Entity performance</title>
+  <title th:text="#{page.entity.title(${e.name()})}">Entity performance</title>
   <!--
     Deliberately one file with inline styles and no scripts.
     The audience is a citizen on a low-end phone paying for data.
@@ -25,53 +25,98 @@
     .mandate { font-size:15px; margin:0 0 24px; }
     .money { background:var(--panel); border-radius:10px; padding:16px; margin:0 0 20px; }
     .money .label { font-size:13px; color:var(--muted); margin:0 0 2px; }
-    .money .value { font-size:28px; font-weight:700; color:var(--green); }
-    .money .year { font-size:13px; color:var(--muted); }
+    .money .value { font-size:28px; font-weight:700; color:var(--green); margin:0; }
+    .money .year { font-size:13px; color:var(--muted); margin:2px 0 0; }
     h2 { font-size:15px; margin:24px 0 10px; color:var(--green); }
     table { width:100%; border-collapse:collapse; font-size:15px; }
-    td { padding:9px 0; border-bottom:1px solid var(--line); }
+    th, td { padding:9px 0; border-bottom:1px solid var(--line); text-align:left; font-weight:400; }
     td.n { text-align:right; font-variant-numeric:tabular-nums; font-weight:600; }
     .foot { margin-top:28px; padding-top:16px; border-top:1px solid var(--line);
             font-size:13px; color:var(--muted); }
+    .foot p { margin:0 0 12px; }
     a { color:var(--green); }
+    /* Do not remove. Focus is the only way to navigate this page by keyboard. */
+    a:focus-visible { outline:3px solid var(--green); outline-offset:3px; border-radius:3px; }
+    .skip { position:absolute; left:-9999px; }
+    .skip:focus { position:fixed; left:8px; top:8px; z-index:10; padding:10px 14px;
+                  background:var(--ink); color:var(--bg); border-radius:6px; }
+    /* Read aloud, not shown. */
+    .vh { position:absolute; width:1px; height:1px; margin:-1px; padding:0; overflow:hidden;
+          clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+    nav.langs { margin:28px 0 0; padding-top:16px; border-top:1px solid var(--line); font-size:14px; }
+    nav.langs .lbl { color:var(--muted); font-size:13px; display:block; margin-bottom:6px; }
+    /* 44px minimum on every tappable control, including these. */
+    nav.langs a, .foot a { display:inline-flex; align-items:center; min-height:44px; }
+    nav.langs a[aria-current] { font-weight:700; text-decoration:none; }
   </style>
 </head>
 <body>
+<a class="skip" href="#main" th:text="#{common.skip}">Skip to the main content</a>
 <div class="wrap">
-  <p class="kicker">Public performance record</p>
-  <h1 th:text="${e.name()}">Entity name</h1>
-  <p class="sector" th:text="${e.sector()}">Sector</p>
-  <p class="mandate" th:text="${e.mandate()}">Mandate</p>
+  <main id="main">
+    <p class="kicker" th:text="#{page.entity.kicker}">Public performance record</p>
+    <h1 th:text="${e.name()}">Entity name</h1>
+    <p class="sector" th:text="${e.sector()}">Sector</p>
+    <p class="mandate" th:text="${e.mandate()}">Mandate</p>
 
-  <div class="money">
-    <p class="label">Public funds allocated</p>
-    <div class="value" th:text="'R ' + ${#numbers.formatDecimal(e.totalAllocation(), 0, 'WHITESPACE', 0, 'POINT')}">R 0</div>
-    <p class="year" th:text="'Financial year ' + ${e.financialYearLabel()}">Financial year</p>
-  </div>
+    <div class="money">
+      <p class="label" th:text="#{page.entity.allocated}">Public funds allocated</p>
+      <p class="value" th:text="'R ' + ${#numbers.formatDecimal(e.totalAllocation(), 0, 'WHITESPACE', 0, 'POINT')}">R 0</p>
+      <p class="year" th:text="#{page.entity.year(${e.financialYearLabel()})}">Financial year</p>
+    </div>
 
-  <h2>What was promised, and what was delivered</h2>
-  <table>
-    <tr><td>Targets committed to this year</td><td class="n" th:text="${e.targetsCommitted()}">0</td></tr>
-    <tr><td>Achieved</td><td class="n" th:text="${e.targetsAchieved()}">0</td></tr>
-    <tr><td>In progress</td><td class="n" th:text="${e.targetsInProgress()}">0</td></tr>
-    <tr><td>Not met</td><td class="n" th:text="${e.targetsMissed()}">0</td></tr>
-    <tr><td>Not yet started</td><td class="n" th:text="${e.targetsNotStarted()}">0</td></tr>
-  </table>
+    <h2 th:text="#{page.entity.promised}">What was promised, and what was delivered</h2>
+    <table>
+      <caption class="vh" th:text="#{page.entity.summary}">Targets committed and delivered</caption>
+      <tbody>
+        <tr>
+          <th scope="row" th:text="#{page.entity.committed}">Targets committed to this year</th>
+          <td class="n" th:text="${e.targetsCommitted()}">0</td>
+        </tr>
+        <tr>
+          <th scope="row" th:text="#{page.entity.achieved}">Achieved</th>
+          <td class="n" th:text="${e.targetsAchieved()}">0</td>
+        </tr>
+        <tr>
+          <th scope="row" th:text="#{page.entity.inprogress}">In progress</th>
+          <td class="n" th:text="${e.targetsInProgress()}">0</td>
+        </tr>
+        <tr>
+          <th scope="row" th:text="#{page.entity.missed}">Not met</th>
+          <td class="n" th:text="${e.targetsMissed()}">0</td>
+        </tr>
+        <tr>
+          <th scope="row" th:text="#{page.entity.notstarted}">Not yet started</th>
+          <td class="n" th:text="${e.targetsNotStarted()}">0</td>
+        </tr>
+      </tbody>
+    </table>
 
-  <p class="foot">
-    <span th:if="${e.lastReportedAt() != null}"
-          th:text="'Last reported to the Department on ' + ${#temporals.format(e.lastReportedAt(), 'd MMMM yyyy')} + '.'">
-      Last reported.
-    </span>
-    <span th:if="${e.lastReportedAt() == null}">
-      This entity has not yet submitted an approved report for this year.
-    </span>
-    <br><br>
-    Figures are as reported by the entity and reviewed by the Department of Sport, Arts and Culture.
-    Published with departmental approval.
-    <br><br>
-    <a href="/public">All published entities</a>
-  </p>
+    <div class="foot">
+      <p th:if="${e.lastReportedAt() != null}"
+         th:text="#{page.entity.lastreported(${#temporals.format(e.lastReportedAt(), 'd MMMM yyyy')})}">
+        Last reported.
+      </p>
+      <p th:if="${e.lastReportedAt() == null}" th:text="#{page.entity.neverreported}">
+        This entity has not yet submitted an approved report for this year.
+      </p>
+      <p th:text="#{page.entity.disclaimer}">
+        Figures are as reported by the entity and reviewed by the Department.
+      </p>
+      <p>
+        <a th:href="@{/public(lang=${#locale.language})}" th:text="#{page.entity.all}">All published entities</a>
+      </p>
+    </div>
+  </main>
+
+  <nav class="langs" th:attr="aria-label=#{common.language}">
+    <span class="lbl" th:text="#{common.language}">Language</span>
+    <a th:each="l : ${languages}"
+       th:href="@{${path}(lang=${l.tag()})}"
+       th:lang="${l.tag()}"
+       th:text="${l.name()}"
+       th:attr="aria-current=${#locale.language == l.tag()} ? 'true' : null">English</a>
+  </nav>
 </div>
 </body>
 </html>
