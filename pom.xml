@@ -94,6 +94,22 @@
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
       </plugin>
+      <!--
+        Spring resolves @RequestParam and @PathVariable names from the bytecode when the
+        annotation does not carry one. The parent pom already asks for this, but stating it
+        here keeps it true for builds that read only this file (the IDE language server
+        among them), where a class compiled without it turns every such handler into a 500.
+      -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <parameters>true</parameters>
+          <compilerArgs>
+            <arg>-parameters</arg>
+          </compilerArgs>
+        </configuration>
+      </plugin>
     </plugins>
   </build>
 </project>

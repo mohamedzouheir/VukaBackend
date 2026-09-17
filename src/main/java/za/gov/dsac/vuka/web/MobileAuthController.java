@@ -32,15 +32,15 @@ public class MobileAuthController {
     }
 
     @GetMapping("/signin")
-    public String form(@RequestParam(required = false) String next, Model model) {
+    public String form(@RequestParam(name = "next", required = false) String next, Model model) {
         model.addAttribute("next", safeNext(next));
         return "mobile-signin";
     }
 
     @PostMapping("/signin")
-    public String submit(@RequestParam String email,
-                         @RequestParam String password,
-                         @RequestParam(required = false) String next,
+    public String submit(@RequestParam("email") String email,
+                         @RequestParam("password") String password,
+                         @RequestParam(name = "next", required = false) String next,
                          HttpServletRequest request,
                          HttpServletResponse response,
                          Model model) {

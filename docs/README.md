@@ -31,9 +31,9 @@ replacements. Read it alongside the PDF rather than instead of it. The PDF has n
 regenerated, so where the two disagree the corrections file is newer.
 
 The repository's own [README](../README.md) carries a known-limitations section that is kept
-honest for the same reason. Nothing in this project has been compiled or run end to end, because
-the environment it was written in could not reach Maven Central. Budget time for the first
-`mvn spring-boot:run` to find something.
+honest for the same reason. The project now compiles in full and its tests pass under the
+checked-in Maven wrapper, but no run has gone through the whole reporter journey against seeded
+data. Budget time for the first `./mvnw spring-boot:run` to find something.
 
 ---
 
