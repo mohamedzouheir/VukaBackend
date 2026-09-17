@@ -45,7 +45,8 @@
           clip:rect(0 0 0 0); white-space:nowrap; border:0; }
     nav.langs { margin:28px 0 0; padding-top:16px; border-top:1px solid var(--line); font-size:14px; }
     nav.langs .lbl { color:var(--muted); font-size:13px; display:block; margin-bottom:6px; }
-    nav.langs a { margin-right:14px; display:inline-block; padding:4px 0; line-height:1.4; }
+    /* 44px minimum on every tappable control, including these. */
+    nav.langs a, .foot a { display:inline-flex; align-items:center; min-height:44px; }
     nav.langs a[aria-current] { font-weight:700; text-decoration:none; }
   </style>
 </head>

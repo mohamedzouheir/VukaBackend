@@ -32,8 +32,9 @@
     nav.langs { margin:28px 0 0; padding-top:16px; border-top:1px solid var(--line);
                 font-size:14px; }
     nav.langs .lbl { color:var(--muted); font-size:13px; display:block; margin-bottom:6px; }
-    nav.langs a { color:var(--green); margin-right:14px; display:inline-block;
-                  padding:4px 0; line-height:1.4; }
+    /* 44px minimum: these are the smallest touch targets on the public surface. */
+    nav.langs a { color:var(--green); margin-right:16px; display:inline-flex;
+                  align-items:center; min-height:44px; }
     nav.langs a[aria-current] { font-weight:700; text-decoration:none; }
   </style>
 </head>
