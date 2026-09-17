@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.*;
 import za.gov.dsac.vuka.config.VukaPrincipal;
 import za.gov.dsac.vuka.domain.*;
 import za.gov.dsac.vuka.repository.*;
+import za.gov.dsac.vuka.service.ReportingViewService;
 import za.gov.dsac.vuka.service.RiskService;
 import za.gov.dsac.vuka.service.UnitCostService;
 
@@ -36,12 +37,14 @@ public class DashboardController {
     private final AuditFindingRepository findings;
     private final RiskService riskService;
     private final UnitCostService unitCost;
+    private final ReportingViewService views;
 
     public DashboardController(PublicEntityRepository entities, RiskScoreRepository riskScores,
                                ReportingPeriodRepository periods, FinancialYearRepository years,
                                TargetRepository targets, TargetResultRepository results,
                                AllocationRepository allocations, AuditFindingRepository findings,
-                               RiskService riskService, UnitCostService unitCost) {
+                               RiskService riskService, UnitCostService unitCost,
+                               ReportingViewService views) {
         this.entities = entities;
         this.riskScores = riskScores;
         this.periods = periods;
@@ -52,6 +55,7 @@ public class DashboardController {
         this.findings = findings;
         this.riskService = riskService;
         this.unitCost = unitCost;
+        this.views = views;
     }
 
     // ---------- portfolio ----------
@@ -59,7 +63,20 @@ public class DashboardController {
     public record PortfolioRow(UUID entityId, String name, String shortName, String sector,
                                String entityType, BigDecimal score, String band,
                                BigDecimal previousScore, BigDecimal movement,
-                               List<SignalView> signals) {}
+                               List<SignalView> signals,
+                               /**
+                                * Allocation for the current financial year, in rands, or null
+                                * where the entity has no allocation row.
+                                *
+                                * <p>On the row rather than fetched per entity because of one
+                                * sentence the executive view has to be able to say: "R358.6
+                                * million sits with entities in the critical band". Risk expressed
+                                * in rands is what a Director-General can take into a portfolio
+                                * committee meeting, and it is one multiplication away from data
+                                * already held. Null stays null: an entity with no allocation row
+                                * contributes nothing to that total rather than a zero.
+                                */
+                               BigDecimal totalAllocation) {}
 
     public record SignalView(String type, String description, BigDecimal contribution,
                              BigDecimal weight, BigDecimal value) {}
@@ -70,10 +87,20 @@ public class DashboardController {
         UUID period = periodId != null ? periodId : currentPeriodId();
         if (period == null) return List.of();
 
+        // One pass over allocations for the whole portfolio rather than one query per row.
+        Map<UUID, BigDecimal> allocationByEntity = views.allocationByEntityForCurrentYear();
+
+        // One query for every score in the period, signals included. Reading the signals lazily
+        // here throws, because open-in-view is false and this method is not transactional, and
+        // fetching them per entity would be twenty eight extra queries to draw one screen.
+        Map<UUID, RiskScore> scoreByEntity = new HashMap<>();
+        for (RiskScore rs : riskScores.findByPeriodWithSignals(period)) {
+            if (rs.getEntity() != null) scoreByEntity.put(rs.getEntity().getId(), rs);
+        }
+
         List<PortfolioRow> rows = new ArrayList<>();
         for (PublicEntity e : entities.findAll()) {
-            RiskScore rs = riskScores.findByEntityIdAndReportingPeriodId(e.getId(), period).orElse(null);
-            rows.add(toRow(e, rs));
+            rows.add(toRow(e, scoreByEntity.get(e.getId()), allocationByEntity.get(e.getId())));
         }
         rows.sort(Comparator.comparing(
                 (PortfolioRow r) -> r.score() == null ? BigDecimal.valueOf(-1) : r.score()).reversed());
@@ -81,10 +108,14 @@ public class DashboardController {
     }
 
     private PortfolioRow toRow(PublicEntity e, RiskScore rs) {
+        return toRow(e, rs, views.allocationByEntityForCurrentYear().get(e.getId()));
+    }
+
+    private PortfolioRow toRow(PublicEntity e, RiskScore rs, BigDecimal allocation) {
         if (rs == null) {
             return new PortfolioRow(e.getId(), e.getName(), e.getShortName(),
                     String.valueOf(e.getSector()), String.valueOf(e.getEntityType()),
-                    null, "NOT_SCORED", null, null, List.of());
+                    null, "NOT_SCORED", null, null, List.of(), allocation);
         }
         BigDecimal movement = rs.getPreviousScore() == null
                 ? null : rs.getScore().subtract(rs.getPreviousScore());
@@ -97,7 +128,8 @@ public class DashboardController {
 
         return new PortfolioRow(e.getId(), e.getName(), e.getShortName(),
                 String.valueOf(e.getSector()), String.valueOf(e.getEntityType()),
-                rs.getScore(), String.valueOf(rs.getBand()), rs.getPreviousScore(), movement, signals);
+                rs.getScore(), String.valueOf(rs.getBand()), rs.getPreviousScore(), movement,
+                signals, allocation);
     }
 
     // ---------- one entity ----------
@@ -115,9 +147,25 @@ public class DashboardController {
     public record FindingView(String financialYear, String outcome, String description,
                               boolean repeatFinding, String resolutionStatus) {}
 
+    /**
+     * One entity.
+     *
+     * <p>The only endpoint in this controller a reporter may reach, and only for the entity on
+     * their own token. Section 5 of the frontend design puts it as the last row of the gating
+     * table: "the same three, plus a reporter whose token entityId equals {id}". That one
+     * comparison is the whole tenancy model, and it is done here rather than in a filter so a new
+     * projection of this data cannot ship without it.
+     *
+     * <p>A reporter asking for another entity gets a not found rather than a forbidden. Telling a
+     * caller that a record exists but is not theirs is itself a disclosure about another entity.
+     */
     @GetMapping("/entity/{entityId}")
+    @PreAuthorize("hasAnyRole('ENTITY_REPORTER','DSAC_REVIEWER','DSAC_EXECUTIVE','ADMIN')")
     public ResponseEntity<EntityDetail> entity(@PathVariable UUID entityId,
-                                               @RequestParam(required = false) UUID periodId) {
+                                               @RequestParam(required = false) UUID periodId,
+                                               @AuthenticationPrincipal VukaPrincipal who) {
+        if (who != null && !who.canRead(entityId.toString())) return ResponseEntity.notFound().build();
+
         PublicEntity e = entities.findById(entityId).orElse(null);
         if (e == null) return ResponseEntity.notFound().build();
 
@@ -127,7 +175,7 @@ public class DashboardController {
 
         UUID period = periodId != null ? periodId : currentPeriodId();
         RiskScore rs = period == null ? null
-                : riskScores.findByEntityIdAndReportingPeriodId(entityId, period).orElse(null);
+                : riskScores.findByEntityAndPeriodWithSignals(entityId, period).orElse(null);
 
         BigDecimal total = allocations.findByEntityIdAndFinancialYearId(entityId, fy.getId()).stream()
                 .map(Allocation::getAmount).filter(Objects::nonNull)
@@ -201,6 +249,50 @@ public class DashboardController {
                 .filter(Objects::nonNull)
                 .toList();
         return unitCost.peerMedian(values);
+    }
+
+    // ---------- the accountability chain ----------
+
+    /**
+     * Allocated, promised, reported, verified, each with its citation.
+     *
+     * <p>The four boxes at the top of the drilldown, and the row the pitch opens on. Every box can
+     * come back null with the interface rendering a dash and the reason, because three readable
+     * boxes are worth showing and a screen that replaces all four with an error is not.
+     */
+    @GetMapping("/entity/{entityId}/chain")
+    @PreAuthorize("hasAnyRole('ENTITY_REPORTER','DSAC_REVIEWER','DSAC_EXECUTIVE','ADMIN')")
+    public ResponseEntity<ReportingViewService.ChainView> chain(
+            @PathVariable UUID entityId,
+            @RequestParam(required = false) UUID periodId,
+            @AuthenticationPrincipal VukaPrincipal who) {
+
+        if (who != null && !who.canRead(entityId.toString())) return ResponseEntity.notFound().build();
+        if (entities.findById(entityId).isEmpty()) return ResponseEntity.notFound().build();
+        return ResponseEntity.ok(views.chainFor(entityId, periodId));
+    }
+
+    // ---------- unit cost ----------
+
+    /**
+     * Planned against actual unit cost, per indicator, with both sides of each division.
+     *
+     * <p>Note what this signature does not have: a sector parameter, an entity list, or any way to
+     * ask for cost per outcome across mandates. A ballet company and a boxing regulator do not
+     * produce commensurable outputs, and the absence of the parameter is the design decision. The
+     * peer comparison lives on its own endpoint and is bound to the entity's own sector by
+     * construction rather than by a filter the caller sets.
+     */
+    @GetMapping("/entity/{entityId}/unit-cost")
+    @PreAuthorize("hasAnyRole('ENTITY_REPORTER','DSAC_REVIEWER','DSAC_EXECUTIVE','ADMIN')")
+    public ResponseEntity<List<ReportingViewService.UnitCostView>> unitCosts(
+            @PathVariable UUID entityId,
+            @RequestParam(required = false) UUID targetId,
+            @AuthenticationPrincipal VukaPrincipal who) {
+
+        if (who != null && !who.canRead(entityId.toString())) return ResponseEntity.notFound().build();
+        if (entities.findById(entityId).isEmpty()) return ResponseEntity.notFound().build();
+        return ResponseEntity.ok(views.unitCostsFor(entityId, targetId, unitCost));
     }
 
     // ---------- recompute ----------

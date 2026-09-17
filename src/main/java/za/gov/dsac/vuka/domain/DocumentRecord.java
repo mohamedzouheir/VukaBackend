@@ -76,6 +76,20 @@ public class DocumentRecord {
     private Enums.AgsaCriterion agsaCriterion;
 
     /**
+     * The target this document is offered as evidence for.
+     *
+     * <p>Null where the document belongs to the filing as a whole rather than to one indicator,
+     * which is the case for the uploaded reporting template itself. Before V3 this link was a
+     * filename convention, and a filename convention is not a link: it fails the moment somebody
+     * uploads "scan001.pdf", and it fails silently. The claim this product makes is that a
+     * reported figure carries the document behind it, so the join that carries the claim is a
+     * foreign key.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "target_id")
+    private Target target;
+
+    /**
      * Content hash of the stored bytes. A reviewer opening evidence six months after the fact
      * needs to know it is the file that was attached, not a file that replaced it.
      */
@@ -117,6 +131,9 @@ public class DocumentRecord {
 
     public Enums.AgsaCriterion getAgsaCriterion() { return agsaCriterion; }
     public void setAgsaCriterion(Enums.AgsaCriterion agsaCriterion) { this.agsaCriterion = agsaCriterion; }
+
+    public Target getTarget() { return target; }
+    public void setTarget(Target target) { this.target = target; }
 
     public String getContentHash() { return contentHash; }
     public void setContentHash(String contentHash) { this.contentHash = contentHash; }

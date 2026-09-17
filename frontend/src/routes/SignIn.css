@@ -1,0 +1,47 @@
+.signin-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-5) var(--space-4);
+  background: var(--canvas-sunk);
+}
+
+.signin {
+  width: 100%;
+  max-width: 460px;
+  background: var(--canvas);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding: var(--space-5);
+}
+.signin > * + * { margin-top: var(--space-4); }
+
+.signin-mark {
+  margin: 0;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--brand);
+  font-size: 0.9375rem;
+}
+
+.signin h1 { font-size: 1.25rem; margin: var(--space-2) 0 0; }
+.signin-blurb { margin: var(--space-2) 0 0; font-size: 0.9375rem; }
+
+.signin-error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-3);
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  background: #FDF6F1;
+  border: 1px solid #F0D9C8;
+  color: var(--ink);
+}
+
+.signin-foot { margin-top: var(--space-5); }
+
+.dev-roles { display: grid; gap: var(--space-2); grid-template-columns: 1fr 1fr; }
+@media (max-width: 420px) { .dev-roles { grid-template-columns: 1fr; } }

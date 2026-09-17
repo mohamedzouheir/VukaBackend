@@ -70,11 +70,27 @@ First start runs the Flyway migrations and loads the real data described below. 
 |---|---|---|
 | Citizen view | http://localhost:8080/public | Anyone, no login |
 | Mobile submission | http://localhost:8080/m | Entity reporters |
+| Office dashboard | http://localhost:5173 in development, http://localhost:8080 once built | Everyone who signs in |
 | Dashboard API | http://localhost:8080/api/dashboard/portfolio | DSAC roles |
 | Export | http://localhost:8080/api/export/submission/{id}/full.csv | Reporter (own) or DSAC |
 
 The citizen view needs no authentication, so it is the fastest way to confirm the application is
 alive.
+
+### The office dashboard
+
+React, in `frontend/`. Run it beside the backend in development, or build it into the jar.
+
+```bash
+cd frontend
+npm install
+npm run dev      # port 5173, proxies /api, /m and /public to 8080
+npm run build    # writes into src/main/resources/static, so mvn package ships one jar
+```
+
+It needs an identity to do anything. See **Firebase** below, or the development sign in
+immediately after it. `frontend/README.md` has the detail, including which role to sign in as
+first and why the order matters.
 
 ### Firebase
 
@@ -101,6 +117,29 @@ entityId  the entity a reporter is bound to; omit for DSAC roles
 `entityId` lives on the token rather than in a request parameter precisely so a client cannot
 choose it. It is what stops one entity reading another's data, and every controller routes that
 check through `VukaPrincipal.canRead`.
+
+With no usable credential the application still starts. The citizen view, the migrations and the
+Thymeleaf surfaces have nothing to do with Firebase, and taking them down because a key file is
+missing is the wrong failure. It logs loudly, verifies nothing, and every authenticated endpoint
+answers 401. It fails closed rather than refusing to boot.
+
+### Signing in without Firebase
+
+There is a development sign in, for walking the four role journeys on a laptop with no Firebase
+project attached.
+
+```bash
+VUKA_DEV_AUTH=true mvn spring-boot:run     # backend
+VITE_DEV_AUTH=true                          # in frontend/.env
+```
+
+It must never be true in a deployed environment. `DevAuthFilter` is a `@ConditionalOnProperty`
+bean, so with the property off the filter is not in the chain and there is no code path to bypass.
+It runs after the real verifier and only fills a context the real verifier left empty, so a signed
+token always wins. A development reporter is still bound to exactly one entity and every
+authorisation check applies unchanged: what is switched off is signature verification, not
+authorisation. The backend logs a warning on every start and the interface carries a banner on
+every page while it is on.
 
 ---
 
@@ -152,9 +191,16 @@ service/
   NotificationService 30 day / 15 day / hourly countdowns
   PublicationService  builds the citizen view, gated on DSAC approval
   SeedService         real published data, plus labelled illustrative quarterlies
+  ReportingViewService assembles the rows the dashboard reads, provenance attached
+  TemplateWriter      writes the pre-filled template, against TemplateParser's own constants
 web/          REST controllers plus two server-rendered surfaces
-config/       Firebase token verification, Spring Security
+config/       Firebase token verification, Spring Security, the development sign in
+frontend/     the React office dashboard. Builds into src/main/resources/static
 ```
+
+The dashboard is a separate application in the same repository rather than a separate repository,
+because it is built against these exact records and a version skew between the two is the failure
+nobody notices until a demo. `npm run build` puts it inside the jar.
 
 ### Four decisions worth knowing about
 
@@ -266,13 +312,38 @@ creation and cannot be changed afterwards.
 
 State these before someone finds them.
 
-- **Maven Central was unreachable in the environment this was built in**, so the full application
-  has never been compiled or run end to end. What *has* been verified: all 18 domain classes
-  compile, the risk engine's 17 tests pass, all 173 JPA-mapped columns exist in the migrations so
-  `ddl-auto: validate` will pass, and every repository call resolves to a declared method. Budget
-  time for a first `mvn spring-boot:run` finding something anyway.
+- **It runs, and starting it found two bugs that reading did not.** `mvn compile` and `mvn test`
+  pass, 60 source files and 17 tests, Flyway applies all three migrations, the seed loads and
+  `Started VukaApplication` appears. Getting there took three attempts. `ddl-auto: validate`
+  refused to start on `missing column [q1target]`, because the quarterly target columns were
+  renamed in the migration to match a naming rule Hibernate does not apply when a digit precedes
+  the capital. Then `/api/dashboard/portfolio` failed on every call with a
+  `LazyInitializationException` reading `RiskScore.signals`, so the review queue and the executive
+  portfolio had no working data source at all. Both are fixed. Section 8 of `SESSION-LOG.md` has
+  the detail.
+- **No screen has been opened by a person.** The API returns correct data for every endpoint the
+  dashboard calls. That is not the same as the screens being right, and the empty and error states
+  in particular have never been seen.
+- **`docker compose up -d` assumes you have Docker.** If you do not, native Postgres works
+  unchanged: the credentials in `docker-compose.yml` are the defaults in `application.yml`, so a
+  `vuka` role owning a `vuka` database on 5432 needs no configuration. `run-local.ps1` starts the
+  application that way on Windows.
+- **The seed scores Q1 and the system thinks it is Q2.** `currentPeriodId()` resolves to the last
+  period whose window has opened. `SeedService` writes risk scores against Q1 2026/27. So a fresh
+  database shows every band as `NOT_SCORED` until somebody presses Recompute, and recomputing
+  against Q2 puts Robben Island at 45 and medium where the frontend design has it at 74 and
+  critical, because the seed carries one prior period of history where those wireframes assume
+  three. The engine is right and the data is thin. Decide which quarter the demo is in before
+  presenting it.
 - **Quarterly submission timing in the seed is illustrative**, as described above.
 - **The eQPRS export shape is our reading of a published reporting format, not a certified
   integration.** Confirm the columns against DPME's current template before anyone relies on it.
-- **Evidence-to-target linking in the export** falls back to a filename convention where an
-  extraction row does not carry the link. Good enough to demonstrate, not good enough to ship.
+- **Uploaded document bytes are not stored.** `DocumentRecord.storagePath` names where they belong
+  in an object store and wiring that store is a deployment decision. What is stored is everything
+  the evidence chain rests on: the file name, the size, the content hash, the uploader, the time,
+  the target it is attached to and the Auditor-General's test it was offered against.
+  `GET /api/documents/{id}` returns exactly that and says so in its own response rather than
+  implying the file is there.
+- **Display names are missing in two places.** The schema stores a uid for the reviewer on a
+  submission and for the uploader on a document, not a name. Both come back null rather than as a
+  uid, because showing a uid to a reviewer is noise and inventing a name is worse.
