@@ -42,7 +42,7 @@ public class PublicController {
      * public surface should not confirm what exists behind it.
      */
     @GetMapping("/entity/{id}")
-    public String entity(@PathVariable UUID id, Model model) {
+    public String entity(@PathVariable("id") UUID id, Model model) {
         var view = publication.findPublished(id);
         if (view == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
