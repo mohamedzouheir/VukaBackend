@@ -17,7 +17,7 @@ import { api } from '../lib/api';
 import { useAsync } from '../lib/useAsync';
 import { useAuth, canReview, isDsac } from '../lib/auth';
 import type { PortfolioRow } from '../lib/types';
-import { BAND_ORDER, bandColour, bandWord, num, randsShort, date, daysRemainingText } from '../lib/format';
+import { BAND_ORDER, bandColour, bandWord, num, randsShort, date, daysRemainingText, reviewPeriod } from '../lib/format';
 import { PageHead } from '../components/AppShell';
 import { EmptyState, ErrorState, Loading, Tile } from '../components/Shell';
 import {
@@ -39,7 +39,11 @@ export function Dashboard() {
   );
   const tasks = useAsync(() => api.myTasks(), []);
 
-  const period = useMemo(() => (periods.data ?? []).filter((p) => p.open).at(-1) ?? null, [periods.data]);
+  // A reporter works on the open quarter, the Department on the one that has fallen due.
+  const period = useMemo(
+    () => (dsac ? reviewPeriod(periods.data) : (periods.data ?? []).filter((p) => p.open).at(-1) ?? null),
+    [dsac, periods.data],
+  );
 
   const counts = useMemo(() => {
     const rows = portfolio.data ?? [];
@@ -126,8 +130,11 @@ export function Dashboard() {
             <div className="table-wrap">
               <table>
                 <thead>
-                  <tr>
-                    <th>Entity</th>
+                  {/* nowrap: beside the right rail at laptop widths the headers, the period and
+                      the link were breaking mid-word ("PERI OD", "Op en"). A reporter's table
+                      drops the entity column, which only ever repeats their own name. */}
+                  <tr className="nowrap">
+                    {dsac ? <th>Entity</th> : null}
                     <th>Period</th>
                     <th className="num">Reported</th>
                     <th>Status</th>
@@ -138,8 +145,8 @@ export function Dashboard() {
                 <tbody>
                   {(subs.data ?? []).slice(0, 8).map((s) => (
                     <tr key={s.submissionId}>
-                      <td>{s.entityName}</td>
-                      <td className="muted">{s.periodLabel}</td>
+                      {dsac ? <td>{s.entityName}</td> : null}
+                      <td className="muted nowrap">{s.periodLabel}</td>
                       <td className="num">
                         {num(s.confirmedCount)} of {num(s.targetCount)}
                       </td>
@@ -154,7 +161,7 @@ export function Dashboard() {
                           </span>
                         ) : null}
                       </td>
-                      <td>
+                      <td className="nowrap">
                         <Link
                           to={canReview(me?.role) ? '/review/' + s.submissionId : '/entity/submission/' + s.submissionId + '/review'}
                         >
@@ -369,5 +376,9 @@ export function StatusChip({ status }: { status: string }) {
 function greeting(name: string | null): string {
   const h = new Date().getHours();
   const part = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
-  return name ? part + ', ' + name.split(/[\s.]/)[0] : part;
+  if (!name) return part;
+  // "N. Mabaso" greeted as "N" read as a glitch. Where the first word is only an initial, use
+  // the whole name as it was given.
+  const first = name.trim().split(/\s+/)[0];
+  return part + ', ' + (/^[A-Za-z]\.?$/.test(first) ? name.trim() : first);
 }

@@ -87,7 +87,7 @@ public class DashboardController {
     /** Every funded body, ranked by risk, each carrying the signals behind its score. */
     @GetMapping("/portfolio")
     public List<PortfolioRow> portfolio(@RequestParam(name = "periodId", required = false) UUID periodId) {
-        UUID period = periodId != null ? periodId : currentPeriodId();
+        UUID period = periodId != null ? periodId : views.reviewPeriodId();
         if (period == null) return List.of();
 
         // One pass over allocations for the whole portfolio rather than one query per row.
@@ -181,7 +181,7 @@ public class DashboardController {
         if (fy == null) return ResponseEntity.ok(new EntityDetail(entityId, e.getName(),
                 String.valueOf(e.getSector()), e.getMandate(), BigDecimal.ZERO, null, List.of(), List.of()));
 
-        UUID period = periodId != null ? periodId : currentPeriodId();
+        UUID period = periodId != null ? periodId : views.reviewPeriodId();
         RiskScore rs = period == null ? null
                 : riskScores.findByEntityAndPeriodWithSignals(entityId, period).orElse(null);
 
@@ -311,17 +311,5 @@ public class DashboardController {
     public Map<String, Object> recompute(@RequestParam(name = "periodId", required = false) UUID periodId,
                                          @AuthenticationPrincipal VukaPrincipal who) {
         return riskSchedule.recompute(periodId);
-    }
-
-    /** The most recent period whose window has opened. */
-    private UUID currentPeriodId() {
-        FinancialYear fy = years.findByCurrentTrue().orElse(null);
-        if (fy == null) return null;
-        return periods.findByFinancialYearIdOrderByQuarterAsc(fy.getId()).stream()
-                .filter(p -> p.getPeriodStart() != null
-                        && !p.getPeriodStart().isAfter(java.time.LocalDate.now()))
-                .reduce((a, b) -> b)
-                .map(ReportingPeriod::getId)
-                .orElse(null);
     }
 }

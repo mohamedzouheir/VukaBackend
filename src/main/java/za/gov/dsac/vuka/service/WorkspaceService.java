@@ -8,6 +8,7 @@ import za.gov.dsac.vuka.repository.*;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -93,8 +94,68 @@ public class WorkspaceService {
         return tasks.findByEntityIdOrderByCreatedAtDesc(entityId);
     }
 
-    public List<TaskItem> myOpenTasks(VukaPrincipal who) {
-        return tasks.findByAssignedToUidAndStatusOrderByDueDateAsc(who.uid(), Enums.TaskStatus.OPEN);
+    /**
+     * Everything assigned to the caller, open work first by due date, then closed work newest
+     * first. The screens filter by status; returning only OPEN hid work marked in progress and
+     * left the Done filter permanently empty.
+     */
+    public List<TaskItem> myTasks(VukaPrincipal who) {
+        return tasks.findByAssignedToUid(who.uid()).stream()
+                .sorted(Comparator
+                        .comparing((TaskItem t) -> t.getStatus() == Enums.TaskStatus.DONE)
+                        .thenComparing(TaskItem::getDueDate, Comparator.nullsLast(Comparator.naturalOrder())))
+                .toList();
+    }
+
+    /**
+     * Records who has signed in, so they can be assigned work. Role and entity come from the signed
+     * token and are refreshed on every sign in; a display name already held is kept when the token
+     * carries none, because Firebase tokens often do not.
+     */
+    @Transactional
+    public void recordSignIn(VukaPrincipal who) {
+        if (who == null || who.uid() == null || who.role() == null) return;
+        Enums.Role role;
+        try {
+            role = Enums.Role.valueOf(who.role());
+        } catch (IllegalArgumentException e) {
+            return;
+        }
+        UserProfile u = users.findByUid(who.uid()).orElseGet(UserProfile::new);
+        u.setUid(who.uid());
+        if (who.email() != null) u.setEmail(who.email());
+        if (who.name() != null && !who.name().isBlank()) u.setDisplayName(who.name());
+        else if (u.getDisplayName() == null) u.setDisplayName(who.email());
+        u.setRole(role);
+        UUID entityId = null;
+        try {
+            entityId = who.entityId() == null ? null : UUID.fromString(who.entityId());
+        } catch (IllegalArgumentException ignored) {
+            // A malformed claim is reported by /api/me already; it just binds nothing here.
+        }
+        u.setEntity(role == Enums.Role.ENTITY_REPORTER && entityId != null
+                ? entities.findById(entityId).orElse(null) : null);
+        users.save(u);
+    }
+
+    /** Someone a task on this entity can be assigned to. */
+    public record Person(String uid, String name, String role, boolean dsac) {}
+
+    /**
+     * Who a task on this entity can go to: everyone at the Department, and the reporters of this
+     * entity. Nobody at another entity, because a task is visible to its assignee and an entity's
+     * work is not another entity's business.
+     */
+    public List<Person> assignableFor(UUID entityId) {
+        return users.findAll().stream()
+                .filter(u -> u.getRole() != null)
+                .filter(u -> u.getRole() != Enums.Role.ENTITY_REPORTER
+                        || (u.getEntity() != null && entityId.equals(u.getEntity().getId())))
+                .map(u -> new Person(u.getUid(),
+                        u.getDisplayName() == null || u.getDisplayName().isBlank() ? u.getUid() : u.getDisplayName(),
+                        u.getRole().name(), u.getRole() != Enums.Role.ENTITY_REPORTER))
+                .sorted(Comparator.comparing(Person::dsac).thenComparing(Person::name))
+                .toList();
     }
 
     // ------------------------------------------------------------------

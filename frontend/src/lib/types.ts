@@ -335,6 +335,25 @@ export interface WorkspaceDocument {
   microsoftError: string | null;
 }
 
+/** WorkspaceService.Person */
+export interface TaskPerson {
+  uid: string;
+  name: string;
+  role: string;
+  dsac: boolean;
+}
+
+/** WorkspaceController.TaskRequest */
+export interface NewTask {
+  title: string;
+  description: string | null;
+  assignedToUid: string;
+  assignedToName: string | null;
+  dueDate: string | null;
+  documentId: string | null;
+  submissionId: string | null;
+}
+
 /** WorkspaceController.TaskView */
 export interface WorkspaceTask {
   id: string;

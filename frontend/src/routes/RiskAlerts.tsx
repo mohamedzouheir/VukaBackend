@@ -28,7 +28,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useAsync } from '../lib/useAsync';
 import type { PortfolioRow, SubmissionRow } from '../lib/types';
-import { BAND_ORDER, bandColour, bandWord, num, rands, signalLabel, statusLabel } from '../lib/format';
+import { BAND_ORDER, bandColour, bandWord, num, rands, reviewPeriod, signalLabel, statusLabel } from '../lib/format';
 import { PageHead } from '../components/AppShell';
 import { RiskBadge } from '../components/RiskBadge';
 import { RiskPanel } from '../components/RiskPanel';
@@ -50,7 +50,7 @@ export function RiskAlerts() {
   const [explain, setExplain] = useState<PortfolioRow | null>(null);
   const [recomputing, setRecomputing] = useState(false);
 
-  const period = useMemo(() => (periods.data ?? []).filter((p) => p.open).at(-1) ?? null, [periods.data]);
+  const period = useMemo(() => reviewPeriod(periods.data), [periods.data]);
 
   const subByEntity = useMemo(() => {
     const map = new Map<string, SubmissionRow>();

@@ -3,6 +3,7 @@ package za.gov.dsac.vuka.web;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import za.gov.dsac.vuka.config.VukaPrincipal;
@@ -126,6 +127,8 @@ public class SubmissionController {
      * can open the source rather than taking the number on trust.
      */
     @GetMapping("/{submissionId}/extractions")
+    // Reads each extraction's target, which is lazy, and open-in-view is false.
+    @Transactional(readOnly = true)
     public ResponseEntity<List<ExtractionView>> extractions(@PathVariable("submissionId") UUID submissionId,
                                                             @AuthenticationPrincipal VukaPrincipal who) {
         Submission s = submissions.findById(submissionId).orElse(null);

@@ -200,6 +200,26 @@ public class ReportingViewService {
                 .orElse(null);
     }
 
+    /**
+     * The most recent period whose due date has passed, which is what the Department's screens
+     * default to. Falls back to {@link #currentPeriodId()} before the first due date of the year.
+     *
+     * <p>A reporter works on the quarter that is open. A reviewer works on the quarter that has
+     * fallen due, because until then there is nothing to review and every entity reads as
+     * outstanding. In September those are Q2 and Q1 respectively, and a single default would be
+     * wrong for one of them.
+     */
+    public UUID reviewPeriodId() {
+        FinancialYear fy = years.findByCurrentTrue().orElse(null);
+        if (fy == null) return null;
+        LocalDate today = LocalDate.now(ZA);
+        return periods.findByFinancialYearIdOrderByQuarterAsc(fy.getId()).stream()
+                .filter(p -> p.getSubmissionDueDate() != null && p.getSubmissionDueDate().isBefore(today))
+                .reduce((a, b) -> b)
+                .map(ReportingPeriod::getId)
+                .orElseGet(this::currentPeriodId);
+    }
+
     /* ================================================================== */
     /* submissions                                                         */
     /* ================================================================== */
@@ -506,7 +526,7 @@ public class ReportingViewService {
         List<Target> registered = targets.findByEntityIdAndFinancialYearId(entityId, fy.getId());
         Integer promised = registered.isEmpty() ? null : registered.size();
 
-        UUID period = periodId != null ? periodId : currentPeriodId();
+        UUID period = periodId != null ? periodId : reviewPeriodId();
         Submission submission = period == null ? null
                 : submissions.findByEntityIdAndReportingPeriodId(entityId, period).orElse(null);
 

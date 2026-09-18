@@ -568,16 +568,68 @@ the page.
 
 ---
 
+### 10.4 Demo data, and which quarter the demo is in
+
+Section 8.5 left this open. It is now decided by role rather than by date. A reporter's screens
+open on the open period, which in September is Q2. The Department's screens open on the last
+period that has fallen due, which is Q1, through `ReportingViewService.reviewPeriodId()` and the
+matching `reviewPeriod()` in `frontend/src/lib/format.ts`. `RiskSchedule` scores both. The real
+date is kept, so nothing in the demo is dated before the quarter it reports on.
+
+`DemoDataService` then adds workflow data on top of the reference seed, once, on a database with
+no comments or tasks. Every row of it is invented and says so. Q1 carries every review state; the
+demo reporter's entity (Iziko, the one Firebase reporter account) is submitted and waiting so a
+reviewer can return it live; the National Library is returned with two open disputes; tasks are
+assigned to the four Firebase accounts by uid; and a completed Q2 template for Iziko is written to
+`var/demo/`, with a figure typed as words, a figure typed as text, a missing figure with its
+reason, a shortfall with no reason and an unregistered indicator code.
+
+One cost worth stating. The reference seed reported only 12 of Iziko's 20 Q1 indicators. The demo
+answers the other 8, because a returned period reopens every unanswered target, and a live return
+would otherwise hand the reporter ten rows instead of one. That lowers Iziko's evidence gap signal.
+
+Found on the way and fixed: a quarterly report that fell due and was never filed added nothing to
+the lateness signal, which averaged only the reports that arrived, so an entity that stopped
+filing scored better than one filing a week late. `RiskService` now counts each such report as
+late up to today, where the entity has targets registered for the year, and the panel says how
+many are unfiled. It changes nothing in the seeded demo, because every entity with targets filed
+Q1. It does not move Robben Island either: its lateness is already at the ceiling from the
+seventy day statutory breach, and it has no targets registered, so no quarterly report is due
+from it in the system. The 45 against the wireframes' 74 is thin history, as section 8.5 says.
+
+---
+
+### 10.5 Setting tasks, and a demo database that outlives a session
+
+**Tasks can be set from the screen.** Requirement (d) asks for tasks set internally and externally,
+and until now the endpoint existed with nothing calling it. The Tasks screen has a Set a task form
+for every role holding `PARTICIPATE`: reporter, reviewer, administrator, not the executive. The
+assignee list is `GET /api/workspace/entity/{id}/people`, which is the Department plus that
+entity's own reporters and nobody from another entity. Whether a task is external is still derived
+by the server, never ticked. Anyone who signs in is recorded in `user_profile` by `/api/me`, which is
+what makes them assignable.
+
+**My tasks returned only OPEN.** Work marked in progress vanished from its owner's list and the Done
+filter could never show anything. It now returns everything assigned to the caller, open first; the
+badge and the dashboard already filtered out done work on the client.
+
+**Seeded tasks no longer claim the Director-General set them.** The executive has no `PARTICIPATE`,
+so a task "set by the Director-General" was something the product would not have let happen.
+
+**The demo database.** The Postgres that was running on 5432 lived in another Claude session's
+scratch directory and goes when that session is cleaned up. `run-local.sh` now runs a portable
+Postgres 16 from `~/.vuka` on 5433, seeded from scratch with the demo data. Its Iziko id is new, so
+the Firebase reporter account's `entityId` claim has to be reset to it before Nomsa can sign in.
+
+---
+
 ## 11. Still open
 
 Ordered by how much it costs us if it is not done.
 
-1. **Decide which quarter the demo is in.** Section 8.5. Either seed Q2 submission history so the
-   lateness and evidence gap signals have real inputs, or present Q1 as current. As it stands the
-   demo script says Robben Island is critical at 74 and the running system says medium at 45, and
-   somebody in the room will have the wireframes open. Seeding Q2 means writing more illustrative
-   quarterly figures, which section 4 is careful to label as the only invented numbers in the seed,
-   so whichever way this goes it has to be said out loud.
+1. **Decided: the quarter depends on who is looking.** Section 10.4. Reporters open on Q2, the
+   Department on Q1. Robben Island still reads medium at 45 rather than critical at 74; say so if
+   the wireframes are on the table.
 2. **Finish Firebase.** The web API key from the console into `frontend/.env`, and Email/Password
    enabled as a sign in method. Four accounts already exist with correct claims. Until this is done
    the browser cannot sign in at all and `VUKA_DEV_AUTH` is carrying the demo, which must not be

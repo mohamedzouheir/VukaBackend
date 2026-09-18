@@ -9,6 +9,7 @@ import za.gov.dsac.vuka.config.VukaPrincipal;
 import za.gov.dsac.vuka.domain.PublicEntity;
 import za.gov.dsac.vuka.repository.PublicEntityRepository;
 import za.gov.dsac.vuka.service.ReportingViewService;
+import za.gov.dsac.vuka.service.WorkspaceService;
 
 import java.util.List;
 import java.util.UUID;
@@ -34,10 +35,13 @@ public class MeController {
 
     private final PublicEntityRepository entities;
     private final ReportingViewService views;
+    private final WorkspaceService workspace;
 
-    public MeController(PublicEntityRepository entities, ReportingViewService views) {
+    public MeController(PublicEntityRepository entities, ReportingViewService views,
+                        WorkspaceService workspace) {
         this.entities = entities;
         this.views = views;
+        this.workspace = workspace;
     }
 
     /**
@@ -50,6 +54,8 @@ public class MeController {
 
     @GetMapping("/me")
     public MeView me(@AuthenticationPrincipal VukaPrincipal who) {
+        // Whoever signs in becomes someone work can be assigned to. See WorkspaceService.
+        workspace.recordSignIn(who);
         String entityName = null;
         if (who.entityId() != null) {
             try {
