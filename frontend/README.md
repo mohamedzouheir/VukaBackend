@@ -31,7 +31,8 @@ npm run dev
 
 The dashboard needs an identity. If you have a Firebase project, copy `.env.example` to `.env` and
 fill in the three `VITE_FIREBASE_*` values, and set the `role` and `entityId` custom claims on a
-user through the Admin SDK.
+DSAC user through the Admin SDK. Reporter accounts are issued from the Administration screen
+instead; there is no sign up.
 
 If you do not, both sides have a development sign in. It must never be enabled anywhere real.
 
@@ -43,8 +44,9 @@ VUKA_DEV_AUTH=true mvn spring-boot:run
 VITE_DEV_AUTH=true
 ```
 
-Sign in as a **DSAC reviewer** first. Open the portfolio, copy an entity uuid from any row, then
-sign out and sign back in as an **entity reporter** with that uuid. That order matters: a reporter
+With the entity field blank, the reporter button signs in as the demo reporter at Iziko, whose Q1
+submission the reviewer returns in the demonstration. For any other entity, sign in as a **DSAC
+admin** first; the Administration screen prints every entity's uuid under its name. That order matters: a reporter
 with no entity id can reach nothing, which is correct behaviour and looks exactly like a bug.
 
 With development sign in on, the application carries a banner on every page and the backend logs a

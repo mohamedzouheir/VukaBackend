@@ -555,10 +555,11 @@ So the look was taken and the invented figures were not:
 | Predicted impact, recommended actions | The five stored signals with their contributions |
 | Province, acronym, registration number | Absent, and the footnote says so |
 | Document views and downloads | Absent. Nothing counts either |
-| Analytics and Insights, whole screen | A screen saying what is missing and what it would take |
+| Analytics and Insights, whole screen | At first a screen saying what was missing; since 10.6, the trends the data can carry |
 
 The Analytics screen is the one to defend out loud. Built as designed it would have been the most
-persuasive thing in the product and the only part that could not survive being clicked into.
+persuasive thing in the product and the only part that could not survive being clicked into. It
+was later built from the series that do exist; see 10.6.
 
 **Tasks and Documents turned out to be real.** They were going to be honest empty states until
 reading the branch showed `/api/workspace/tasks/mine` and
@@ -620,6 +621,106 @@ so a task "set by the Director-General" was something the product would not have
 scratch directory and goes when that session is cleaned up. `run-local.sh` now runs a portable
 Postgres 16 from `~/.vuka` on 5433, seeded from scratch with the demo data. Its Iziko id is new, so
 the Firebase reporter account's `entityId` claim has to be reset to it before Nomsa can sign in.
+
+### One home and one rail per role
+
+Before this pass the reviewer, the executive and the admin all landed on the same dashboard and
+saw nearly the same eight rail entries, which is the opposite of block 2 in the build order
+("four roles land in four different places") and the first thing a judge switching accounts would
+notice. `homeFor` in `lib/auth.tsx` described the intended routing and was never called.
+
+Now `/` renders a different home per role and each role has its own rail, written out whole in
+`railFor` rather than filtered from one shared list:
+
+- **Reviewer, J3.** Lands on Today: awaiting decision, returned, nothing filed, approved, then the
+  top three of the risk-ranked queue using the queue's own row component. No portfolio totals and
+  no rand figures, which are the executive's.
+- **Executive, J4.** Lands on the portfolio (W9). Rail is Portfolio, Entities, Citizen View. No
+  tasks, workspaces or recompute button, because the role changes nothing.
+- **Admin, UC-21.** Lands on Administration, the publication switch, with published, unpublished
+  and no-targets counts. Rail is Administration, Workspaces, Tasks, Citizen View. No queue and no
+  risk screen.
+
+The risk band bars on the old shared dashboard are gone; the same distribution is the executive's
+heatmap. Analytics & Insights was in no rail then; 10.6 put it in the reviewer's and executive's. The recompute buttons on the queue and on Risk &
+Alerts are now shown only to a role holding `REVIEW_SUBMISSIONS`, where before an executive
+reaching Risk & Alerts was offered one the API refused.
+
+The capability table changed once, on purpose: `REVIEW_SUBMISSIONS` is the reviewer's alone, so
+publication and approval take two people. `CapabilityTest.adminDoesNotReview` holds it. The
+Microsoft sync endpoint, which was reviewer only, now also admits `ADMINISTER`, because the admin
+binds the library and pulling versions decides nothing. This departs from the PRD's "nothing is
+fully barred" for the administrator, and the pitch should say so as a governance choice.
+
+### The reporter, and the return round trip
+
+The reporter had two homes, a Dashboard and My reporting, showing the same tiles and the same
+deadline. Their home is now the reporting screen itself (J1: no generic landing page).
+
+The bigger fault was the return. The reporter's screen showed a returned card only for the open
+quarter, but the Department reviews the quarter that has fallen due, so in September the reviewer
+returns Q1 while the reporter's screen is on Q2. A live return left nothing on the reporter's
+screen but a chip in the prior periods list, with no link. Now every returned period sits at the
+top: who returned it (the name now resolved from the user directory rather than left null), the
+reason, each open dispute in the reviewer's words, and one button into the confirmation screen,
+which already opens on the disputed rows only. Disputes are read on the five second comment poll
+and the submission list every ten seconds, so a return made on stage appears without a reload.
+Prior periods now link to their submissions.
+
+Demo plumbing: a dev reporter with no entity id is the demo reporter at Iziko, so nobody pastes a
+uuid mid-demonstration. The local database had never received the demo seed (it already held
+comments, so the seed stepped aside) and the demo uids pointed at Firebase accounts; `run-demo.sh`
+runs against a separate `vuka_demo` database with the dev uids, and `--reset` restores it.
+
+### The demonstration journey: deadline, warning, account
+
+The journey the demo now shows, end to end and each step real:
+
+1. **Admin sets the deadline.** Administration, Submission deadlines. For Schedule 3A the date is
+   a departmental instruction, so the Department sets it here. A passed deadline is locked; a new
+   one cannot be past, before the quarter ends, or later than a statutory date
+   (`DeadlineRulesTest`). Audit logged.
+2. **Reporter signs in and is warned.** `DeadlineAlert`: late (due date passed, nothing filed) or
+   approaching (open quarter due within thirty days, not filed), the same thirty days at which the
+   reminders begin. Once per sign in for a given set of warnings. A returned quarter is not called
+   late; the returned card handles it. In the seeded demo Q2 is due 30 October, 42 days out, so
+   the warning appears only after the admin brings it forward, which is the point to show.
+3. **Admin registers an entity and issues its reporter account.** There is no sign up anywhere.
+   With Firebase the account is created with claims and a set-password link; without it the person
+   is recorded in the directory and the screen says no credential was issued. A new entity appears
+   in the queue as not scored with nothing filed, and its reporter is warned that Q1 is late.
+
+This departs from the PRD, which cut entity creation and user administration (section 12, cuts 1
+and 3). The brief's emphasis on who may report and by when made them the demonstration rather than
+admin screens nobody watches. Targets are still not entered by form: they are versioned against a
+tabled plan.
+
+### 10.6 Analytics built from what is actually stored
+
+The placeholder said what a real Analytics screen would need, and most of it was already in the
+database: allocations for 2023/24 to 2026/27, published audit outcomes with targets achieved for
+2023/24 and 2024/25, and confirmed quarterly results with their stored risk scores. The screen is
+now built on those, through `GET /api/dashboard/analytics` (`AnalyticsService`), and sits in the
+reviewer's and the executive's rails. It is the only screen that answers "is it getting better"
+rather than "where does it stand this quarter", so it does not repeat the portfolio or the risk
+screen.
+
+Four sections: year on year, who moved (the same entities in both audited years, largest fall
+first), quarter by quarter, and by sector. Three decisions worth defending:
+
+- **Like for like.** The portfolio rate covers six entities in 2023/24 and twelve in 2024/25, so the
+  screen says the rows are different populations and computes movement only over the four entities
+  with counts in both years.
+- **Every funded entity is expected to file**, the same population the register and the queue
+  count, so "not filed" on this screen agrees with "nothing filed" on the Entities screen. The
+  sixteen with no registered targets are named as such rather than dropped.
+- **Met is computed, not read.** A figure meets its quarter target when the latest confirmed actual
+  is at least the quarter value, so the rate can be reproduced from the two numbers on the review
+  screen, and a figure corrected after a return counts once.
+
+Still absent, on purpose: any monthly series, document views and downloads, and cost per outcome
+across sectors. The in-year quarterly figures in the demonstration are the illustrative seed, and
+the footnote says so.
 
 ---
 

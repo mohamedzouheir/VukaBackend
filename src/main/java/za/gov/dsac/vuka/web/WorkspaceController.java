@@ -318,9 +318,12 @@ public class WorkspaceController {
         return ResponseEntity.ok(Map.of("status", request.webhookUrl() == null ? "cleared" : "set"));
     }
 
-    /** Runs a delta poll now rather than waiting for the timer. Useful on stage. */
+    /**
+     * Runs a delta poll now rather than waiting for the timer. Useful on stage. Open to the admin
+     * who binds the library as well as to the reviewer, since pulling versions decides nothing.
+     */
     @PostMapping("/entity/{entityId}/microsoft/sync")
-    @PreAuthorize("@can.has('REVIEW_SUBMISSIONS')")
+    @PreAuthorize("@can.has('REVIEW_SUBMISSIONS') or @can.has('ADMINISTER')")
     public ResponseEntity<?> syncNow(@PathVariable("entityId") UUID entityId) {
         EntityWorkspace workspaceRow = microsoft.workspaceFor(entityId);
         if (!workspaceRow.isBoundToMicrosoft()) {

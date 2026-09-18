@@ -19,6 +19,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useAsync } from '../lib/useAsync';
+import { can, useAuth } from '../lib/auth';
 import type { PortfolioRow, SubmissionRow } from '../lib/types';
 import { BAND_ORDER, num, reviewPeriod, signalLabel, statusLabel } from '../lib/format';
 import { RiskBadge, RiskBadgeSkeleton } from '../components/RiskBadge';
@@ -30,6 +31,7 @@ import './ReviewQueue.css';
 type Sort = 'risk' | 'entity' | 'received';
 
 export function ReviewQueue() {
+  const { me } = useAuth();
   const portfolio = useAsync(() => api.portfolio(), []);
   const subs = useAsync(() => api.submissions(), []);
   const periods = useAsync(() => api.periods(), []);
@@ -97,10 +99,14 @@ export function ReviewQueue() {
           <p className="muted">{period ? period.label : 'No open reporting period'}</p>
         </div>
         <span className="spacer" />
-        <button type="button" onClick={() => void recompute()} disabled={recomputing}>
-          {recomputing ? <IconSpinner size={16} className="spin" /> : <IconGauge size={16} />}
-          Recompute scores
-        </button>
+        {/* Offered only where the API accepts it. An executive reaching this screen by address
+            reads the scores and is not shown a control that would be refused. */}
+        {can(me, 'REVIEW_SUBMISSIONS') ? (
+          <button type="button" onClick={() => void recompute()} disabled={recomputing}>
+            {recomputing ? <IconSpinner size={16} className="spin" /> : <IconGauge size={16} />}
+            Recompute scores
+          </button>
+        ) : null}
       </div>
 
       {portfolio.loading ? (
@@ -179,7 +185,7 @@ export function ReviewQueue() {
   );
 }
 
-function QueueRow({
+export function QueueRow({
   entity,
   sub,
   onExplain,

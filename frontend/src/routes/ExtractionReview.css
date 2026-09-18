@@ -45,3 +45,4 @@
 .er-criteria legend { font-size: 0.875rem; font-weight: 600; padding: 0 var(--space-1); }
 .er-criteria .ind-check { align-items: flex-start; }
 .er-criteria .ind-check input { margin-top: 4px; }
+.er-paste-refused { color: var(--band-critical); }

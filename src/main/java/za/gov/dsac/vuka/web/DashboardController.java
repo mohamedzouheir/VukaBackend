@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import za.gov.dsac.vuka.config.VukaPrincipal;
 import za.gov.dsac.vuka.domain.*;
 import za.gov.dsac.vuka.repository.*;
+import za.gov.dsac.vuka.service.AnalyticsService;
 import za.gov.dsac.vuka.service.ReportingViewService;
 import za.gov.dsac.vuka.service.RiskSchedule;
 import za.gov.dsac.vuka.service.RiskService;
@@ -40,14 +41,17 @@ public class DashboardController {
     private final UnitCostService unitCost;
     private final ReportingViewService views;
     private final RiskSchedule riskSchedule;
+    private final AnalyticsService analytics;
 
     public DashboardController(PublicEntityRepository entities, RiskScoreRepository riskScores,
                                ReportingPeriodRepository periods, FinancialYearRepository years,
                                TargetRepository targets, TargetResultRepository results,
                                AllocationRepository allocations, AuditFindingRepository findings,
                                RiskService riskService, UnitCostService unitCost,
-                               ReportingViewService views, RiskSchedule riskSchedule) {
+                               ReportingViewService views, RiskSchedule riskSchedule,
+                               AnalyticsService analytics) {
         this.riskSchedule = riskSchedule;
+        this.analytics = analytics;
         this.entities = entities;
         this.riskScores = riskScores;
         this.periods = periods;
@@ -301,6 +305,17 @@ public class DashboardController {
         if (who != null && !who.canRead(entityId.toString())) return ResponseEntity.notFound().build();
         if (entities.findById(entityId).isEmpty()) return ResponseEntity.notFound().build();
         return ResponseEntity.ok(views.unitCostsFor(entityId, targetId, unitCost));
+    }
+
+    // ---------- analytics ----------
+
+    /**
+     * How the portfolio is moving: year on year, the same entities across two audited years,
+     * quarter by quarter, and by sector. See {@link AnalyticsService} for what it refuses to show.
+     */
+    @GetMapping("/analytics")
+    public AnalyticsService.AnalyticsView analytics() {
+        return analytics.analytics();
     }
 
     // ---------- recompute ----------

@@ -12,7 +12,7 @@
  * The design's "1,248 views" and "856 downloads" are not here. Nothing counts either.
  */
 import { useMemo, useState } from 'react';
-import { api } from '../lib/api';
+import { api, openFile } from '../lib/api';
 import { useAsync } from '../lib/useAsync';
 import { useAuth, isDsac } from '../lib/auth';
 import { criterionLabel, dateTime, fileSize, num } from '../lib/format';
@@ -161,7 +161,10 @@ export function Documents() {
                           {d.agsaCriterion ? criterionLabel(d.agsaCriterion) : 'not stated'}
                         </td>
                         <td>
-                          <a href={api.documentContentUrl(d.id)} target="_blank" rel="noreferrer">
+                          <a
+                            href={api.documentContentUrl(d.id)}
+                            onClick={(e) => openFile(e, api.documentContentUrl(d.id), d.fileName ?? 'document')}
+                          >
                             Open <IconExternal size={13} />
                           </a>
                         </td>

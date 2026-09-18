@@ -88,6 +88,12 @@ First start runs the Flyway migrations and loads the real data described below. 
 The citizen view needs no authentication, so it is the fastest way to confirm the application is
 alive.
 
+**Without Docker, for a demonstration.** With Postgres already on 5432, `./run-demo.sh` starts the
+backend against its own `vuka_demo` database with development sign in and the demo account uids,
+and `./run-demo.sh --reset` puts that database back to the seeded demo state after a rehearsal.
+Then `cd frontend && VITE_DEV_AUTH=true npm run dev` and open http://localhost:5173. Never run it
+anywhere another person can reach.
+
 ### The office dashboard
 
 React, in `frontend/`. Run it beside the backend in development, or build it into the jar.
@@ -128,6 +134,16 @@ entityId  the entity a reporter is bound to; omit for DSAC roles
 `entityId` lives on the token rather than in a request parameter precisely so a client cannot
 choose it. It is what stops one entity reading another's data, and every controller routes that
 check through `VukaPrincipal.canRead`.
+
+**Reporters cannot sign up; they can only sign in.** A reporter account is issued by a DSAC
+administrator from the Administration screen, for one named entity (`ReporterAccountService`).
+With Firebase configured it creates the user with no password, sets both claims and returns a
+set-password link for the administrator to send, so the password never passes through DSAC.
+Without Firebase it records the person in the directory, so they still receive the entity's
+reminders, and says that no credential was issued. Firebase's own sign-up endpoint can only be
+switched off in the console (Authentication, Settings, User actions); turn it off for any real
+deployment. Either way an account made that way carries no `role` claim and every endpoint
+refuses it. DSAC staff accounts are still set by script.
 
 With no usable credential the application still starts. The citizen view, the migrations and the
 Thymeleaf surfaces have nothing to do with Firebase, and taking them down because a key file is
@@ -205,13 +221,50 @@ dashboard shows a page or a button only when the API behind it would accept the 
 | Comment, set and move tasks | yes | yes | | yes |
 | Download the pre-filled template | yes | yes | | yes |
 | See across entities | | yes | yes | yes |
-| Approve, return, decide on documents | | yes | | yes |
-| Publication, Microsoft binding | | | | yes |
+| Approve, return, decide on documents | | yes | | |
+| Register entities, issue reporter accounts, set deadlines, publish, bind Microsoft | | | | yes |
 
 The executive column reads everything and changes nothing. The reporter column is the only one
 that puts figures or evidence on the record. Before this table existed, two endpoints let an
 executive post a comment or approve a document while the dashboard presented the role as read
 only.
+
+**Each role opens on its own screen, with its own rail.** `/` is one address with four homes
+(`Home` in `frontend/src/App.tsx`, `railFor` in `components/AppShell.tsx`):
+
+| Role | Lands on | Rail |
+|---|---|---|
+| Reporter | My reporting (W1). On sign in, a warning when a quarter is late or due within 30 days. Anything the Department returned sits at the top: who, why, and each disputed figure in the reviewer's words, live | My reporting, Documents, Workspaces, Tasks, Citizen View |
+| Reviewer | Today: what awaits their decision, and the top three of the risk-ranked queue | Today, Review queue, Risk & Alerts, Analytics, Documents, Workspaces, Tasks |
+| Executive | The portfolio (W9): counts, bands, rands in the critical band | Portfolio, Entities, Analytics, Citizen View |
+| Admin | Administration: quarter deadlines, register an entity, issue its reporter account, publish | Administration, Workspaces, Tasks, Citizen View |
+
+**Deadlines are the Department's to set, and a passed one is fixed.** For a Schedule 3A entity
+TR 30.2.1 names no day count, so the quarterly due date is a departmental instruction, set per
+quarter on the Administration screen. The reporter's warning, the countdown, the email reminders
+and the lateness signal all read that one date. Four refusals, each tested in
+`DeadlineRulesTest`: a deadline that has passed cannot be moved (lateness was measured against
+it), a new one cannot be in the past, it cannot fall before the quarter ends, and it cannot be
+later than a statutory deadline where one applies. Every change is written to the audit log with
+the administrator's name.
+
+The admin does not review, in the table or on screen. Whoever decides what the public sees is not
+the person who approves the figures it will see, so publication and approval always take two
+people; an admin approval is refused by the API with a 403. This narrows the PRD's "nothing is
+fully barred" for the administrator, deliberately.
+
+**Analytics & Insights answers whether things are getting better** (`/analytics`, one call to
+`GET /api/dashboard/analytics`, `AnalyticsService`). Every other oversight screen describes one
+quarter; this one carries the four series the data can actually support. Year on year: ENE
+allocation per financial year beside the Auditor-General's published outcomes and targets-achieved
+counts. Who moved: the same entities in the two latest audited years, because a portfolio rate
+over six audited entities one year and twelve the next measures who got audited, not who improved.
+Quarter by quarter: filing against the due date, figures against each target's own quarter value,
+and the stored risk bands. By sector: rands and delivery side by side for the quarter under review,
+never divided into a cost per outcome. A year not audited shows no rate, and a quarter not yet due
+shows no "not filed" count. There is no monthly series and no document view count, because nothing
+records either. `AnalyticsServiceTest` holds the matched-cohort arithmetic and the latest-row rule
+for corrected figures.
 
 A refusal is told apart from a missing sign in, and says why:
 
@@ -281,7 +334,8 @@ service/
   SubmissionService   upload -> parse -> confirm -> submit -> review
   UnitCostService     planned versus actual, sector-bound peer comparison
   ExportService       the filing in full, DPME and spreadsheet shapes
-  NotificationService 30 day / 15 day / hourly countdowns
+  NotificationService 30 day / 15 day / final day countdowns, by email and optionally Teams
+  EmailNotifier       SMTP, off unless configured, with a demo redirect
   PublicationService  builds the citizen view, gated on DSAC approval
   SeedService         real published data, plus labelled illustrative quarterlies
   ReportingViewService assembles the rows the dashboard reads, provenance attached
@@ -406,10 +460,26 @@ page says "a receipt is not an approval" in those words.
 entity's repository could put evidence there under the entity's name. Whether a task is external
 is read from who set it and who has to do it, not from a flag the caller chooses.
 
-**The countdown lands in Teams.** Where an administrator sets a channel workflow URL on an
-entity's workspace, the 30 day, 15 day and hourly reminders post there as an Adaptive Card naming
-the targets with no evidence. A workflow webhook rather than Graph's `ChannelMessage.Send`,
-because that permission is protected by Microsoft and far larger than a reminder needs.
+**The countdown arrives by email.** Every entity has a mailbox, and many departments restrict
+Teams workflows, so email is the channel expected to work everywhere. At 08:00 on 30 days, 15
+days, the day before and the due date, the entity's contact address and its registered reporters
+get a plain-text reminder naming the targets that still have no evidence. It stops once the
+period is submitted. Any SMTP relay works (Microsoft 365, Azure Communication Services, SendGrid,
+a government relay), rather than Graph's `Mail.Send`, which would let the app send as any mailbox
+in the tenant:
+
+```bash
+export MAIL_HOST=smtp.example.gov.za  MAIL_FROM=vuka@example.gov.za
+export MAIL_USERNAME=...  MAIL_PASSWORD_FILE=/path/to/file/containing/the/password
+export MAIL_REDIRECT_TO=you@example.com   # demos: every reminder goes here instead
+```
+
+The seeded contact addresses are invented, so set `MAIL_REDIRECT_TO` for any demonstration.
+
+**Teams is optional.** Where an administrator also sets a channel workflow URL on an entity's
+workspace, the same countdown posts there as an Adaptive Card, once at 30 and 15 days and hourly
+on the last two days. A workflow webhook rather than Graph's `ChannelMessage.Send`, because that
+permission is protected by Microsoft and far larger than a reminder needs.
 
 To bind a tenant, register an app with `Files.ReadWrite.All` or `Sites.ReadWrite.All` as an
 application permission (`Sites.Selected` with a per-library grant is the smaller, better
@@ -545,6 +615,22 @@ State these before someone finds them.
   version, history, download, the receipt, DSAC approval, per-criterion evidence, a cross-boundary
   task and the tenancy refusals were exercised over HTTP with the development sign in. The
   Microsoft calls were not, for want of a tenant; see below.
+- **Evidence can be attached a quarter at a time.** "Attach evidence files" on the confirmation
+  screen takes every file at once, reads the indicator code (`HER-1.1`, `her_1_1`, `HER1.1`) and
+  the reliability test (attendance, reconciliation, register) from each file name, and asks only
+  about the files it could not place. A file with no indicator or no test is held back, never
+  attached as a guess. Each file goes through `POST /api/submissions/{id}/evidence`, the same path
+  as a single attach. The matching was walked in Chrome against the demo data; the attach itself
+  was not pressed there, to keep the demo database clean, and is the same call the single attach
+  already makes.
+- **The template is optional on the web.** The quarter card leads with "Enter figures", which opens
+  the confirmation screen with a box per indicator; uploading the template is the second option.
+  A column of figures copied from any spreadsheet can be pasted into the first box and fills the
+  rows below it in screen order, and two columns, indicator code and figure, fill by code in any
+  order. Wider selections are refused, because a row of the template also holds its targets.
+  Pasting only fills the boxes; nothing is written until the reporter confirms, so a typed or
+  pasted figure carries "entered by hand" and the confirmer's name rather than a source cell. Both
+  were walked in Chrome against a seeded draft; nothing was confirmed.
 - **It runs, and starting it found two bugs that reading did not.** `./mvnw clean test` passes, 60
   source files and 17 tests, Flyway applies all three migrations, the seed loads and
   `Started VukaApplication` appears. Getting there took three attempts. `ddl-auto: validate`
@@ -558,7 +644,8 @@ State these before someone finds them.
   and on a phone, reviewer, executive, administrator and citizen, against a freshly seeded
   Postgres, driven by a script that clicks what a person would click. That pass found and fixed:
   the template download, the source cell links and the evidence links all opening without the
-  token; submission detail, submit, review, export, the drilldown, the phone home and the phone
+  token (the Open link on the Documents screen was missed by that pass and fixed later; a PDF or
+  image now opens in a new tab, anything else downloads); submission detail, submit, review, export, the drilldown, the phone home and the phone
   receipt answering 500 on lazy loads; every phone form bouncing to sign in because each request
   deleted the CSRF cookie; a returned figure that could not be corrected; and no state checks on
   confirm, submit or review, so a figure could be changed after submission and a draft approved.
@@ -587,6 +674,9 @@ State these before someone finds them.
   mapping is unit tested against Graph's response shapes, but no tenant was available. Bind one
   test library and run `POST .../microsoft/sync` before showing it. The Teams card is likewise
   tested for shape, not posted to a live channel.
+- **Reminder email has not been sent through a real relay.** The schedule and the message are unit
+  tested; delivery has not been exercised. Point `MAIL_HOST` at a test relay with
+  `MAIL_REDIRECT_TO` set and wait for, or temporarily trigger, the 08:00 run before relying on it.
 - **Delta polling, not change notifications.** Five minutes between a save in SharePoint and the
   version in Vuka by default (`MS_POLL_INTERVAL_MS`). Graph subscriptions would make it seconds
   but need a public HTTPS endpoint Microsoft can reach.

@@ -24,6 +24,7 @@ import {
   type User,
 } from 'firebase/auth';
 import { api, setTokenSource } from './api';
+import { forget, setIdentity } from './offline';
 import type { MeView, Role, Capability } from './types';
 
 const DEV_AUTH = import.meta.env.VITE_DEV_AUTH === 'true';
@@ -98,7 +99,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     tokenRef.current = stored;
-    void load().finally(() => setReady(true));
+    void setIdentity(stored)
+      .then(load)
+      .finally(() => setReady(true));
   }, [load]);
 
   /* Firebase keeps the session; this fires once on load and again on every refresh. */
@@ -113,11 +116,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     const stop = onIdTokenChanged(fb.auth, (user: User | null) => {
       if (!user) {
+        void setIdentity(null);
         setMe(null);
         setReady(true);
         return;
       }
-      void load().finally(() => setReady(true));
+      // Identity first, from the user Firebase keeps on the device, so that with no network the
+      // profile below can come from this person's kept copy and the dashboard still opens.
+      void setIdentity(user.uid)
+        .then(load)
+        .finally(() => setReady(true));
     });
     return stop;
   }, [fb, load]);
@@ -125,7 +133,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signIn = useCallback(
     async (email: string, password: string) => {
       if (!fb) throw new Error('Firebase is not configured.');
-      await signInWithEmailAndPassword(fb.auth, email, password);
+      const cred = await signInWithEmailAndPassword(fb.auth, email, password);
+      await setIdentity(cred.user.uid);
       await load();
     },
     [fb, load],
@@ -138,12 +147,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const token = ['dev', role, entityId ?? '', name].join('|');
       tokenRef.current = token;
       sessionStorage.setItem(DEV_TOKEN_KEY, token);
+      await setIdentity(token);
       await load();
     },
     [load],
   );
 
   const signOut = useCallback(async () => {
+    // Deletes this person's kept data and unsent changes, after asking about the changes. A
+    // shared machine must not open on the last person's screens with no network to stop it.
+    if (!(await forget())) return;
     tokenRef.current = null;
     sessionStorage.removeItem(DEV_TOKEN_KEY);
     setMe(null);
@@ -179,31 +192,4 @@ export function can(me: MeView | null | undefined, capability: Capability): bool
 
 export function isDsac(role: Role | undefined | null): boolean {
   return role === 'DSAC_REVIEWER' || role === 'DSAC_EXECUTIVE' || role === 'ADMIN';
-}
-
-export function canReview(role: Role | undefined | null): boolean {
-  return role === 'DSAC_REVIEWER' || role === 'ADMIN';
-}
-
-/**
- * Where a role lands after signing in.
- *
- * Four roles land in four different places, which is the demonstrable outcome of block 2
- * in the build order. A reporter never sees a route into the portfolio, because the first
- * thing they need is their own deadline.
- */
-export function homeFor(me: MeView | null): string {
-  if (!me) return '/signin';
-  switch (me.role) {
-    case 'ENTITY_REPORTER':
-      return '/entity';
-    case 'DSAC_REVIEWER':
-      return '/review';
-    case 'DSAC_EXECUTIVE':
-      return '/portfolio';
-    case 'ADMIN':
-      return '/admin/entities';
-    default:
-      return '/signin';
-  }
 }

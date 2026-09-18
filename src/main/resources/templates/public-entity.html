@@ -5,8 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title th:text="#{page.entity.title(${e.name()})}">Entity performance</title>
   <!--
-    Deliberately one file with inline styles and no scripts.
-    The audience is a citizen on a low-end phone paying for data.
+    Deliberately one file with inline styles and one optional line of script, which enrols the
+    page in the offline copy and changes nothing about how it renders.
+    The audience is a citizen on a low-end phone paying for data. The full view, with charts
+    and search, is at the same address with ?view=rich; see CitizenSurface.
     Everything here is already approved for publication by DSAC.
   -->
   <style>
@@ -52,12 +54,18 @@
        rule; this page had lost it. */
     nav.langs a { margin-right:16px; }
     nav.langs a[aria-current] { font-weight:700; text-decoration:none; }
+    nav.langs .full { display:inline-flex; align-items:center; min-height:44px; margin-top:8px; color:var(--green); }
+    /* Hidden until the service worker serves this page from its saved copy, and then the first
+       thing on the page, because a figure without its date is a figure that looks current. */
+    .offline { margin:0 0 16px; padding:10px 12px; border-left:4px solid var(--green);
+               background:var(--line); font-size:14px; }
   </style>
 </head>
 <body>
 <a class="skip" href="#main" th:text="#{common.skip}">Skip to the main content</a>
 <div class="wrap">
   <main id="main">
+    <p class="offline" role="status" data-offline-note hidden th:text="#{common.offline.saved}">You are offline.</p>
     <p class="kicker" th:text="#{page.entity.kicker}">Public performance record</p>
     <h1 th:text="${e.name()}">Entity name</h1>
     <p class="sector" th:text="${e.sector()}">Sector</p>
@@ -108,7 +116,7 @@
         Figures are as reported by the entity and reviewed by the Department.
       </p>
       <p>
-        <a th:href="@{/public(lang=${#locale.language})}" th:text="#{page.entity.all}">All published entities</a>
+        <a th:href="@{/public(lang=${#locale.language}, view='lite')}" th:text="#{page.entity.all}">All published entities</a>
       </p>
     </div>
   </main>
@@ -116,11 +124,17 @@
   <nav class="langs" th:attr="aria-label=#{common.language}">
     <span class="lbl" th:text="#{common.language}">Language</span>
     <a th:each="l : ${languages}"
-       th:href="@{${path}(lang=${l.tag()})}"
+       th:href="@{${path}(lang=${l.tag()}, view='lite')}"
        th:lang="${l.tag()}"
        th:text="${l.name()}"
        th:attr="aria-current=${#locale.language == l.tag()} ? 'true' : null">English</a>
+    <br>
+    <a class="full" th:if="${richAvailable}" th:href="@{${path}(lang=${#locale.language}, view='rich')}"
+       th:text="#{common.view.rich}">Full version</a>
   </nav>
 </div>
+<!-- The only script on this page, and it is optional: it keeps a copy of each page read here on
+     the device, so the figures are still there with no signal. Without it the page is unchanged. -->
+<script>if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(function(){});</script>
 </body>
 </html>

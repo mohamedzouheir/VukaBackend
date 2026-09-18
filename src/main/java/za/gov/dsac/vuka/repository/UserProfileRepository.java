@@ -14,4 +14,7 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
 
     Optional<UserProfile> findByUid(String uid);
     Optional<UserProfile> findByEmail(String email);
+
+    /** The people who report for an entity, who receive its deadline reminders. */
+    List<UserProfile> findByEntityIdAndRole(UUID entityId, Enums.Role role);
 }

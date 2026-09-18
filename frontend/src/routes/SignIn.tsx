@@ -96,6 +96,11 @@ export function SignIn() {
         )}
 
         <p className="small muted signin-foot">
+          There is no sign up. Accounts are issued by the Department for one named entity, so if you
+          report for an entity and have no account, ask your DSAC administrator for one.
+        </p>
+
+        <p className="small muted signin-foot">
           Reporting on a phone? The low bandwidth surface is at <a href="/m">/m</a> and needs no
           JavaScript. The citizen view at <a href="/public">/public</a> needs no account at all.
         </p>
@@ -146,12 +151,13 @@ function DevSignIn({
           className="mono"
           value={entityId}
           onChange={(e) => setEntityId(e.target.value)}
-          placeholder=""
+          placeholder="blank for the demo reporter"
           aria-describedby="dev-entity-help"
         />
         <p className="small muted" id="dev-entity-help">
-          The uuid of a seeded entity. Sign in as a reviewer first, open the portfolio and copy one
-          from a row. A reporter with no entity id can reach nothing, which is the correct behaviour.
+          Leave it blank to sign in as the demo reporter at Iziko, the entity whose Q1 submission
+          the reviewer returns in the demonstration. Or paste the uuid of another seeded entity;
+          the Administration screen prints one under each name.
         </p>
       </div>
 

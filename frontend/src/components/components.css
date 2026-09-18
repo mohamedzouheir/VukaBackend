@@ -336,3 +336,19 @@
 .cp-body { margin: 2px 0 0; white-space: pre-wrap; }
 .cp-form { display: grid; gap: var(--space-1); max-width: 40rem; }
 .cp-form button { justify-self: start; }
+
+/* ---------- deadline warning (DeadlineAlert) ---------- */
+
+.deadline-warning {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  border: 1px solid;
+}
+.deadline-warning > svg { flex: none; margin-top: 2px; }
+.deadline-late { background: var(--danger-wash); border-color: var(--danger-border); }
+.deadline-late > svg { color: var(--band-critical); }
+.deadline-soon { background: var(--warn-wash); border-color: var(--warn-border); }
+.deadline-soon > svg { color: var(--warn); }

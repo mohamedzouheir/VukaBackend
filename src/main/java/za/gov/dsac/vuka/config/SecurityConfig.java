@@ -113,7 +113,14 @@ public class SecurityConfig {
                 // method level ADMIN check.
                 .requestMatchers("/", "/index.html", "/favicon.ico", "/assets/**",
                                  "/signin", "/entity/**", "/review/**", "/portfolio/**",
-                                 "/admin/entities/**").permitAll()
+                                 "/admin/entities/**", "/entities", "/risk", "/analytics",
+                                 "/workspaces", "/documents", "/tasks").permitAll()
+
+                // The offline layer: the service worker, the page that enrols the phone surface
+                // in it, and the full citizen view's page. Static files with no data in them. The
+                // worker has to be fetchable before anyone signs in, or a reporter who loses
+                // signal on the sign-in page has nothing installed to fall back on.
+                .requestMatchers("/sw.js", "/offline/**", "/citizen.html", "/favicon.svg").permitAll()
 
                 // Everything else needs a verified Firebase token carrying a role claim. That
                 // includes every /api route, so the shell above can be read by anyone and the

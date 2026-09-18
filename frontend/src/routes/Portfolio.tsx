@@ -17,7 +17,8 @@ import type { PortfolioRow, Sector } from '../lib/types';
 import { BAND_ORDER, bandColour, bandWord, num, randsShort, reviewPeriod, sectorLabel } from '../lib/format';
 import { RiskPanel } from '../components/RiskPanel';
 import { EmptyState, ErrorState, Loading, Tile } from '../components/Shell';
-import { IconFilter, IconInfo } from '../icons';
+import { PageHead } from '../components/AppShell';
+import { IconFilter, IconGauge, IconInfo } from '../icons';
 import './Portfolio.css';
 
 const SECTORS: Sector[] = ['ARTS', 'HERITAGE', 'LIBRARIES', 'SPORT', 'LANGUAGE', 'OTHER'];
@@ -83,12 +84,14 @@ export function Portfolio() {
 
   return (
     <div className="stack">
-      <div className="section-head">
-        <div>
-          <h1>Portfolio</h1>
-          <p className="muted">{period ? period.label : 'No open reporting period'}</p>
-        </div>
-      </div>
+      <PageHead
+        icon={<IconGauge size={26} />}
+        title="Portfolio"
+        subtitle={
+          (period ? period.label : 'No open reporting period') +
+          '. How many, then which ones, then why. Read only: nothing on this screen changes a figure.'
+        }
+      />
 
       {/* Counts first. */}
       <div className="tiles">

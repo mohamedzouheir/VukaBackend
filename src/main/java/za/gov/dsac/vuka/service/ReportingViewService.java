@@ -47,13 +47,15 @@ public class ReportingViewService {
     private final AllocationRepository allocations;
     private final CommentRepository comments;
     private final RiskScoreRepository riskScores;
+    private final UserProfileRepository users;
 
     public ReportingViewService(PublicEntityRepository entities, FinancialYearRepository years,
                                 ReportingPeriodRepository periods, SubmissionRepository submissions,
                                 TargetRepository targets, TargetResultRepository results,
                                 ExtractionResultRepository extractions,
                                 DocumentRecordRepository documents, AllocationRepository allocations,
-                                CommentRepository comments, RiskScoreRepository riskScores) {
+                                CommentRepository comments, RiskScoreRepository riskScores,
+                                UserProfileRepository users) {
         this.entities = entities;
         this.years = years;
         this.periods = periods;
@@ -65,6 +67,7 @@ public class ReportingViewService {
         this.allocations = allocations;
         this.comments = comments;
         this.riskScores = riskScores;
+        this.users = users;
     }
 
     /* ================================================================== */
@@ -243,6 +246,11 @@ public class ReportingViewService {
     }
 
     @Transactional(readOnly = true)
+    private String reviewerName(String uid) {
+        if (uid == null) return null;
+        return users.findByUid(uid).map(u -> u.getDisplayName()).orElse(null);
+    }
+
     public SubmissionRow toSubmissionRow(Submission s) {
         PublicEntity e = s.getEntity();
         ReportingPeriod p = s.getReportingPeriod();
@@ -268,10 +276,10 @@ public class ReportingViewService {
                 s.getId(), e.getId(), e.getName(), p.getId(), p.getLabel(),
                 String.valueOf(s.getStatus()), String.valueOf(s.getChannel()),
                 str(s.getCreatedAt()), str(s.getSubmittedAt()), s.getSubmittedByName(),
-                // The reviewer's display name is not stored on the submission, only their uid.
-                // Showing the uid would be worse than saying so, so this stays null and the
-                // interface says "reviewed" without inventing a name.
-                null,
+                // The submission stores the reviewer's uid, and the directory holds the name. A uid
+                // the directory does not know stays null rather than being shown raw, because a
+                // reporter told "returned by Q5DNyQ3T..." has been told nothing.
+                reviewerName(s.getReviewedByUid()),
                 str(s.getReviewedAt()), s.getReturnReason(),
                 daysLate(s, p), targetCount, confirmed, evidence);
     }
@@ -690,8 +698,12 @@ public class ReportingViewService {
     /* administration                                                      */
     /* ================================================================== */
 
-    public record AdminEntityRow(UUID entityId, String name, String sector,
-                                 boolean publiclyVisible, int targetCount) {}
+    /** One person who reports for an entity. credentialIssued is false where Firebase was absent. */
+    public record ReporterView(String name, String email, boolean credentialIssued) {}
+
+    public record AdminEntityRow(UUID entityId, String name, String shortName, String sector,
+                                 boolean publiclyVisible, int targetCount,
+                                 List<ReporterView> reporters) {}
 
     @Transactional(readOnly = true)
     public List<AdminEntityRow> adminEntityRows() {
@@ -700,8 +712,13 @@ public class ReportingViewService {
         for (PublicEntity e : entities.findAll()) {
             int count = fy == null ? 0
                     : (int) targets.countByEntityIdAndFinancialYearId(e.getId(), fy.getId());
-            out.add(new AdminEntityRow(e.getId(), e.getName(), String.valueOf(e.getSector()),
-                    e.isPubliclyVisible(), count));
+            List<ReporterView> reporters = users.findByEntityIdAndRole(e.getId(), Enums.Role.ENTITY_REPORTER)
+                    .stream()
+                    .map(u -> new ReporterView(u.getDisplayName(), u.getEmail(),
+                            u.getUid() != null && !u.getUid().startsWith("unissued:")))
+                    .toList();
+            out.add(new AdminEntityRow(e.getId(), e.getName(), e.getShortName(),
+                    String.valueOf(e.getSector()), e.isPubliclyVisible(), count, reporters));
         }
         out.sort(Comparator.comparing(AdminEntityRow::name));
         return out;
