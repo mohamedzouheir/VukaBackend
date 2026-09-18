@@ -2,6 +2,7 @@ package za.gov.dsac.vuka.web;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import za.gov.dsac.vuka.config.VukaPrincipal;
@@ -161,6 +162,11 @@ public class DashboardController {
      */
     @GetMapping("/entity/{entityId}")
     @PreAuthorize("hasAnyRole('ENTITY_REPORTER','DSAC_REVIEWER','DSAC_EXECUTIVE','ADMIN')")
+    // Read only, and it has to be transactional. This method walks targets, their results and
+    // their findings, and open-in-view is false, so any lazy association it touches outside a
+    // transaction throws. The fetch join above covers the one that did; this covers the next one
+    // somebody adds without noticing.
+    @Transactional(readOnly = true)
     public ResponseEntity<EntityDetail> entity(@PathVariable("entityId") UUID entityId,
                                                @RequestParam(name = "periodId", required = false) UUID periodId,
                                                @AuthenticationPrincipal VukaPrincipal who) {
@@ -201,7 +207,7 @@ public class DashboardController {
                     String.valueOf(uc.verdict())));
         }
 
-        List<FindingView> fvs = findings.findByEntityId(entityId).stream()
+        List<FindingView> fvs = findings.findByEntityIdWithYear(entityId).stream()
                 .map(f -> new FindingView(
                         f.getFinancialYear() == null ? "" : f.getFinancialYear().getLabel(),
                         String.valueOf(f.getOutcome()), f.getDescription(),

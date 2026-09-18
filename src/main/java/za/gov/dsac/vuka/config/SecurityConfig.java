@@ -9,7 +9,10 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.util.matcher.AnyRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 
 import java.net.URLEncoder;
@@ -89,6 +92,18 @@ public class SecurityConfig {
                 // Citizen view, health, static assets.
                 .requestMatchers("/public/**", "/actuator/health", "/css/**", "/js/**").permitAll()
 
+                // The error dispatch, and leaving this out silently broke every error response.
+                // When a controller throws, Spring forwards to /error, and that forward is an
+                // ERROR dispatch: OncePerRequestFilter.shouldNotFilterErrorDispatch() is true by
+                // default, so neither authentication filter runs and the forward arrives
+                // unauthenticated. With /error authenticated, the entry point answered it and the
+                // real status was thrown away. An authenticated caller with the wrong role got a
+                // 401 instead of a 403, which reads to a client as an expired session and sends
+                // the user round a sign-out loop rather than telling them the truth. Permitting
+                // the dispatch does not expose anything: what the error page contains is decided
+                // by the server.error properties, which include no message and no stack trace.
+                .requestMatchers("/error").permitAll()
+
                 // The reporter has to be able to reach the sign-in form without being signed in.
                 .requestMatchers("/m/signin").permitAll()
                 // Everything else under /m writes performance data in a named person's name.
@@ -110,14 +125,25 @@ public class SecurityConfig {
                 // data underneath it cannot.
                 .anyRequest().authenticated())
 
-            // A browser that hits 401 on an ordinary page navigation has reached a dead end. The
-            // API still gets its 401; only the reporter surface redirects, and it carries the
-            // path it was heading for so an expired token costs the reporter nothing but a
-            // sign-in. Where they were is in the URL, which is the same property the whole
-            // mobile flow is built on.
-            .exceptionHandling(e -> e.defaultAuthenticationEntryPointFor(
-                    (request, response, ex) -> response.sendRedirect(signInWithReturnTo(request)),
-                    MOBILE_SURFACE))
+            // A browser that hits 401 on an ordinary page navigation has reached a dead end, so
+            // the reporter surface redirects and carries the path it was heading for: an expired
+            // token then costs the reporter nothing but a sign-in, and where they were is in the
+            // URL, which is the property the whole mobile flow is built on.
+            //
+            // The second mapping is not optional, and leaving it out was a live bug. Spring's
+            // ExceptionHandlingConfigurer only builds a DelegatingAuthenticationEntryPoint when
+            // there is more than one mapping; with exactly one it uses that entry point for every
+            // request and ignores the matcher entirely. So a single mobile mapping sent
+            // unauthenticated API callers a 302 to /m/signin instead of a 401, and a fetch client
+            // cannot tell a redirected HTML page from an expired session. Anything not under /m
+            // gets a plain 401.
+            .exceptionHandling(e -> e
+                    .defaultAuthenticationEntryPointFor(
+                            (request, response, ex) -> response.sendRedirect(signInWithReturnTo(request)),
+                            MOBILE_SURFACE)
+                    .defaultAuthenticationEntryPointFor(
+                            new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
+                            AnyRequestMatcher.INSTANCE))
 
             .addFilterBefore(firebaseTokenFilter, UsernamePasswordAuthenticationFilter.class);
 
