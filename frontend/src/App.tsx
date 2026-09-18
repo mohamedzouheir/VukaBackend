@@ -44,10 +44,14 @@ export function App() {
   const { ready, me } = useAuth();
 
   const signedIn = Boolean(me);
-  const oversight = can(me, 'VIEW_PORTFOLIO' as Capability);
+  // The critical count badges the reviewer's Risk & Alerts and the executive's bell. The admin's
+  // surface carries neither, so it does not pay for the portfolio request.
+  const oversight = can(me, 'VIEW_PORTFOLIO' as Capability) && me?.role !== 'ADMIN';
+  // Only the roles whose rail carries Tasks fetch the count for its badge.
+  const tasksInRail = me?.role === 'ENTITY_REPORTER' || me?.role === 'DSAC_REVIEWER' || me?.role === 'ADMIN';
 
   const portfolio = useAsync(() => api.portfolio(), [signedIn, oversight], signedIn && oversight);
-  const tasks = useAsync(() => api.myTasks(), [signedIn], signedIn);
+  const tasks = useAsync(() => api.myTasks(), [signedIn, tasksInRail], signedIn && tasksInRail);
 
   if (!ready) return <Loading what="your account" />;
   if (!me) return <SignIn />;
@@ -60,9 +64,9 @@ export function App() {
   return (
     <AppShell criticalCount={criticalCount} openTaskCount={openTaskCount}>
       <Routes>
-        {/* Every role lands on the same route and the screen reads its own capabilities, so a
-            reporter and a Director-General get different content from one address. */}
-        <Route path="/" element={<Dashboard />} />
+        {/* Every role lands on the same address and each gets its own home there. Four roles
+            land in four different places, which is block 2 of the build order. */}
+        <Route path="/" element={<Home />} />
         <Route path="/signin" element={<Navigate to="/" replace />} />
 
         {/* Oversight. */}
@@ -100,6 +104,28 @@ export function App() {
       </Routes>
     </AppShell>
   );
+}
+
+/**
+ * The home screen, by role.
+ *
+ * The executive's home is the portfolio (W9), the admin's is the publication register and the
+ * reporter's is their own reporting screen (W1), rather than a dashboard that restates any of
+ * them. Only the reviewer gets a dashboard, because their day starts with a question no single
+ * screen answers: which three things to look at first.
+ */
+function Home() {
+  const { me } = useAuth();
+  switch (me?.role) {
+    case 'DSAC_EXECUTIVE':
+      return <Portfolio />;
+    case 'ADMIN':
+      return <EntityAdmin />;
+    case 'ENTITY_REPORTER':
+      return <EntityHome />;
+    default:
+      return <Dashboard />;
+  }
 }
 
 /**

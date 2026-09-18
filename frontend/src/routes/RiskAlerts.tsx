@@ -27,6 +27,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useAsync } from '../lib/useAsync';
+import { can, useAuth } from '../lib/auth';
 import type { PortfolioRow, SubmissionRow } from '../lib/types';
 import { BAND_ORDER, bandColour, bandWord, num, rands, reviewPeriod, signalLabel, statusLabel } from '../lib/format';
 import { PageHead } from '../components/AppShell';
@@ -41,6 +42,7 @@ import './RiskAlerts.css';
 type BandFilter = 'ALL' | 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
 
 export function RiskAlerts() {
+  const { me } = useAuth();
   const portfolio = useAsync(() => api.portfolio(), []);
   const subs = useAsync(() => api.submissions(), []);
   const periods = useAsync(() => api.periods(), []);
@@ -93,10 +95,14 @@ export function RiskAlerts() {
           title="Risk & Alerts"
           subtitle="Where the Department should look first this quarter, and why."
         >
-          <button type="button" onClick={() => void recompute()} disabled={recomputing}>
-            {recomputing ? <IconSpinner size={16} className="spin" /> : <IconGauge size={16} />}
-            Recompute scores
-          </button>
+          {/* Offered only where the API accepts it. An executive reaching this screen by address
+              reads the scores and is not shown a control that would be refused. */}
+          {can(me, 'REVIEW_SUBMISSIONS') ? (
+            <button type="button" onClick={() => void recompute()} disabled={recomputing}>
+              {recomputing ? <IconSpinner size={16} className="spin" /> : <IconGauge size={16} />}
+              Recompute scores
+            </button>
+          ) : null}
         </PageHead>
 
         {portfolio.loading ? (

@@ -43,8 +43,9 @@ VUKA_DEV_AUTH=true mvn spring-boot:run
 VITE_DEV_AUTH=true
 ```
 
-Sign in as a **DSAC reviewer** first. Open the portfolio, copy an entity uuid from any row, then
-sign out and sign back in as an **entity reporter** with that uuid. That order matters: a reporter
+With the entity field blank, the reporter button signs in as the demo reporter at Iziko, whose Q1
+submission the reviewer returns in the demonstration. For any other entity, sign in as a **DSAC
+admin** first; the Administration screen prints every entity's uuid under its name. That order matters: a reporter
 with no entity id can reach nothing, which is correct behaviour and looks exactly like a bug.
 
 With development sign in on, the application carries a banner on every page and the backend logs a

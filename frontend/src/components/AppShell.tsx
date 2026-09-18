@@ -10,20 +10,20 @@
  * which is the one thing this product exists not to do, so an unknown count renders as no badge
  * rather than as a zero or a guess.
  *
- * The designs also carry Analytics & Insights in the rail. It is present and it says plainly that
- * it is not built, because the trends it shows have no source: nothing in the schema records a
- * figure per month, and inventing one to fill a chart would undo the argument the rest of the
- * product makes.
+ * The designs also carry Analytics & Insights in the rail. It is not in any rail here, because the
+ * trends it shows have no source: nothing in the schema records a figure per month, and a rail
+ * entry that opens on "not built" spends a click of the demonstration on an apology. The route
+ * still answers, and says why, for anyone who reaches it by address.
  */
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth, canReview, isDsac } from '../lib/auth';
+import { useAuth } from '../lib/auth';
 import type { MeView, Role } from '../lib/types';
 import {
-  IconAlert, IconArms, IconBell, IconChart, IconChevronDown, IconChevronRight, IconCitation,
+  IconAlert, IconArms, IconBell, IconChevronDown, IconChevronRight, IconCitation,
   IconExternal,
-  IconFolder, IconHome, IconLandmark, IconMenu, IconSettings, IconSignOut,
+  IconFolder, IconGauge, IconHome, IconLandmark, IconList, IconMenu, IconSettings, IconSignOut,
   IconTasks, IconWorkspaces,
 } from '../icons';
 import { SearchField } from './SearchField';
@@ -37,7 +37,74 @@ interface NavItem {
   badge?: number | null;
   /** External to the single page application. */
   external?: boolean;
-  visible: (role: Role) => boolean;
+}
+
+/**
+ * The rail, one list per role.
+ *
+ * Written out whole rather than filtered from one shared list, because the shared list is how
+ * three DSAC roles ended up with the same eight entries. Each role gets the screens its job is
+ * made of and nothing else (frontend design section 2 and journeys J3 and J4):
+ *
+ *   reporter   reports for one entity, taken from the token. Their home is the reporting screen
+ *              itself (J1: no generic landing page), with anything the Department returned at
+ *              the top. Documents, workspace and tasks are their side of the conversation.
+ *   reviewer   works the risk-ranked queue and decides. Today, queue, risk, documents to decide
+ *              on, the workspaces and tasks where the conversation with an entity happens.
+ *   executive  reads the portfolio and never changes anything. Portfolio, the register to find
+ *              one entity by name, and the citizen view. No tasks, no workspaces, no recompute,
+ *              because nothing there is theirs to act on.
+ *   admin      decides what the public sees and binds workspaces to Microsoft 365. No queue and
+ *              no risk screen: the admin holds no review capability at all, so that publication
+ *              and approval always take two people. Tasks stay, because the reviewer hands the
+ *              publication decision over as one.
+ *
+ * A route left out of a rail is still reachable by address where the capability allows it, so a
+ * link from inside a screen keeps working. The rail is what each person is for, not the fence.
+ */
+function railFor(
+  role: Role,
+  { criticalCount, openTaskCount }: { criticalCount?: number | null; openTaskCount?: number | null },
+): NavItem[] {
+  const citizen: NavItem = { to: '/public', label: 'Citizen View', icon: <IconExternal size={19} />, external: true };
+  const workspaces: NavItem = { to: '/workspaces', label: 'Workspaces', icon: <IconWorkspaces size={19} /> };
+  const documents: NavItem = { to: '/documents', label: 'Documents', icon: <IconFolder size={19} /> };
+  const tasks: NavItem = { to: '/tasks', label: 'Tasks', icon: <IconTasks size={19} />, badge: openTaskCount ?? null };
+
+  switch (role) {
+    case 'ENTITY_REPORTER':
+      return [
+        { to: '/', label: 'My reporting', icon: <IconCitation size={19} /> },
+        documents,
+        workspaces,
+        tasks,
+        citizen,
+      ];
+    case 'DSAC_REVIEWER':
+      return [
+        { to: '/', label: 'Today', icon: <IconHome size={19} /> },
+        { to: '/review', label: 'Review queue', icon: <IconList size={19} /> },
+        { to: '/risk', label: 'Risk & Alerts', icon: <IconAlert size={19} />, badge: criticalCount ?? null },
+        documents,
+        workspaces,
+        tasks,
+      ];
+    case 'DSAC_EXECUTIVE':
+      return [
+        { to: '/', label: 'Portfolio', icon: <IconGauge size={19} /> },
+        { to: '/entities', label: 'Entities', icon: <IconLandmark size={19} /> },
+        citizen,
+      ];
+    case 'ADMIN':
+      return [
+        { to: '/', label: 'Administration', icon: <IconSettings size={19} /> },
+        workspaces,
+        tasks,
+        citizen,
+      ];
+    default:
+      return [];
+  }
 }
 
 export function AppShell({
@@ -83,31 +150,7 @@ export function AppShell({
   if (!me) return <>{children}</>;
   const role = me.role;
 
-  const items: NavItem[] = [
-    { to: '/', label: 'Dashboard', icon: <IconHome size={19} />, visible: () => true },
-    { to: '/entities', label: 'Entities', icon: <IconLandmark size={19} />, visible: isDsac },
-    { to: '/review', label: 'Reports', icon: <IconCitation size={19} />, visible: (r) => canReview(r) },
-    { to: '/entity', label: 'My reporting', icon: <IconCitation size={19} />, visible: (r) => r === 'ENTITY_REPORTER' },
-    { to: '/documents', label: 'Documents', icon: <IconFolder size={19} />, visible: () => true },
-    { to: '/analytics', label: 'Analytics & Insights', icon: <IconChart size={19} />, visible: isDsac },
-    {
-      to: '/risk',
-      label: 'Risk & Alerts',
-      icon: <IconAlert size={19} />,
-      badge: criticalCount ?? null,
-      visible: isDsac,
-    },
-    { to: '/workspaces', label: 'Workspaces', icon: <IconWorkspaces size={19} />, visible: () => true },
-    {
-      to: '/tasks',
-      label: 'Tasks',
-      icon: <IconTasks size={19} />,
-      badge: openTaskCount ?? null,
-      visible: () => true,
-    },
-    { to: '/public', label: 'Citizen View', icon: <IconExternal size={19} />, external: true, visible: () => true },
-    { to: '/admin/entities', label: 'Settings', icon: <IconSettings size={19} />, visible: (r) => r === 'ADMIN' },
-  ];
+  const items = railFor(role, { criticalCount, openTaskCount });
 
   return (
     <div className={'shell' + (railOpen ? ' rail-open' : '') + (collapsed ? ' shell-collapsed' : '')}>
@@ -134,9 +177,7 @@ export function AppShell({
         </div>
 
         <div className="rail-nav">
-          {items
-            .filter((i) => i.visible(role))
-            .map((i) =>
+          {items.map((i) =>
               i.external ? (
                 <a key={i.to} href={i.to} target="_blank" rel="noreferrer" title={i.label}>
                   {i.icon}
@@ -155,7 +196,7 @@ export function AppShell({
                   ) : null}
                 </NavLink>
               ),
-            )}
+          )}
         </div>
 
         <div className="rail-foot rail-label">

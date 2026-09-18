@@ -12,6 +12,7 @@ import type {
   ParseReport, PeerComparison, PeriodView, PortfolioRow, SubmissionDetail, SubmissionRow,
   UnitCostView, WorkspaceDocument, WorkspaceTask, TaskPerson, NewTask,
 } from './types';
+import { copyOf, enqueue, keep, reachable, registerSender, type Queued } from './offline';
 
 export class ApiError extends Error {
   constructor(
@@ -35,7 +36,47 @@ export function setTokenSource(source: TokenSource) {
 }
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const token = await getToken();
+  const read = (init.method ?? 'GET') === 'GET';
+  try {
+    const value = await network<T>(path, init);
+    if (read) void keep(path, value);
+    return value;
+  } catch (e) {
+    // No answer at all, as distinct from an answer that said no. Only then is a kept copy
+    // offered, and only this person's: see offline.ts.
+    if (read && e instanceof ApiError && e.status === 0) {
+      const copy = await copyOf<T>(path);
+      if (copy !== null) return copy;
+    }
+    throw e;
+  }
+}
+
+/**
+ * A change that is safe to send late. Sent now where the network answers; kept in the outbox
+ * where it does not, which resolves as Queued rather than throwing, so a sequence of changes (a
+ * reviewer's disputes and then the return) is kept whole and in order rather than cut off after
+ * the first. The outbox bar says what is waiting. See offline.ts for which changes qualify.
+ */
+async function change<T>(description: string, path: string, init: RequestInit & { body?: string }): Promise<T | Queued> {
+  try {
+    return await request<T>(path, init);
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 0) {
+      return enqueue(path, init.method ?? 'POST', init.body ?? null, description);
+    }
+    throw e;
+  }
+}
+
+async function network<T>(path: string, init: RequestInit): Promise<T> {
+  let token: string | null = null;
+  try {
+    token = await getToken();
+  } catch {
+    // Firebase refreshes an expiring token over the network. With no network the request goes
+    // without one and fails to connect, which is the answer the caller should get.
+  }
   const headers = new Headers(init.headers);
   if (token) headers.set('Authorization', 'Bearer ' + token);
   if (init.body && !(init.body instanceof FormData)) {
@@ -47,8 +88,10 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     res = await fetch(path, { ...init, headers });
   } catch {
     // A network failure is not a permission problem and must not read like one.
-    throw new ApiError(0, 'Could not reach the server. Check that the backend is running.');
+    reachable(false);
+    throw new ApiError(0, 'Could not reach the server. Check your connection.');
   }
+  reachable(true);
 
   if (res.status === 401) {
     throw new ApiError(401, 'Your session has expired. Sign in again.');
@@ -192,16 +235,18 @@ export const api = {
       varianceExplanation?: string | null;
     }[],
   ) =>
-    request<{ confirmed: number; by: string }>('/api/submissions/' + submissionId + '/confirm', {
+    change<{ confirmed: number; by: string }>(
+      'Confirm ' + rows.length + (rows.length === 1 ? ' figure' : ' figures'),
+      '/api/submissions/' + submissionId + '/confirm', {
       method: 'POST',
       body: JSON.stringify({ rows }),
     }),
 
   submit: (submissionId: string) =>
-    request<unknown>('/api/submissions/' + submissionId + '/submit', { method: 'POST' }),
+    change<unknown>('Submit the period to the Department', '/api/submissions/' + submissionId + '/submit', { method: 'POST' }),
 
   review: (submissionId: string, approve: boolean, returnReason?: string) =>
-    request<unknown>('/api/submissions/' + submissionId + '/review', {
+    change<unknown>(approve ? 'Approve a submission' : 'Return a submission to the entity', '/api/submissions/' + submissionId + '/review', {
       method: 'POST',
       body: JSON.stringify({ approve, returnReason: returnReason ?? null }),
     }),
@@ -233,7 +278,7 @@ export const api = {
    * whole filing tells the entity nothing it can correct.
    */
   addComment: (submissionId: string, body: string, targetId: string, parentId?: string) =>
-    request<CommentView>('/api/submissions/' + submissionId + '/comments', {
+    change<CommentView>(parentId ? 'Reply to a comment' : 'Comment on a figure', '/api/submissions/' + submissionId + '/comments', {
       method: 'POST',
       body: JSON.stringify({ body, targetId, parentId: parentId ?? null }),
     }),
@@ -313,7 +358,7 @@ export const api = {
     '/api/workspace/document/' + documentId + '/content',
 
   decideDocument: (documentId: string, approve: boolean, note: string) =>
-    request<unknown>('/api/workspace/document/' + documentId + '/decision', {
+    change<unknown>(approve ? 'Approve a document' : 'Return a document', '/api/workspace/document/' + documentId + '/decision', {
       method: 'POST',
       body: JSON.stringify({ approve, note }),
     }),
@@ -335,7 +380,7 @@ export const api = {
     }),
 
   setTaskStatus: (taskId: string, status: string) =>
-    request<unknown>('/api/workspace/task/' + taskId + '/status', {
+    change<unknown>('Mark a task ' + status.toLowerCase().replace('_', ' '), '/api/workspace/task/' + taskId + '/status', {
       method: 'POST',
       body: JSON.stringify({ status }),
     }),
@@ -356,3 +401,12 @@ export const api = {
       { entityId: string; name: string; sector: string; publiclyVisible: boolean; targetCount: number }[]
     >('/api/admin/entities'),
 };
+
+// Replay goes through the same client, with the same token and the same error rules.
+registerSender(
+  (path, method, body) => request<unknown>(path, { method, body: body ?? undefined }),
+  (e) => ({
+    status: e instanceof ApiError ? e.status : -1,
+    message: e instanceof Error ? e.message : 'The change was not accepted.',
+  }),
+);

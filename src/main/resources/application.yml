@@ -97,6 +97,20 @@ vuka:
     # half the downloads 404. Object storage is one DocumentStore implementation away.
     root: ${DOCUMENT_ROOT:./var/documents}
 
+  mail:
+    # Deadline reminders by email. With no host, nothing is sent and every reminder is still
+    # logged. Any SMTP relay works: Microsoft 365, Azure Communication Services, SendGrid or a
+    # government relay. Port 587 with STARTTLS.
+    host: ${MAIL_HOST:}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    # A path to a file holding the SMTP password, not the password itself.
+    password-path: ${MAIL_PASSWORD_FILE:}
+    from: ${MAIL_FROM:}
+    # Sends every reminder to this one address instead, naming the intended recipients in the
+    # body. The seeded contact addresses are invented, so set this for any demonstration.
+    redirect-to: ${MAIL_REDIRECT_TO:}
+
   microsoft:
     # Nothing here is required. With no tenant configured, workspaces, document versioning,
     # comments and tasks all work and the integration reports itself as not configured.

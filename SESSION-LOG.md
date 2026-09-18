@@ -621,6 +621,56 @@ scratch directory and goes when that session is cleaned up. `run-local.sh` now r
 Postgres 16 from `~/.vuka` on 5433, seeded from scratch with the demo data. Its Iziko id is new, so
 the Firebase reporter account's `entityId` claim has to be reset to it before Nomsa can sign in.
 
+### One home and one rail per role
+
+Before this pass the reviewer, the executive and the admin all landed on the same dashboard and
+saw nearly the same eight rail entries, which is the opposite of block 2 in the build order
+("four roles land in four different places") and the first thing a judge switching accounts would
+notice. `homeFor` in `lib/auth.tsx` described the intended routing and was never called.
+
+Now `/` renders a different home per role and each role has its own rail, written out whole in
+`railFor` rather than filtered from one shared list:
+
+- **Reviewer, J3.** Lands on Today: awaiting decision, returned, nothing filed, approved, then the
+  top three of the risk-ranked queue using the queue's own row component. No portfolio totals and
+  no rand figures, which are the executive's.
+- **Executive, J4.** Lands on the portfolio (W9). Rail is Portfolio, Entities, Citizen View. No
+  tasks, workspaces or recompute button, because the role changes nothing.
+- **Admin, UC-21.** Lands on Administration, the publication switch, with published, unpublished
+  and no-targets counts. Rail is Administration, Workspaces, Tasks, Citizen View. No queue and no
+  risk screen.
+
+The risk band bars on the old shared dashboard are gone; the same distribution is the executive's
+heatmap. Analytics & Insights is in no rail. The recompute buttons on the queue and on Risk &
+Alerts are now shown only to a role holding `REVIEW_SUBMISSIONS`, where before an executive
+reaching Risk & Alerts was offered one the API refused.
+
+The capability table changed once, on purpose: `REVIEW_SUBMISSIONS` is the reviewer's alone, so
+publication and approval take two people. `CapabilityTest.adminDoesNotReview` holds it. The
+Microsoft sync endpoint, which was reviewer only, now also admits `ADMINISTER`, because the admin
+binds the library and pulling versions decides nothing. This departs from the PRD's "nothing is
+fully barred" for the administrator, and the pitch should say so as a governance choice.
+
+### The reporter, and the return round trip
+
+The reporter had two homes, a Dashboard and My reporting, showing the same tiles and the same
+deadline. Their home is now the reporting screen itself (J1: no generic landing page).
+
+The bigger fault was the return. The reporter's screen showed a returned card only for the open
+quarter, but the Department reviews the quarter that has fallen due, so in September the reviewer
+returns Q1 while the reporter's screen is on Q2. A live return left nothing on the reporter's
+screen but a chip in the prior periods list, with no link. Now every returned period sits at the
+top: who returned it (the name now resolved from the user directory rather than left null), the
+reason, each open dispute in the reviewer's words, and one button into the confirmation screen,
+which already opens on the disputed rows only. Disputes are read on the five second comment poll
+and the submission list every ten seconds, so a return made on stage appears without a reload.
+Prior periods now link to their submissions.
+
+Demo plumbing: a dev reporter with no entity id is the demo reporter at Iziko, so nobody pastes a
+uuid mid-demonstration. The local database had never received the demo seed (it already held
+comments, so the seed stepped aside) and the demo uids pointed at Firebase accounts; `run-demo.sh`
+runs against a separate `vuka_demo` database with the dev uids, and `--reset` restores it.
+
 ---
 
 ## 11. Still open

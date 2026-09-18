@@ -45,6 +45,12 @@
       <artifactId>spring-boot-starter-validation</artifactId>
     </dependency>
 
+    <!-- Deadline reminders by email, over whatever SMTP relay the department already has -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-mail</artifactId>
+    </dependency>
+
     <!-- Flyway: schema migrations -->
     <dependency>
       <groupId>org.flywaydb</groupId>

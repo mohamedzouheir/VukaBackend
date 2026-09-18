@@ -10,17 +10,20 @@
  * means the score is never a surprise. A system that scores you on data you cannot see is
  * a system people work around.
  */
-import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useAsync, useAction } from '../lib/useAsync';
 import { useAuth } from '../lib/auth';
-import { date, daysRemainingText, num, statusLabel } from '../lib/format';
+import { isOpenDispute, useLiveComments } from '../lib/useLiveComments';
+import type { SubmissionRow } from '../lib/types';
+import { date, dateTime, daysRemainingText, num, statusLabel } from '../lib/format';
 import { PeriodCard } from '../components/PeriodCard';
 import { StateLine } from '../components/StateLine';
 import { EmptyState, ErrorState, Loading, Tile } from '../components/Shell';
 import {
-  IconAlert, IconCheckCircle, IconDownload, IconPhone, IconReturn, IconUpload,
+  IconAlert, IconCheckCircle, IconChevronRight, IconComment, IconDownload, IconPhone, IconReturn,
+  IconUpload,
 } from '../icons';
 import './EntityHome.css';
 
@@ -35,6 +38,18 @@ export function EntityHome() {
     [entityId],
     entityId !== null,
   );
+
+  /* A reviewer can return a period while this screen is open, and in the demonstration they do.
+     Re-read the list every ten seconds while the tab is visible, so the returned card appears on
+     its own rather than after a reload nobody thinks to do. */
+  const reloadSubs = subs.reload;
+  useEffect(() => {
+    if (entityId === null) return;
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') reloadSubs();
+    }, 10000);
+    return () => window.clearInterval(timer);
+  }, [entityId, reloadSubs]);
 
   const [opening, setOpening] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
@@ -53,6 +68,14 @@ export function EntityHome() {
   const currentSub = useMemo(
     () => (subs.data ?? []).find((s) => current && s.periodId === current.periodId) ?? null,
     [subs.data, current],
+  );
+
+  /* Every period the Department has sent back, whichever quarter it was. The open quarter is Q2
+     while the one under review is Q1, so a returned card keyed to the open quarter alone never
+     showed the return the reporter most needed to see. */
+  const returned = useMemo(
+    () => (subs.data ?? []).filter((s) => s.status === 'RETURNED'),
+    [subs.data],
   );
 
   const prior = useMemo(
@@ -91,6 +114,12 @@ export function EntityHome() {
           </p>
         </div>
       </div>
+
+      {/* What the Department sent back comes first, above the new quarter, because it is the
+          only thing on this screen somebody else is waiting on. */}
+      {returned.map((r) => (
+        <ReturnedCard key={r.submissionId} sub={r} />
+      ))}
 
       <PeriodCard
         period={current}
@@ -155,30 +184,6 @@ export function EntityHome() {
         returnReason={currentSub?.returnReason ?? null}
       />
 
-      {currentSub?.status === 'RETURNED' ? (
-        <div className="card returned">
-          <p className="row">
-            <IconReturn size={18} />
-            <strong>The Department returned this period.</strong>
-          </p>
-          <p>
-            {currentSub.returnReason ??
-              'No overall reason was recorded. The disputed targets are marked on the review screen.'}
-          </p>
-          <p className="small muted">
-            Only the disputed targets were reopened. Everything else stays as filed, with the
-            original confirmation and its author on the record.
-          </p>
-          <button
-            type="button"
-            className="primary"
-            onClick={() => navigate('/entity/submission/' + currentSub.submissionId + '/review')}
-          >
-            Correct the disputed figures
-          </button>
-        </div>
-      ) : null}
-
       {/* Prior periods, because the risk engine reads exactly this history. */}
       <div className="card">
         <div className="section-head">
@@ -202,7 +207,9 @@ export function EntityHome() {
           <ul className="prior">
             {prior.map((s) => (
               <li key={s.submissionId}>
-                <span className="prior-period">{s.periodLabel}</span>
+                <Link className="prior-period" to={'/entity/submission/' + s.submissionId + '/review'}>
+                  {s.periodLabel}
+                </Link>
                 <span className="chip">{statusLabel(s.status)}</span>
                 <span className="muted small">
                   {num(s.confirmedCount)} of {num(s.targetCount)} reported
@@ -252,5 +259,82 @@ export function EntityHome() {
         />
       </div>
     </div>
+  );
+}
+
+/**
+ * UC-6. One period the Department returned: who returned it, why, and each disputed figure with
+ * the reviewer's own words against it, then one button into the confirmation screen, which opens
+ * on the disputed rows only.
+ *
+ * The disputes are read live, on the same five second poll the confirmation screen uses, so a
+ * figure the reviewer disputes while the reporter is looking appears here without a reload.
+ */
+function ReturnedCard({ sub }: { sub: SubmissionRow }) {
+  const navigate = useNavigate();
+  const live = useLiveComments(sub.submissionId);
+  const disputes = (live.comments ?? []).filter(isOpenDispute);
+
+  return (
+    <section className="card returned" aria-labelledby={'returned-' + sub.submissionId}>
+      <p className="row" style={{ gap: 8, margin: 0 }}>
+        <IconReturn size={18} />
+        <strong id={'returned-' + sub.submissionId}>
+          {sub.periodLabel} was returned to you
+          {sub.reviewedByName ? ' by ' + sub.reviewedByName : ''}
+        </strong>
+        <span className="spacer" />
+        {sub.reviewedAt ? <span className="small muted">{dateTime(sub.reviewedAt)}</span> : null}
+      </p>
+
+      <p style={{ margin: 'var(--space-2) 0 0' }}>
+        {sub.returnReason ?? 'No overall reason was recorded. The disputed figures are listed below.'}
+      </p>
+
+      {live.comments === null ? (
+        <p className="small muted">Reading the reviewer's comments...</p>
+      ) : disputes.length === 0 ? (
+        <p className="small muted">
+          No figure is marked as disputed, so the reason above is the whole of what was asked.
+        </p>
+      ) : (
+        <ul className="returned-disputes">
+          {disputes.map((c) => (
+            <li key={c.commentId}>
+              <IconComment size={16} className="muted" />
+              <span>
+                <strong className="mono">{c.indicatorRef ?? 'A figure'}</strong>{' '}
+                <span>{c.body}</span>
+                <em className="small muted">
+                  {' '}
+                  {c.authorName ?? 'DSAC'}
+                  {c.createdAt ? ', ' + dateTime(c.createdAt) : ''}
+                </em>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <p className="small muted">
+        Only these figures were reopened. Everything else stays as filed, with the original
+        confirmation and its author on the record. Reply against a figure on the next screen and the
+        reviewer sees it within seconds.
+      </p>
+
+      <button
+        type="button"
+        className="primary"
+        onClick={() => navigate('/entity/submission/' + sub.submissionId + '/review')}
+      >
+        {disputes.length === 0
+          ? 'Open the returned period'
+          : disputes.length === 1
+            ? 'Answer the disputed figure'
+            : 'Answer the ' + num(disputes.length) + ' disputed figures'}{' '}
+        <IconChevronRight size={16} />
+      </button>
+      <span className="visually-hidden" role="status">{live.announcement}</span>
+    </section>
   );
 }

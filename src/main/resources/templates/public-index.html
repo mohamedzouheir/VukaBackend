@@ -36,12 +36,18 @@
     nav.langs a { color:var(--green); margin-right:16px; display:inline-flex;
                   align-items:center; min-height:44px; }
     nav.langs a[aria-current] { font-weight:700; text-decoration:none; }
+    nav.langs .full { display:inline-flex; align-items:center; min-height:44px; margin-top:8px; color:var(--green); }
+    /* Hidden until the service worker serves this page from its saved copy, and then the first
+       thing on the page, because a figure without its date is a figure that looks current. */
+    .offline { margin:0 0 16px; padding:10px 12px; border-left:4px solid var(--green);
+               background:var(--line); font-size:14px; }
   </style>
 </head>
 <body>
 <a class="skip" href="#main" th:text="#{common.skip}">Skip to the main content</a>
 <div class="wrap">
   <main id="main">
+    <p class="offline" role="status" data-offline-note hidden th:text="#{common.offline.saved}">You are offline.</p>
     <h1 th:text="#{page.index.title}">Public entity performance</h1>
     <p class="lede" th:text="#{page.index.lede}">
       What each funded body received, what it committed to deliver, and what it reported.
@@ -53,7 +59,7 @@
 
     <ul class="list" th:unless="${#lists.isEmpty(entities)}">
       <li th:each="e : ${entities}">
-        <a class="row" th:href="@{/public/entity/{id}(id=${e.entityId()}, lang=${#locale.language})}">
+        <a class="row" th:href="@{/public/entity/{id}(id=${e.entityId()}, lang=${#locale.language}, view='lite')}">
           <span class="nm" th:text="${e.name()}">Entity</span>
           <span class="meta">
             <span th:text="${e.sector()}">Sector</span>
@@ -70,11 +76,17 @@
   <nav class="langs" th:attr="aria-label=#{common.language}">
     <span class="lbl" th:text="#{common.language}">Language</span>
     <a th:each="l : ${languages}"
-       th:href="@{${path}(lang=${l.tag()})}"
+       th:href="@{${path}(lang=${l.tag()}, view='lite')}"
        th:lang="${l.tag()}"
        th:text="${l.name()}"
        th:attr="aria-current=${#locale.language == l.tag()} ? 'true' : null">English</a>
+    <br>
+    <a class="full" th:if="${richAvailable}" th:href="@{${path}(lang=${#locale.language}, view='rich')}"
+       th:text="#{common.view.rich}">Full version</a>
   </nav>
 </div>
+<!-- The only script on this page, and it is optional: it keeps a copy of each page read here on
+     the device, so the figures are still there with no signal. Without it the page is unchanged. -->
+<script>if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(function(){});</script>
 </body>
 </html>

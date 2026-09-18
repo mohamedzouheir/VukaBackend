@@ -17,8 +17,9 @@ import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useAsync } from '../lib/useAsync';
 import { num, sectorLabel } from '../lib/format';
-import { EmptyState, ErrorState, Loading } from '../components/Shell';
-import { IconAlert, IconExternal, IconEye, IconEyeOff, IconSpinner } from '../icons';
+import { PageHead } from '../components/AppShell';
+import { EmptyState, ErrorState, Loading, Tile } from '../components/Shell';
+import { IconAlert, IconExternal, IconEye, IconEyeOff, IconSettings, IconSpinner } from '../icons';
 
 export function EntityAdmin() {
   const entities = useAsync(() => api.adminEntities(), []);
@@ -43,20 +44,26 @@ export function EntityAdmin() {
 
   const rows = entities.data ?? [];
   const published = rows.filter((r) => r.publiclyVisible).length;
+  const noTargets = rows.filter((r) => r.targetCount === 0).length;
 
   return (
     <div className="stack">
-      <div className="section-head">
-        <div>
-          <h1>Entities</h1>
-          <p className="muted">
-            {num(published)} of {num(rows.length)} published to the citizen view
-          </p>
-        </div>
-        <span className="spacer" />
+      <PageHead
+        icon={<IconSettings size={26} />}
+        title="Administration"
+        subtitle="What the public can see, entity by entity. Nothing here touches a reported figure."
+      >
         <a className="btn" href="/public" target="_blank" rel="noreferrer">
           <IconExternal size={16} /> Open the citizen view
         </a>
+      </PageHead>
+
+      {/* The admin's own counts. No risk band and no submission state: approving figures is the
+          reviewer's job and reading the portfolio is the executive's, each on their own home. */}
+      <div className="tiles">
+        <Tile icon={<IconEye size={22} />} tone="ok" value={num(published) + ' of ' + num(rows.length)} label="Published" sub="Visible on the citizen view" />
+        <Tile icon={<IconEyeOff size={22} />} value={num(rows.length - published)} label="Not published" sub="Off until the Department decides" />
+        <Tile icon={<IconAlert size={22} />} tone="warn" value={num(noTargets)} label="No targets registered" sub="Nothing to report against yet" />
       </div>
 
       <p className="ind-note ind-note-plain">

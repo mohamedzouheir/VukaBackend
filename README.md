@@ -88,6 +88,12 @@ First start runs the Flyway migrations and loads the real data described below. 
 The citizen view needs no authentication, so it is the fastest way to confirm the application is
 alive.
 
+**Without Docker, for a demonstration.** With Postgres already on 5432, `./run-demo.sh` starts the
+backend against its own `vuka_demo` database with development sign in and the demo account uids,
+and `./run-demo.sh --reset` puts that database back to the seeded demo state after a rehearsal.
+Then `cd frontend && VITE_DEV_AUTH=true npm run dev` and open http://localhost:5173. Never run it
+anywhere another person can reach.
+
 ### The office dashboard
 
 React, in `frontend/`. Run it beside the backend in development, or build it into the jar.
@@ -205,13 +211,29 @@ dashboard shows a page or a button only when the API behind it would accept the 
 | Comment, set and move tasks | yes | yes | | yes |
 | Download the pre-filled template | yes | yes | | yes |
 | See across entities | | yes | yes | yes |
-| Approve, return, decide on documents | | yes | | yes |
+| Approve, return, decide on documents | | yes | | |
 | Publication, Microsoft binding | | | | yes |
 
 The executive column reads everything and changes nothing. The reporter column is the only one
 that puts figures or evidence on the record. Before this table existed, two endpoints let an
 executive post a comment or approve a document while the dashboard presented the role as read
 only.
+
+**Each role opens on its own screen, with its own rail.** `/` is one address with four homes
+(`Home` in `frontend/src/App.tsx`, `railFor` in `components/AppShell.tsx`):
+
+| Role | Lands on | Rail |
+|---|---|---|
+| Reporter | My reporting (W1), with anything the Department returned at the top: who returned it, why, and each disputed figure in the reviewer's words, live | My reporting, Documents, Workspaces, Tasks, Citizen View |
+| Reviewer | Today: what awaits their decision, and the top three of the risk-ranked queue | Today, Review queue, Risk & Alerts, Documents, Workspaces, Tasks |
+| Executive | The portfolio (W9): counts, bands, rands in the critical band | Portfolio, Entities, Citizen View |
+| Admin | Administration: the publication switch per entity | Administration, Workspaces, Tasks, Citizen View |
+
+The admin does not review, in the table or on screen. Whoever decides what the public sees is not
+the person who approves the figures it will see, so publication and approval always take two
+people; an admin approval is refused by the API with a 403. This narrows the PRD's "nothing is
+fully barred" for the administrator, deliberately. Analytics & Insights is in no rail, because it has no
+data behind it; the route still explains why to anyone who reaches it by address.
 
 A refusal is told apart from a missing sign in, and says why:
 
@@ -281,7 +303,8 @@ service/
   SubmissionService   upload -> parse -> confirm -> submit -> review
   UnitCostService     planned versus actual, sector-bound peer comparison
   ExportService       the filing in full, DPME and spreadsheet shapes
-  NotificationService 30 day / 15 day / hourly countdowns
+  NotificationService 30 day / 15 day / final day countdowns, by email and optionally Teams
+  EmailNotifier       SMTP, off unless configured, with a demo redirect
   PublicationService  builds the citizen view, gated on DSAC approval
   SeedService         real published data, plus labelled illustrative quarterlies
   ReportingViewService assembles the rows the dashboard reads, provenance attached
@@ -406,10 +429,26 @@ page says "a receipt is not an approval" in those words.
 entity's repository could put evidence there under the entity's name. Whether a task is external
 is read from who set it and who has to do it, not from a flag the caller chooses.
 
-**The countdown lands in Teams.** Where an administrator sets a channel workflow URL on an
-entity's workspace, the 30 day, 15 day and hourly reminders post there as an Adaptive Card naming
-the targets with no evidence. A workflow webhook rather than Graph's `ChannelMessage.Send`,
-because that permission is protected by Microsoft and far larger than a reminder needs.
+**The countdown arrives by email.** Every entity has a mailbox, and many departments restrict
+Teams workflows, so email is the channel expected to work everywhere. At 08:00 on 30 days, 15
+days, the day before and the due date, the entity's contact address and its registered reporters
+get a plain-text reminder naming the targets that still have no evidence. It stops once the
+period is submitted. Any SMTP relay works (Microsoft 365, Azure Communication Services, SendGrid,
+a government relay), rather than Graph's `Mail.Send`, which would let the app send as any mailbox
+in the tenant:
+
+```bash
+export MAIL_HOST=smtp.example.gov.za  MAIL_FROM=vuka@example.gov.za
+export MAIL_USERNAME=...  MAIL_PASSWORD_FILE=/path/to/file/containing/the/password
+export MAIL_REDIRECT_TO=you@example.com   # demos: every reminder goes here instead
+```
+
+The seeded contact addresses are invented, so set `MAIL_REDIRECT_TO` for any demonstration.
+
+**Teams is optional.** Where an administrator also sets a channel workflow URL on an entity's
+workspace, the same countdown posts there as an Adaptive Card, once at 30 and 15 days and hourly
+on the last two days. A workflow webhook rather than Graph's `ChannelMessage.Send`, because that
+permission is protected by Microsoft and far larger than a reminder needs.
 
 To bind a tenant, register an app with `Files.ReadWrite.All` or `Sites.ReadWrite.All` as an
 application permission (`Sites.Selected` with a per-library grant is the smaller, better
@@ -587,6 +626,9 @@ State these before someone finds them.
   mapping is unit tested against Graph's response shapes, but no tenant was available. Bind one
   test library and run `POST .../microsoft/sync` before showing it. The Teams card is likewise
   tested for shape, not posted to a live channel.
+- **Reminder email has not been sent through a real relay.** The schedule and the message are unit
+  tested; delivery has not been exercised. Point `MAIL_HOST` at a test relay with
+  `MAIL_REDIRECT_TO` set and wait for, or temporarily trigger, the 08:00 run before relying on it.
 - **Delta polling, not change notifications.** Five minutes between a save in SharePoint and the
   version in Vuka by default (`MS_POLL_INTERVAL_MS`). Graph subscriptions would make it seconds
   but need a public HTTPS endpoint Microsoft can reach.
