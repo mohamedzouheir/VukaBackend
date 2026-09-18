@@ -30,3 +30,6 @@ frontend/dev.log
 
 # Uploaded documents on a local run (vuka.documents.root)
 var/
+
+# Office lock files left behind while a document is open.
+~$*

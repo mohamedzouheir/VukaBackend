@@ -10,7 +10,7 @@
 import type {
   ChainView, CommentView, EntityDetail, ExtractionView, IndicatorRowView, MeView,
   ParseReport, PeerComparison, PeriodView, PortfolioRow, SubmissionDetail, SubmissionRow,
-  UnitCostView, WorkspaceDocument, WorkspaceTask, TaskPerson, NewTask, AdminEntityRow,
+  AuditPage, UnitCostView, WorkspaceDocument, WorkspaceTask, TaskPerson, NewTask, AdminEntityRow,
   IssuedReporter, AnalyticsView,
 } from './types';
 import { copyOf, enqueue, keep, reachable, registerSender, type Queued } from './offline';
@@ -430,6 +430,15 @@ export const api = {
 
   /** Whether a Microsoft tenant is actually bound, so the screen can say so rather than guess. */
   microsoftStatus: () => request<Record<string, unknown>>('/api/workspace/microsoft/status'),
+
+  /* ---------- audit trail ---------- */
+
+  auditTrail: (params: { from?: string; to?: string; type?: string; entityId?: string } = {}) =>
+    request<AuditPage>('/api/audit' + qs(params)),
+
+  /** The same filter as the screen, so the file matches what was on the page. */
+  auditExportUrl: (params: { from?: string; to?: string; type?: string; entityId?: string } = {}) =>
+    '/api/audit/export.csv' + qs(params),
 
   /* ---------- administration ---------- */
 

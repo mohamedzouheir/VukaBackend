@@ -19,20 +19,26 @@ import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
+import { useI18n } from '../lib/i18n';
+import type { Key } from '../lib/i18n';
 import type { MeView, Role } from '../lib/types';
 import {
-  IconAlert, IconArms, IconBell, IconChart, IconChevronDown, IconChevronRight, IconCitation,
+  IconAlert, IconBell, IconChart, IconChevronDown, IconChevronRight, IconCitation,
   IconExternal,
   IconFolder, IconGauge, IconHome, IconLandmark, IconList, IconMenu, IconSettings, IconSignOut,
   IconTasks, IconWorkspaces,
 } from '../icons';
 import { SearchField } from './SearchField';
+import { LanguagePicker } from './LanguagePicker';
+import { Arms } from './Arms';
 import { ConnectionBar } from './ConnectionBar';
 import './AppShell.css';
 
 interface NavItem {
   to: string;
-  label: string;
+  /* The key rather than the word, so the rail is rebuilt in the chosen language on every render
+     instead of being frozen in whatever language the array was written in. */
+  label: Key;
   icon: ReactNode;
   /** Absent means no badge. Never rendered as zero. */
   badge?: number | null;
@@ -69,16 +75,16 @@ function railFor(
   role: Role,
   { criticalCount, openTaskCount }: { criticalCount?: number | null; openTaskCount?: number | null },
 ): NavItem[] {
-  const citizen: NavItem = { to: '/public', label: 'Citizen View', icon: <IconExternal size={19} />, external: true };
-  const workspaces: NavItem = { to: '/workspaces', label: 'Workspaces', icon: <IconWorkspaces size={19} /> };
-  const documents: NavItem = { to: '/documents', label: 'Documents', icon: <IconFolder size={19} /> };
-  const analytics: NavItem = { to: '/analytics', label: 'Analytics', icon: <IconChart size={19} /> };
-  const tasks: NavItem = { to: '/tasks', label: 'Tasks', icon: <IconTasks size={19} />, badge: openTaskCount ?? null };
+  const citizen: NavItem = { to: '/public', label: 'nav.citizenView', icon: <IconExternal size={19} />, external: true };
+  const workspaces: NavItem = { to: '/workspaces', label: 'nav.workspaces', icon: <IconWorkspaces size={19} /> };
+  const documents: NavItem = { to: '/documents', label: 'nav.documents', icon: <IconFolder size={19} /> };
+  const analytics: NavItem = { to: '/analytics', label: 'nav.analytics', icon: <IconChart size={19} /> };
+  const tasks: NavItem = { to: '/tasks', label: 'nav.tasks', icon: <IconTasks size={19} />, badge: openTaskCount ?? null };
 
   switch (role) {
     case 'ENTITY_REPORTER':
       return [
-        { to: '/', label: 'My reporting', icon: <IconCitation size={19} /> },
+        { to: '/', label: 'nav.myReporting', icon: <IconCitation size={19} /> },
         documents,
         workspaces,
         tasks,
@@ -86,9 +92,9 @@ function railFor(
       ];
     case 'DSAC_REVIEWER':
       return [
-        { to: '/', label: 'Today', icon: <IconHome size={19} /> },
-        { to: '/review', label: 'Review queue', icon: <IconList size={19} /> },
-        { to: '/risk', label: 'Risk & Alerts', icon: <IconAlert size={19} />, badge: criticalCount ?? null },
+        { to: '/', label: 'nav.today', icon: <IconHome size={19} /> },
+        { to: '/review', label: 'nav.reviewQueue', icon: <IconList size={19} /> },
+        { to: '/risk', label: 'nav.risk', icon: <IconAlert size={19} />, badge: criticalCount ?? null },
         analytics,
         documents,
         workspaces,
@@ -96,14 +102,14 @@ function railFor(
       ];
     case 'DSAC_EXECUTIVE':
       return [
-        { to: '/', label: 'Portfolio', icon: <IconGauge size={19} /> },
-        { to: '/entities', label: 'Entities', icon: <IconLandmark size={19} /> },
+        { to: '/', label: 'nav.portfolio', icon: <IconGauge size={19} /> },
+        { to: '/entities', label: 'nav.entities', icon: <IconLandmark size={19} /> },
         analytics,
         citizen,
       ];
     case 'ADMIN':
       return [
-        { to: '/', label: 'Administration', icon: <IconSettings size={19} /> },
+        { to: '/', label: 'nav.administration', icon: <IconSettings size={19} /> },
         workspaces,
         tasks,
         citizen,
@@ -123,6 +129,7 @@ export function AppShell({
   openTaskCount?: number | null;
 }) {
   const { me, devAuth, signOut } = useAuth();
+  const { t } = useI18n();
   const location = useLocation();
   const navigate = useNavigate();
   const [railOpen, setRailOpen] = useState(false);
@@ -162,21 +169,21 @@ export function AppShell({
     <div className={'shell' + (railOpen ? ' rail-open' : '') + (collapsed ? ' shell-collapsed' : '')}>
       {railOpen ? <div className="rail-scrim" onClick={() => setRailOpen(false)} /> : null}
 
-      <nav className="rail" aria-label="Main">
+      <nav className="rail" aria-label={t('nav.main')}>
         <div className="rail-brand">
           <Link to="/" className="rail-brand-link">
             <span className="rail-wordmark">
-              <span style={{ color: '#3B9BF5' }}>V</span>
+              <span className="rail-wordmark-v">V</span>
               <span className="rail-label">uka</span>
             </span>
-            <p className="rail-tagline rail-label">Transparent. Accountable. Impactful.</p>
+            <p className="rail-tagline rail-label">{t('nav.tagline')}</p>
           </Link>
           <button
             type="button"
             className="rail-collapse"
             onClick={toggleCollapsed}
-            aria-label={collapsed ? 'Expand the navigation' : 'Collapse the navigation'}
-            title={collapsed ? 'Expand' : 'Collapse'}
+            aria-label={collapsed ? t('nav.expand') : t('nav.collapse')}
+            title={collapsed ? t('nav.expand') : t('nav.collapse')}
           >
             <IconChevronRight size={16} />
           </button>
@@ -185,16 +192,16 @@ export function AppShell({
         <div className="rail-nav">
           {items.map((i) =>
               i.external ? (
-                <a key={i.to} href={i.to} target="_blank" rel="noreferrer" title={i.label}>
+                <a key={i.to} href={i.to} target="_blank" rel="noreferrer" title={t(i.label)}>
                   {i.icon}
-                  <span className="rail-label">{i.label}</span>
+                  <span className="rail-label">{t(i.label)}</span>
                   <span className="spacer rail-label" />
                   <IconExternal size={14} className="rail-label" />
                 </a>
               ) : (
-                <NavLink key={i.to} to={i.to} end={i.to === '/'} title={i.label}>
+                <NavLink key={i.to} to={i.to} end={i.to === '/'} title={t(i.label)}>
                   {i.icon}
-                  <span className="rail-label">{i.label}</span>
+                  <span className="rail-label">{t(i.label)}</span>
                   <span className="spacer rail-label" />
                   {/* Only a count the API actually returned. Absent stays absent. */}
                   {typeof i.badge === 'number' && i.badge > 0 ? (
@@ -208,24 +215,18 @@ export function AppShell({
         <div className="rail-foot rail-label">
           <div className="rail-dept">
             <span className="rail-dept-arms">
-              <IconArms size={30} />
+              <Arms size={34} />
             </span>
             <span className="rail-dept-text">
-              <strong>sport, arts &amp; culture</strong>
-              Department:
+              <strong>{t('dept.name')}</strong>
+              {t('dept.line1')}
               <br />
-              Sport, Arts and Culture
+              {t('dept.line2')}
               <br />
-              REPUBLIC OF SOUTH AFRICA
+              {t('dept.line3')}
             </span>
           </div>
-          <p className="rail-motto">
-            Better reporting.
-            <br />
-            Stronger institutions.
-            <br />
-            A brighter South Africa.
-          </p>
+          <p className="rail-motto">{t('dept.motto')}</p>
           <div className="rail-flag" aria-hidden="true">
             <span style={{ background: '#007A4D' }} />
             <span style={{ background: '#FFB612' }} />
@@ -242,7 +243,7 @@ export function AppShell({
             type="button"
             className="rail-toggle"
             onClick={() => setRailOpen((o) => !o)}
-            aria-label="Open the navigation"
+            aria-label={t('nav.openNav')}
             aria-expanded={railOpen}
           >
             <IconMenu size={20} />
@@ -251,20 +252,21 @@ export function AppShell({
           {/* Present because every screen in the designs has it. It is not wired to a search
               endpoint, because there is not one: it routes to the entity register, which is the
               only list the API can actually search over today. */}
-          {/* Present because every screen in the designs has it. It is not wired to a search
-              endpoint, because there is not one: it routes to the entity register, which is the
-              only list the API can actually search over today. */}
           <div className="topbar-search">
             <SearchField
               pill
-              label="Search entities, reports and documents"
-              placeholder="Search entities, reports, documents..."
+              label={t('nav.searchLabel')}
+              placeholder={t('nav.search')}
               onSubmit={(q) => navigate('/entities?q=' + encodeURIComponent(q))}
             />
           </div>
 
           <div className="topbar-right">
-            <button type="button" className="topbar-bell" aria-label="Alerts">
+            {/* The same control as the front door. A reporting officer who chose isiZulu on the
+                way in should not have to go back out to the landing page to change their mind. */}
+            <LanguagePicker compact />
+
+            <button type="button" className="topbar-bell" aria-label={t('nav.alerts')}>
               <IconBell size={20} />
               {typeof criticalCount === 'number' && criticalCount > 0 ? (
                 <span className="rail-badge">{criticalCount}</span>
@@ -274,15 +276,15 @@ export function AppShell({
             <div className="topbar-user">
               <span className="topbar-avatar">{initials(me)}</span>
               <span className="topbar-who">
-                <strong>{me.name ?? me.email ?? 'Signed in'}</strong>
-                <span>{roleLabel(me.role)}</span>
+                <strong>{me.name ?? me.email ?? t('signin.submit')}</strong>
+                <span>{t(roleKey(me.role))}</span>
               </span>
               <button
                 type="button"
                 className="topbar-bell"
                 onClick={() => void signOut()}
-                aria-label="Sign out"
-                title="Sign out"
+                aria-label={t('nav.signOut')}
+                title={t('nav.signOut')}
               >
                 <IconSignOut size={18} />
               </button>
@@ -291,12 +293,7 @@ export function AppShell({
           </div>
         </header>
 
-        {devAuth ? (
-          <p className="dev-banner">
-            Development sign in is enabled. Tokens are not verified and any role can be assumed.
-            Never run a deployed environment this way.
-          </p>
-        ) : null}
+        {devAuth ? <p className="dev-banner">{t('nav.devBanner')}</p> : null}
 
         <main className="shell-content">
           {/* Offline, copies on screen, and changes kept on this device. Absent when none apply. */}
@@ -314,18 +311,16 @@ function initials(me: MeView): string {
   return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase() || '?';
 }
 
-function roleLabel(role: Role): string {
+function roleKey(role: Role): Key {
   switch (role) {
     case 'ENTITY_REPORTER':
-      return 'Entity reporter';
+      return 'role.reporter';
     case 'DSAC_REVIEWER':
-      return 'DSAC reviewer';
+      return 'role.reviewer';
     case 'DSAC_EXECUTIVE':
-      return 'DSAC executive, read only';
-    case 'ADMIN':
-      return 'DSAC admin';
+      return 'role.executive';
     default:
-      return String(role);
+      return 'role.admin';
   }
 }
 

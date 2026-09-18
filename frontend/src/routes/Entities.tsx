@@ -16,7 +16,9 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useAsync } from '../lib/useAsync';
 import type { PortfolioRow, Sector } from '../lib/types';
-import { num, rands, reviewPeriod, sectorLabel, statusLabel } from '../lib/format';
+import { num, rands, reviewPeriod } from '../lib/format';
+import { useI18n } from '../lib/i18n';
+import { useLabels } from '../lib/labels';
 import { PageHead } from '../components/AppShell';
 import { RiskBadge } from '../components/RiskBadge';
 import { RiskPanel } from '../components/RiskPanel';
@@ -28,6 +30,8 @@ import './Entities.css';
 const SECTORS: Sector[] = ['ARTS', 'HERITAGE', 'LIBRARIES', 'SPORT', 'LANGUAGE', 'OTHER'];
 
 export function Entities() {
+  const { t } = useI18n();
+  const L = useLabels();
   const [params, setParams] = useSearchParams();
   const [sector, setSector] = useState<Sector | null>(null);
   const [explain, setExplain] = useState<PortfolioRow | null>(null);
@@ -82,26 +86,26 @@ export function Entities() {
       <div>
         <PageHead
           icon={<IconLandmark size={26} />}
-          title="Entities"
-          subtitle="Every body funded by the Department, its allocation and its reporting state."
+          title={t('entities.title')}
+          subtitle={t('entities.sub')}
         />
 
         {portfolio.loading ? (
-          <Loading what="the entity register" />
+          <Loading what={t('entities.what')} />
         ) : (
           <>
             <div className="tiles">
-              <Tile icon={<IconLandmark size={22} />} value={num(counts.total)} label="Total entities" sub="Receiving an entity transfer" />
-              <Tile icon={<IconCheckCircle size={22} />} tone="ok" value={num(counts.submitted)} label="Submitting reports" sub={period?.label ?? 'no open period'} />
-              <Tile icon={<IconAlert size={22} />} tone="warn" value={num(counts.atRisk)} label="High or critical" sub="Need attention" />
-              <Tile icon={<IconEyeOff size={22} />} tone="purple" value={num(counts.nothing)} label="Nothing filed" sub="This reporting period" />
+              <Tile icon={<IconLandmark size={22} />} value={num(counts.total)} label={t('entities.total')} sub={t('dash.fundedBodiesSub')} />
+              <Tile icon={<IconCheckCircle size={22} />} tone="ok" value={num(counts.submitted)} label={t('entities.submitting')} sub={period?.label ?? t('entities.noOpenPeriod')} />
+              <Tile icon={<IconAlert size={22} />} tone="warn" value={num(counts.atRisk)} label={t('entities.atRisk')} sub={t('entities.atRiskSub')} />
+              <Tile icon={<IconEyeOff size={22} />} tone="purple" value={num(counts.nothing)} label={t('entities.nothingFiled')} sub={t('entities.colPeriod')} />
             </div>
 
             <div className="card ent-filters">
               <div className="ent-search">
                 <SearchField
-                  label="Search entities by name"
-                  placeholder="Search entities by name..."
+                  label={t('entities.searchLabel')}
+                  placeholder={t('entities.searchPlaceholder')}
                   value={query}
                   onChange={(v) => {
                     const next = new URLSearchParams(params);
@@ -118,7 +122,7 @@ export function Entities() {
                   aria-pressed={sector === null}
                   onClick={() => setSector(null)}
                 >
-                  All
+                  {t('common.all')}
                 </button>
                 {SECTORS.map((s) => (
                   <button
@@ -128,7 +132,7 @@ export function Entities() {
                     aria-pressed={sector === s}
                     onClick={() => setSector(s)}
                   >
-                    {sectorLabel(s)}
+                    {L.sector(s)}
                   </button>
                 ))}
               </div>
@@ -136,14 +140,13 @@ export function Entities() {
 
             <div className="card" style={{ padding: 0, marginTop: 'var(--space-4)' }}>
               <div className="section-head" style={{ padding: 'var(--space-4) var(--space-5) 0' }}>
-                <h2>Entities ({num(rows.length)})</h2>
+                <h2>{t('entities.count', num(rows.length) ?? '')}</h2>
               </div>
 
               {rows.length === 0 ? (
                 <div style={{ padding: 'var(--space-5)' }}>
                   <EmptyState>
-                    No entity matches that filter. That is a filter with no matches rather than an
-                    empty register.
+                    {t('entities.empty')}
                   </EmptyState>
                 </div>
               ) : (
@@ -151,11 +154,11 @@ export function Entities() {
                   <table>
                     <thead>
                       <tr>
-                        <th>Entity</th>
-                        <th>Sector</th>
-                        <th className="num">Allocation</th>
-                        <th>Risk</th>
-                        <th>This period</th>
+                        <th>{t('entities.colEntity')}</th>
+                        <th>{t('entities.colSector')}</th>
+                        <th className="num">{t('entities.colAllocation')}</th>
+                        <th>{t('entities.colRisk')}</th>
+                        <th>{t('entities.colPeriod')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -172,10 +175,10 @@ export function Entities() {
                               ) : null}
                             </td>
                             <td>
-                              <span className="chip chip-muted">{sectorLabel(String(r.sector))}</span>
+                              <span className="chip chip-muted">{L.sector(String(r.sector))}</span>
                             </td>
                             <td className="num">
-                              {rands(r.totalAllocation) ?? <em className="muted">no row</em>}
+                              {rands(r.totalAllocation) ?? <em className="muted">{t('entities.noRow')}</em>}
                             </td>
                             <td>
                               <RiskBadge
@@ -188,14 +191,14 @@ export function Entities() {
                             <td>
                               {s ? (
                                 <span className="small">
-                                  {statusLabel(s.status)}
+                                  {L.status(s.status)}
                                   <span className="muted">
                                     {' '}
-                                    {num(s.confirmed)} of {num(s.targets)}
+                                    {t('entities.confirmedOf', num(s.confirmed) ?? '', num(s.targets) ?? '')}
                                   </span>
                                 </span>
                               ) : (
-                                <span className="chip chip-warn">nothing filed</span>
+                                <span className="chip chip-warn">{t('entities.nothingFiled')}</span>
                               )}
                             </td>
                           </tr>
@@ -208,10 +211,7 @@ export function Entities() {
             </div>
 
             <p className="small muted" style={{ marginTop: 'var(--space-4)' }}>
-              The design for this screen also carries an acronym, a province and a registration
-              number. None of the three exists in the schema, so they are absent here rather than
-              filled in. Allocations are the published medium term estimates from Estimates of
-              National Expenditure 2026, Vote 37, Table 37.3.
+              {t('entities.designNote')}
             </p>
           </>
         )}
@@ -219,18 +219,17 @@ export function Entities() {
 
       <aside className="aside">
         <section className="card">
-          <h2 style={{ marginBottom: 'var(--space-3)' }}>By sector</h2>
+          <h2 style={{ marginBottom: 'var(--space-3)' }}>{t('entities.bySector')}</h2>
           <SectorBars rows={portfolio.data ?? []} />
         </section>
 
         <section className="card card-sunk">
           <p className="row" style={{ margin: 0, gap: 8 }}>
             <IconEye size={18} />
-            <strong>Publication is a departmental decision</strong>
+            <strong>{t('entities.publicationHead')}</strong>
           </p>
           <p className="small muted" style={{ marginTop: 'var(--space-2)', marginBottom: 0 }}>
-            Nothing reaches the citizen view unless an administrator switches it on, and every
-            seeded entity ships with it off. The switch is on the Settings screen.
+            {t('entities.publicationBody')}
           </p>
         </section>
       </aside>
@@ -244,19 +243,21 @@ export function Entities() {
 
 /** Entity counts per sector. A count, not a performance rate, because a rate has no source. */
 function SectorBars({ rows }: { rows: PortfolioRow[] }) {
+  const { t } = useI18n();
+  const L = useLabels();
   const counts = SECTORS.map((s) => ({ sector: s, n: rows.filter((r) => r.sector === s).length }))
     .filter((c) => c.n > 0)
     .sort((a, b) => b.n - a.n);
 
   const max = Math.max(...counts.map((c) => c.n), 1);
 
-  if (counts.length === 0) return <p className="muted small">No entities registered.</p>;
+  if (counts.length === 0) return <p className="muted small">{t('entities.noneRegistered')}</p>;
 
   return (
     <div className="stack-tight">
       {counts.map((c) => (
         <div key={c.sector} className="sector-row">
-          <span className="sector-name">{sectorLabel(c.sector)}</span>
+          <span className="sector-name">{L.sector(c.sector)}</span>
           <span className="sector-count">{c.n}</span>
           <span className="sector-track" aria-hidden="true">
             <span style={{ width: (c.n / max) * 100 + '%' }} />

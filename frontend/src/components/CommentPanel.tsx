@@ -11,6 +11,8 @@
 import { useMemo, useState } from 'react';
 import type { CommentView } from '../lib/types';
 import { dateTime } from '../lib/format';
+import { useI18n } from '../lib/i18n';
+import type { Key } from '../lib/i18n';
 import { IconComment } from '../icons';
 import './components.css';
 
@@ -22,17 +24,19 @@ interface Props {
   onReply: (targetId: string, parentId: string, body: string) => Promise<boolean>;
 }
 
-function roleWord(role: string | null): string {
+function roleKey(role: string | null): Key | null {
   switch (role) {
-    case 'ENTITY_REPORTER': return 'entity';
-    case 'DSAC_REVIEWER': return 'DSAC review';
-    case 'DSAC_EXECUTIVE': return 'DSAC';
-    case 'ADMIN': return 'administrator';
-    default: return '';
+    case 'ENTITY_REPORTER': return 'comment.roleEntity';
+    case 'DSAC_REVIEWER': return 'comment.roleReviewer';
+    case 'DSAC_EXECUTIVE': return 'comment.roleExecutive';
+    case 'ADMIN': return 'comment.roleAdmin';
+    default: return null;
   }
 }
 
 export function CommentPanel({ comments, targets, announcement, onReply }: Props) {
+  const { t } = useI18n();
+
   const threads = useMemo(() => {
     const onScreen = new Set(targets.map((t) => t.targetId));
     // The server sends newest first. A conversation reads oldest first.
@@ -59,17 +63,14 @@ export function CommentPanel({ comments, targets, announcement, onReply }: Props
   return (
     <div className="card cp">
       <h2>
-        <IconComment size={16} /> Comments on these figures
+        <IconComment size={16} /> {t('comment.title')}
       </h2>
       <p className="cp-live small muted" role="status">{announcement}</p>
 
       {comments === null ? (
-        <p className="small muted">Loading the conversation.</p>
+        <p className="small muted">{t('comment.loading')}</p>
       ) : threads.length === 0 ? (
-        <p className="small muted">
-          Nothing has been said about these figures. A dispute raised by the Department appears
-          here, and against the figure itself, without reloading the page.
-        </p>
+        <p className="small muted">{t('comment.empty')}</p>
       ) : (
         threads.map(({ target, threads: ts }) => (
           <section key={target.targetId} className="cp-target">
@@ -88,11 +89,13 @@ export function CommentPanel({ comments, targets, announcement, onReply }: Props
 }
 
 function Line({ c, reply }: { c: CommentView; reply?: boolean }) {
+  const { t } = useI18n();
+  const role = roleKey(c.authorRole);
   return (
     <li className={'cp-line' + (reply ? ' cp-reply' : '')}>
       <p className="cp-who small">
-        <strong>{c.authorName ?? 'Unknown'}</strong>
-        {roleWord(c.authorRole) ? <span className="muted"> · {roleWord(c.authorRole)}</span> : null}
+        <strong>{c.authorName ?? t('comment.unknown')}</strong>
+        {role ? <span className="muted"> · {t(role)}</span> : null}
         <span className="muted"> · {dateTime(c.createdAt)}</span>
       </p>
       <p className="cp-body">{c.body}</p>
@@ -105,6 +108,7 @@ function Thread({ root, replies, onReply }: {
   replies: CommentView[];
   onReply: (body: string) => Promise<boolean>;
 }) {
+  const { t } = useI18n();
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
   const id = 'reply-' + root.commentId;
@@ -116,7 +120,7 @@ function Thread({ root, replies, onReply }: {
         {replies.map((r) => <Line key={r.commentId} c={r} reply />)}
       </ul>
       {root.resolved ? (
-        <p className="small muted">Closed.</p>
+        <p className="small muted">{t('comment.closed')}</p>
       ) : (
         <form
           className="cp-form"
@@ -129,11 +133,11 @@ function Thread({ root, replies, onReply }: {
             if (ok) setDraft('');
           }}
         >
-          <label htmlFor={id} className="small">Reply</label>
+          <label htmlFor={id} className="small">{t('comment.reply')}</label>
           <textarea id={id} rows={2} maxLength={4000} value={draft}
                     onChange={(e) => setDraft(e.target.value)} disabled={sending} />
           <button type="submit" disabled={sending || draft.trim() === ''}>
-            {sending ? 'Sending' : 'Send reply'}
+            {sending ? t('comment.sending') : t('comment.send')}
           </button>
         </form>
       )}

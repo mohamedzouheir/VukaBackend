@@ -1,0 +1,251 @@
+/*
+ * Ask Karabo: a floating button that grows a label on hover, and a panel from the right.
+ *
+ * The panel uses the app's green rather than the landing page's, because it is the product
+ * speaking rather than the Department's public face.
+ */
+
+/* ---------------------------------------------------------------- the button */
+
+.karabo-fab {
+  position: fixed;
+  right: var(--space-5);
+  bottom: var(--space-5);
+  z-index: 60;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  height: 56px;
+  min-height: 56px;
+  padding: 0;
+  width: 56px;
+
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--brand);
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(12, 32, 25, 0.28);
+  overflow: hidden;
+
+  transition: width 200ms ease, gap 200ms ease, padding 200ms ease, background 140ms ease;
+}
+.karabo-fab:hover:not(:disabled),
+.karabo-fab:focus-visible {
+  background: var(--brand-dark);
+  width: 182px;
+  gap: var(--space-2);
+  padding: 0 var(--space-5) 0 0;
+}
+
+.karabo-fab-icon {
+  width: 56px;
+  flex: none;
+  display: grid;
+  place-items: center;
+}
+
+/*
+ * The label is always in the document, so it is announced and focusable, and only its width is
+ * animated. Hiding it with display:none would take it out of the accessibility tree, which is
+ * the usual mistake with a control like this.
+ */
+.karabo-fab-label {
+  white-space: nowrap;
+  font-size: 0.9375rem;
+  font-weight: 650;
+  max-width: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-width 200ms ease, opacity 160ms ease;
+}
+.karabo-fab:hover .karabo-fab-label,
+.karabo-fab:focus-visible .karabo-fab-label {
+  max-width: 120px;
+  opacity: 1;
+}
+
+/* Open, it is a close control and does not need to keep offering its name. */
+.karabo-fab-open,
+.karabo-fab-open:hover { width: 56px; gap: 0; padding: 0; }
+.karabo-fab-open .karabo-fab-label { max-width: 0; opacity: 0; }
+
+/* ---------------------------------------------------------------- the panel */
+
+.karabo {
+  position: fixed;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 400px;
+  max-width: 100vw;
+  z-index: 59;
+
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-left: 1px solid var(--rule);
+  box-shadow: -12px 0 40px rgba(28, 26, 22, 0.14);
+
+  transform: translateX(100%);
+  transition: transform 220ms ease;
+  visibility: hidden;
+}
+.karabo-open { transform: translateX(0); visibility: visible; }
+
+.karabo-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--brand);
+  color: #fff;
+  flex: none;
+}
+.karabo-avatar {
+  width: 40px; height: 40px; flex: none;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--gold);
+  color: #241C0E;
+  font-weight: 800;
+  font-size: 1rem;
+}
+.karabo-who { flex: 1 1 auto; min-width: 0; line-height: 1.3; }
+.karabo-who strong { display: block; font-size: 0.9375rem; }
+.karabo-who span { font-size: 0.75rem; opacity: 0.85; }
+.karabo-close {
+  --btn-hover-bg: rgba(255, 255, 255, 0.2);
+  min-height: 0; padding: 6px;
+  border: 0;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+/* ---------------------------------------------------------------- thread */
+
+.karabo-thread {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  background: var(--canvas);
+}
+
+.karabo-msg { display: flex; }
+.karabo-msg-you { justify-content: flex-end; }
+
+.karabo-bubble {
+  max-width: 85%;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  line-height: 1.55;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  color: var(--ink);
+}
+.karabo-msg-karabo .karabo-bubble { border-bottom-left-radius: 4px; }
+.karabo-msg-you .karabo-bubble {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+
+/* Where the answer came from. Every answer carries one, which is the point of the feature. */
+.karabo-source {
+  display: block;
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--rule);
+  font-size: 0.6875rem;
+  line-height: 1.45;
+  color: var(--ink-muted);
+}
+
+.karabo-thinking {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--ink-muted);
+  font-size: 0.8125rem;
+}
+
+/* ---------------------------------------------------------------- suggestions */
+
+.karabo-suggestions {
+  flex: none;
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--rule);
+  background: var(--surface);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.karabo-suggestions p {
+  width: 100%;
+  margin: 0 0 2px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.karabo-chip {
+  --btn-hover-bg: var(--brand-wash);
+  min-height: 32px;
+  padding: 6px 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: var(--radius-pill);
+  border-color: var(--rule);
+  color: var(--ink);
+  text-align: left;
+}
+.karabo-chip:hover:not(:disabled) { border-color: var(--brand); }
+
+/* ---------------------------------------------------------------- composer */
+
+.karabo-composer {
+  flex: none;
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-end;
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--rule);
+  background: var(--surface);
+}
+.karabo-composer textarea {
+  flex: 1 1 auto;
+  min-height: 44px;
+  max-height: 120px;
+  resize: none;
+  font-size: 0.875rem;
+  border-radius: var(--radius);
+}
+.karabo-send { flex: none; width: 44px; padding: 0; min-height: 44px; }
+
+.karabo-foot {
+  flex: none;
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--rule);
+  background: var(--surface-sunk);
+  font-size: 0.6875rem;
+  line-height: 1.5;
+  color: var(--ink-muted);
+}
+
+/* ---------------------------------------------------------------- narrow */
+
+@media (max-width: 520px) {
+  .karabo { width: 100vw; border-left: 0; }
+  .karabo-fab { right: var(--space-4); bottom: var(--space-4); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .karabo, .karabo-fab, .karabo-fab-label { transition: none; }
+}

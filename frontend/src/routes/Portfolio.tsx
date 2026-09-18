@@ -14,7 +14,9 @@ import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useAsync } from '../lib/useAsync';
 import type { PortfolioRow, Sector } from '../lib/types';
-import { BAND_ORDER, bandColour, bandWord, num, randsShort, reviewPeriod, sectorLabel } from '../lib/format';
+import { BAND_ORDER, bandColour, num, randsShort, reviewPeriod } from '../lib/format';
+import { useI18n } from '../lib/i18n';
+import { useLabels } from '../lib/labels';
 import { RiskPanel } from '../components/RiskPanel';
 import { EmptyState, ErrorState, Loading, Tile } from '../components/Shell';
 import { PageHead } from '../components/AppShell';
@@ -24,6 +26,8 @@ import './Portfolio.css';
 const SECTORS: Sector[] = ['ARTS', 'HERITAGE', 'LIBRARIES', 'SPORT', 'LANGUAGE', 'OTHER'];
 
 export function Portfolio() {
+  const { t } = useI18n();
+  const L = useLabels();
   const portfolio = useAsync(() => api.portfolio(), []);
   const subs = useAsync(() => api.submissions(), []);
   const periods = useAsync(() => api.periods(), []);
@@ -80,72 +84,69 @@ export function Portfolio() {
   }, [rows]);
 
   if (portfolio.error) return <ErrorState message={portfolio.error} onRetry={portfolio.reload} />;
-  if (portfolio.loading) return <Loading what="the portfolio" />;
+  if (portfolio.loading) return <Loading what={t('pf.what')} />;
 
   return (
     <div className="stack">
       <PageHead
         icon={<IconGauge size={26} />}
-        title="Portfolio"
-        subtitle={
-          (period ? period.label : 'No open reporting period') +
-          '. How many, then which ones, then why. Read only: nothing on this screen changes a figure.'
-        }
+        title={t('pf.title')}
+        subtitle={(period ? period.label : t('review.noOpenPeriod')) + '. ' + t('pf.sub')}
       />
 
       {/* Counts first. */}
       <div className="tiles">
         <Tile
           value={randsShort(counts.allocated)}
-          label="Allocated this year"
+          label={t('pf.allocatedThisYear')}
           sub={
             counts.missingAllocation > 0
-              ? num(counts.missingAllocation) + ' bodies carry no allocation row'
-              : 'Vote 37, Table 37.3'
+              ? t('pf.noAllocationRows', num(counts.missingAllocation) ?? '')
+              : t('pf.voteCitation')
           }
         />
         <Tile
           value={num(counts.entities)}
-          label="Funded bodies"
-          sub="Every body receiving an entity transfer"
+          label={t('pf.fundedBodies')}
+          sub={t('pf.fundedBodiesSub')}
         />
         <Tile
-          value={num(counts.submitted) + ' of ' + num(counts.entities)}
-          label="Submitted this quarter"
-          sub={period ? period.label : 'no open period'}
+          value={t('pf.countOf', num(counts.submitted) ?? '', num(counts.entities) ?? '')}
+          label={t('pf.submittedQuarter')}
+          sub={period ? period.label : t('entities.noOpenPeriod')}
         />
         <Tile
           value={
             counts.targetsSet === 0
               ? null
-              : num(counts.targetsReported) + ' of ' + num(counts.targetsSet)
+              : t('pf.countOf', num(counts.targetsReported) ?? '', num(counts.targetsSet) ?? '')
           }
-          label="Targets reported"
-          sub="Against targets registered for the year"
+          label={t('pf.targetsReported')}
+          sub={t('pf.targetsReportedSub')}
         />
         <Tile
           value={num(counts.outstanding)}
-          label="Outstanding submissions"
-          sub="Nothing filed for the open period"
+          label={t('pf.outstanding')}
+          sub={t('pf.outstandingSub')}
         />
         <Tile
           value={num(counts.critical)}
-          label="Critical entities"
-          sub="Score of 70 or above"
+          label={t('dash.critical')}
+          sub={t('pf.criticalSub')}
           tone="critical"
         />
       </div>
 
       <div className="queue-sort">
         <IconFilter size={16} />
-        <span className="small muted">By sector</span>
+        <span className="small muted">{t('pf.bySector')}</span>
         <button
           type="button"
           className={'queue-sort-btn' + (sector === null ? ' queue-sort-on' : '')}
           aria-pressed={sector === null}
           onClick={() => setSector(null)}
         >
-          all
+          {t('pf.all')}
         </button>
         {SECTORS.map((s) => (
           <button
@@ -155,22 +156,20 @@ export function Portfolio() {
             aria-pressed={sector === s}
             onClick={() => setSector(s)}
           >
-            {sectorLabel(s).toLowerCase()}
+            {L.sector(s).toLowerCase()}
           </button>
         ))}
       </div>
 
       {rows.length === 0 ? (
         <EmptyState>
-          No entities in this sector. That is a filter with no matches rather than an empty
-          portfolio.
+          {t('pf.noEntitiesInSector')}
         </EmptyState>
       ) : (
         <div className="card">
-          <h2>By risk band</h2>
+          <h2>{t('pf.byRiskBand')}</h2>
           <p className="small muted">
-            Every band shows its score and its word as well as its colour, because a briefing note
-            goes out in greyscale. Click any name for the figures behind its score.
+            {t('pf.greyscaleNote')}
           </p>
 
           <div className="heatmap">
@@ -185,7 +184,7 @@ export function Portfolio() {
                       style={{ background: bandColour(band) }}
                       aria-hidden="true"
                     />
-                    <span>{bandWord(band)}</span>
+                    <span>{L.band(band)}</span>
                     <span className="muted small">{num(list.length)}</span>
                   </div>
                   <ul className="heat-cells">
@@ -194,10 +193,10 @@ export function Portfolio() {
                         <Link to={'/portfolio/entity/' + r.entityId} className="heat-cell">
                           <span className="heat-name">{r.shortName ?? r.name}</span>
                           <span className="heat-score">
-                            {r.score === null ? 'not scored' : num(r.score)}
+                            {r.score === null ? t('pf.notScored') : num(r.score)}
                           </span>
                           <span className="heat-money">
-                            {randsShort(r.totalAllocation) ?? 'no allocation row'}
+                            {randsShort(r.totalAllocation) ?? t('common.noAllocationRow')}
                           </span>
                         </Link>
                         <button
@@ -205,7 +204,7 @@ export function Portfolio() {
                           className="link heat-why"
                           onClick={() => setExplain(r)}
                         >
-                          why
+                          {t('pf.why')}
                         </button>
                       </li>
                     ))}
@@ -220,23 +219,24 @@ export function Portfolio() {
             <IconInfo size={16} />
             <span>
               {counts.critical === 0 ? (
-                'No entity is in the critical band for this period.'
+                t('pf.noneCritical')
               ) : counts.criticalMoney === null ? (
                 <>
                   <strong>
-                    {num(counts.critical)}{' '}
-                    {counts.critical === 1 ? 'entity sits' : 'entities sit'} in the critical band.
+                    {counts.critical === 1
+                      ? t('pf.oneCritical')
+                      : t('pf.criticalCount', num(counts.critical) ?? '')}
                   </strong>{' '}
-                  None of them carries an allocation row, so the rand figure is not available rather
-                  than zero.
+                  {t('pf.noAllocationForCritical')}
                 </>
               ) : (
                 <>
                   <strong>
-                    {randsShort(counts.criticalMoney)} sits with{' '}
-                    {counts.critical === 1 ? 'the entity' : 'entities'} in the critical band.
+                    {counts.critical === 1
+                      ? t('pf.criticalMoneyOne', randsShort(counts.criticalMoney) ?? '')
+                      : t('pf.criticalMoney', randsShort(counts.criticalMoney) ?? '')}
                   </strong>{' '}
-                  Click any name for the figures behind its score.
+                  {t('pf.clickForFigures')}
                 </>
               )}
             </span>
@@ -246,7 +246,7 @@ export function Portfolio() {
 
       {subs.error ? (
         <ErrorState
-          message={'The bands are shown, but submission counts could not be read. ' + subs.error}
+          message={t('pf.subsUnreadable') + subs.error}
           onRetry={subs.reload}
         />
       ) : null}

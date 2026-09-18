@@ -25,7 +25,9 @@ import type { FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useAsync } from '../lib/useAsync';
-import { date, daysRemainingText, num, sectorLabel } from '../lib/format';
+import { date, num } from '../lib/format';
+import { useI18n } from '../lib/i18n';
+import { useLabels } from '../lib/labels';
 import type { AdminEntityRow, IssuedReporter, PeriodView } from '../lib/types';
 import { PageHead } from '../components/AppShell';
 import { EmptyState, ErrorState, Loading, Modal, Tile } from '../components/Shell';
@@ -35,6 +37,8 @@ import {
 } from '../icons';
 
 const SECTORS = ['ARTS', 'HERITAGE', 'LIBRARIES', 'SPORT', 'LANGUAGE', 'OTHER'];
+/* PFMA schedule designations are a legal classification and read the same in every
+   language, exactly as the province names and the published citations do. */
 const SCHEDULES: [string, string][] = [
   ['SCHEDULE_3A', 'Schedule 3A (national public entity)'],
   ['SCHEDULE_1', 'Schedule 1 (constitutional institution)'],
@@ -43,6 +47,8 @@ const SCHEDULES: [string, string][] = [
 ];
 
 export function EntityAdmin() {
+  const { t } = useI18n();
+  const L = useLabels();
   const entities = useAsync(() => api.adminEntities(), []);
   const periods = useAsync(() => api.adminPeriods(), []);
   const [busy, setBusy] = useState<string | null>(null);
@@ -57,13 +63,13 @@ export function EntityAdmin() {
       await api.setPublished(entityId, next);
       entities.reload();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'The publication flag was not changed.');
+      setError(e instanceof Error ? e.message : t('admin.publishFailed'));
     } finally {
       setBusy(null);
     }
   }
 
-  if (entities.loading) return <Loading what="the entity register" />;
+  if (entities.loading) return <Loading what={t('admin.what')} />;
   if (entities.error) return <ErrorState message={entities.error} onRetry={entities.reload} />;
 
   const rows = entities.data ?? [];
@@ -75,23 +81,23 @@ export function EntityAdmin() {
     <div className="stack">
       <PageHead
         icon={<IconSettings size={26} />}
-        title="Administration"
-        subtitle="Who reports, by when, and what the public sees. Nothing here touches a reported figure."
+        title={t('nav.administration')}
+        subtitle={t('admin.subtitle')}
       >
         <a className="btn" href="/public" target="_blank" rel="noreferrer">
-          <IconExternal size={16} /> Citizen view
+          <IconExternal size={16} /> {t('nav.citizenView')}
         </a>
         <button type="button" className="primary" onClick={() => setRegistering(true)}>
-          <IconPlus size={16} /> Register an entity
+          <IconPlus size={16} /> {t('admin.registerEntity')}
         </button>
       </PageHead>
 
       {/* The admin's own counts. No risk band and no submission state: approving figures is the
           reviewer's job and reading the portfolio is the executive's, each on their own home. */}
       <div className="tiles">
-        <Tile icon={<IconEye size={22} />} tone="ok" value={num(published) + ' of ' + num(rows.length)} label="Published" sub="Visible on the citizen view" />
-        <Tile icon={<IconUser size={22} />} tone="purple" value={num(noReporter)} label="No reporter account" sub="Nobody can report for these yet" />
-        <Tile icon={<IconAlert size={22} />} tone="warn" value={num(noTargets)} label="No targets registered" sub="Nothing to report against yet" />
+        <Tile icon={<IconEye size={22} />} tone="ok" value={t('an.ofCount', num(published) ?? '', num(rows.length) ?? '')} label={t('admin.publishedTile')} sub={t('admin.publishedSub')} />
+        <Tile icon={<IconUser size={22} />} tone="purple" value={num(noReporter)} label={t('admin.noReporter')} sub={t('admin.noReporterSub')} />
+        <Tile icon={<IconAlert size={22} />} tone="warn" value={num(noTargets)} label={t('admin.noTargets')} sub={t('admin.noTargetsSub')} />
       </div>
 
       <DeadlinesCard periods={periods} />
@@ -100,29 +106,24 @@ export function EntityAdmin() {
 
       <section className="card">
         <div className="section-head">
-          <h2>Entities and their reporters</h2>
+          <h2>{t('admin.entitiesAndReporters')}</h2>
         </div>
         <p className="small muted" style={{ marginTop: 0 }}>
-          Entities cannot sign up. Each reporter account is issued here for one named entity, and the
-          person it is issued to can only sign in. Publication is a departmental decision: every
-          entity starts unpublished, and every change is written to the audit log with your name.
+          {t('admin.noSignUpNote')}
         </p>
 
         {rows.length === 0 ? (
-          <EmptyState>
-            No entities are registered. Seeding loads the funded bodies from published Estimates of
-            National Expenditure figures on first start.
-          </EmptyState>
+          <EmptyState>{t('admin.noEntities')}</EmptyState>
         ) : (
           <div className="table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th>Entity</th>
-                  <th>Sector</th>
-                  <th className="num">Targets</th>
-                  <th>Reporters</th>
-                  <th>Citizen view</th>
+                  <th>{t('an.colEntity')}</th>
+                  <th>{t('an.colSector')}</th>
+                  <th className="num">{t('admin.colTargets')}</th>
+                  <th>{t('admin.colReporters')}</th>
+                  <th>{t('nav.citizenView')}</th>
                   <th />
                 </tr>
               </thead>
@@ -134,21 +135,21 @@ export function EntityAdmin() {
                       <br />
                       <span className="mono small muted">{r.entityId}</span>
                     </td>
-                    <td>{sectorLabel(r.sector)}</td>
+                    <td>{L.sector(r.sector)}</td>
                     <td className="num">
-                      {r.targetCount === 0 ? <em className="muted">none registered</em> : num(r.targetCount)}
+                      {r.targetCount === 0 ? <em className="muted">{t('admin.noneRegistered')}</em> : num(r.targetCount)}
                     </td>
                     <td>
                       {r.reporters.length === 0 ? (
-                        <em className="muted small">none issued</em>
+                        <em className="muted small">{t('admin.noneIssued')}</em>
                       ) : (
                         <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
                           {r.reporters.map((p) => (
                             <li key={p.email ?? p.name ?? ''} className="small">
                               {p.name ?? p.email}
                               {p.credentialIssued ? null : (
-                                <span className="muted" title="Recorded in the directory. Firebase was not configured, so no sign-in credential exists yet.">
-                                  {' '}(no credential)
+                                <span className="muted" title={t('admin.noCredentialWhy')}>
+                                  {' '}{t('admin.noCredential')}
                                 </span>
                               )}
                             </li>
@@ -156,17 +157,17 @@ export function EntityAdmin() {
                         </ul>
                       )}
                       <button type="button" className="link small" onClick={() => setIssuingFor(r)}>
-                        Issue an account
+                        {t('admin.issueAccount')}
                       </button>
                     </td>
                     <td>
                       {r.publiclyVisible ? (
                         <span className="row" style={{ gap: 6, color: 'var(--band-low)' }}>
-                          <IconEye size={15} /> published
+                          <IconEye size={15} /> {t('admin.published')}
                         </span>
                       ) : (
                         <span className="row muted" style={{ gap: 6 }}>
-                          <IconEyeOff size={15} /> not published
+                          <IconEyeOff size={15} /> {t('admin.notPublished')}
                         </span>
                       )}
                     </td>
@@ -177,7 +178,7 @@ export function EntityAdmin() {
                         onClick={() => void toggle(r.entityId, !r.publiclyVisible)}
                       >
                         {busy === r.entityId ? <IconSpinner size={16} className="spin" /> : null}
-                        {r.publiclyVisible ? 'Unpublish' : 'Publish'}
+                        {r.publiclyVisible ? t('admin.unpublish') : t('admin.publish')}
                       </button>
                     </td>
                   </tr>
@@ -218,36 +219,35 @@ function DeadlinesCard({
 }: {
   periods: { data: PeriodView[] | null; loading: boolean; error: string | null; reload: () => void };
 }) {
+  const { t } = useI18n();
   return (
     <section className="card">
       <div className="section-head">
         <h2 className="row" style={{ gap: 8 }}>
-          <IconCalendar size={18} /> Submission deadlines
+          <IconCalendar size={18} /> {t('admin.deadlines')}
         </h2>
       </div>
       <p className="small muted" style={{ marginTop: 0 }}>
-        For a Schedule 3A entity, Treasury Regulation 30.2.1 sets no day count for quarterly
-        performance reporting, so the date is the Department's instruction and is set here, for every
-        entity at once. Reporters are warned when they sign in within thirty days of it, and reminded
-        at thirty days, fifteen days and on the last day.
+        {/* Treasury Regulation 30.2.1 is a citation and keeps its published form. */}
+        {t('admin.deadlinesNote', 'Treasury Regulation 30.2.1')}
       </p>
 
       {periods.loading ? (
-        <Loading what="the reporting periods" />
+        <Loading what={t('admin.whatPeriods')} />
       ) : periods.error ? (
         <ErrorState message={periods.error} onRetry={periods.reload} />
       ) : (periods.data ?? []).length === 0 ? (
-        <EmptyState>No reporting periods exist for the current financial year.</EmptyState>
+        <EmptyState>{t('admin.noPeriods')}</EmptyState>
       ) : (
         <div className="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>Quarter</th>
-                <th>Period</th>
-                <th>Due</th>
-                <th>Basis</th>
-                <th>Change</th>
+                <th>{t('an.colQuarter')}</th>
+                <th>{t('admin.colPeriod')}</th>
+                <th>{t('an.colDue')}</th>
+                <th>{t('admin.colBasis')}</th>
+                <th>{t('an.colChange')}</th>
               </tr>
             </thead>
             <tbody>
@@ -263,6 +263,8 @@ function DeadlinesCard({
 }
 
 function DeadlineRow({ period, onSaved }: { period: PeriodView; onSaved: () => void }) {
+  const { t } = useI18n();
+  const L = useLabels();
   const [value, setValue] = useState(period.dueDate ?? '');
   const [saving, setSaving] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
@@ -279,7 +281,7 @@ function DeadlineRow({ period, onSaved }: { period: PeriodView; onSaved: () => v
       setSaved(true);
       onSaved();
     } catch (e) {
-      setFailure(e instanceof Error ? e.message : 'The deadline was not changed.');
+      setFailure(e instanceof Error ? e.message : t('admin.deadlineFailed'));
     } finally {
       setSaving(false);
     }
@@ -291,27 +293,28 @@ function DeadlineRow({ period, onSaved }: { period: PeriodView; onSaved: () => v
         <strong>{period.label}</strong>
       </td>
       <td className="muted small nowrap">
-        {date(period.periodStart)} to {date(period.periodEnd)}
+        {t('admin.periodRange', date(period.periodStart) ?? '', date(period.periodEnd) ?? '')}
       </td>
       <td className="nowrap">
-        {date(period.dueDate) ?? 'not set'}
+        {date(period.dueDate) ?? t('dash.dueNotSet')}
         <br />
         <span className={'small' + (passed ? ' muted' : '')}>
-          {period.daysRemaining === null ? '' : daysRemainingText(period.daysRemaining)}
+          {period.daysRemaining === null ? '' : L.daysRemaining(period.daysRemaining)}
         </span>
       </td>
       <td className="small">
-        {period.statutory ? 'Statutory, PFMA' : 'Departmental instruction'}
+        {/* statutory against departmental: law against an instruction. */}
+        {period.statutory ? t('admin.basisStatutory') : t('admin.basisDepartmental')}
       </td>
       <td>
         {passed ? (
-          <span className="row muted small" style={{ gap: 6 }} title="Lateness was measured against this date, so it cannot be moved.">
-            <IconLock size={15} /> Passed, fixed
+          <span className="row muted small" style={{ gap: 6 }} title={t('admin.passedWhy')}>
+            <IconLock size={15} /> {t('admin.passedFixed')}
           </span>
         ) : (
           <div className="row" style={{ gap: 6, flexWrap: 'nowrap' }}>
             <label className="visually-hidden" htmlFor={'due-' + period.periodId}>
-              New due date for {period.label}
+              {t('admin.newDueFor', period.label)}
             </label>
             <input
               id={'due-' + period.periodId}
@@ -325,11 +328,11 @@ function DeadlineRow({ period, onSaved }: { period: PeriodView; onSaved: () => v
             />
             <button type="button" disabled={!changed || saving} onClick={() => void save()}>
               {saving ? <IconSpinner size={16} className="spin" /> : null}
-              Set
+              {t('admin.set')}
             </button>
             {saved ? (
               <span className="row small" role="status" style={{ gap: 4, color: 'var(--ok)' }}>
-                <IconCheck size={14} /> set
+                <IconCheck size={14} /> {t('admin.setDone')}
               </span>
             ) : null}
           </div>
@@ -345,6 +348,8 @@ function DeadlineRow({ period, onSaved }: { period: PeriodView; onSaved: () => v
 /* ------------------------------------------------------------------ */
 
 function RegisterEntityModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+  const { t } = useI18n();
+  const L = useLabels();
   const [name, setName] = useState('');
   const [shortName, setShortName] = useState('');
   const [sector, setSector] = useState('');
@@ -364,41 +369,40 @@ function RegisterEntityModal({ onClose, onCreated }: { onClose: () => void; onCr
       await api.createEntity({ name, shortName, sector, pfmaSchedule: schedule, contactName, contactEmail });
       onCreated();
     } catch (err) {
-      setFailure(err instanceof Error ? err.message : 'The entity was not registered.');
+      setFailure(err instanceof Error ? err.message : t('admin.registerFailed'));
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <Modal title="Register an entity" onClose={onClose}>
+    <Modal title={t('admin.registerEntity')} onClose={onClose}>
       <form className="stack" onSubmit={(e) => void submit(e)}>
         <p className="small muted" style={{ margin: 0 }}>
-          It starts unpublished, with no targets and no reporter. It appears in the review queue at
-          once, ranked with nothing filed, which is the correct first state.
+          {t('admin.registerNote')}
         </p>
         <div>
-          <label htmlFor="ent-name">Name</label>
+          <label htmlFor="ent-name">{t('admin.fieldName')}</label>
           <input id="ent-name" type="text" value={name} maxLength={500} onChange={(e) => setName(e.target.value)} />
         </div>
         <div>
-          <label htmlFor="ent-short">Short name</label>
+          <label htmlFor="ent-short">{t('admin.fieldShortName')}</label>
           <input id="ent-short" type="text" value={shortName} maxLength={100} onChange={(e) => setShortName(e.target.value)} />
         </div>
         <div>
-          <label htmlFor="ent-sector">Sector</label>
+          <label htmlFor="ent-sector">{t('an.colSector')}</label>
           <select id="ent-sector" value={sector} onChange={(e) => setSector(e.target.value)}>
-            <option value="">Choose a sector</option>
+            <option value="">{t('admin.chooseSector')}</option>
             {SECTORS.map((s) => (
               <option key={s} value={s}>
-                {sectorLabel(s)}
+                {L.sector(s)}
               </option>
             ))}
           </select>
-          <p className="small muted">Unit cost is only ever compared with peers in the same sector.</p>
+          <p className="small muted">{t('admin.sectorNote')}</p>
         </div>
         <div>
-          <label htmlFor="ent-schedule">PFMA schedule</label>
+          <label htmlFor="ent-schedule">{t('admin.fieldSchedule')}</label>
           <select id="ent-schedule" value={schedule} onChange={(e) => setSchedule(e.target.value)}>
             {SCHEDULES.map(([v, l]) => (
               <option key={v} value={v}>
@@ -408,21 +412,21 @@ function RegisterEntityModal({ onClose, onCreated }: { onClose: () => void; onCr
           </select>
         </div>
         <div>
-          <label htmlFor="ent-contact">Contact person (optional)</label>
+          <label htmlFor="ent-contact">{t('admin.fieldContact')}</label>
           <input id="ent-contact" type="text" value={contactName} maxLength={200} onChange={(e) => setContactName(e.target.value)} />
         </div>
         <div>
-          <label htmlFor="ent-email">Contact email (optional)</label>
+          <label htmlFor="ent-email">{t('admin.fieldContactEmail')}</label>
           <input id="ent-email" type="email" value={contactEmail} maxLength={200} onChange={(e) => setContactEmail(e.target.value)} />
-          <p className="small muted">Deadline reminders go to this address as well as to the entity's reporters.</p>
+          <p className="small muted">{t('admin.contactEmailNote')}</p>
         </div>
         {failure ? <p className="field-error" role="alert">{failure}</p> : null}
         <div className="row">
           <button type="submit" className="primary" disabled={!ready || saving}>
-            {saving ? <IconSpinner size={16} className="spin" /> : null} Register
+            {saving ? <IconSpinner size={16} className="spin" /> : null} {t('admin.register')}
           </button>
           <button type="button" onClick={onClose}>
-            Cancel
+            {t('common.cancel')}
           </button>
         </div>
       </form>
@@ -443,6 +447,7 @@ function IssueReporterModal({
   onClose: () => void;
   onIssued: () => void;
 }) {
+  const { t } = useI18n();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [saving, setSaving] = useState(false);
@@ -458,59 +463,58 @@ function IssueReporterModal({
       setIssued(res);
       onIssued();
     } catch (err) {
-      setFailure(err instanceof Error ? err.message : 'The account was not issued.');
+      setFailure(err instanceof Error ? err.message : t('admin.issueFailed'));
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <Modal title={'Reporter account for ' + (entity.shortName ?? entity.name)} onClose={onClose}>
+    <Modal title={t('admin.reporterAccountFor', entity.shortName ?? entity.name)} onClose={onClose}>
       {issued ? (
         <div className="stack">
           <p className="row" style={{ gap: 8, margin: 0 }}>
             <IconCheck size={18} />
-            <strong>{issued.credentialIssued ? 'Account issued.' : 'Recorded, no credential issued.'}</strong>
+            <strong>{issued.credentialIssued ? t('admin.accountIssued') : t('admin.recordedNoCredential')}</strong>
           </p>
           <p style={{ margin: 0 }}>{issued.note}</p>
           {issued.setPasswordLink ? (
             <div>
-              <label htmlFor="issued-link">Set-password link for {issued.email}</label>
+              <label htmlFor="issued-link">{t('admin.setPasswordLinkFor', issued.email)}</label>
               <input id="issued-link" type="text" readOnly value={issued.setPasswordLink} onFocus={(e) => e.target.select()} />
             </div>
           ) : (
             <div>
-              <label htmlFor="issued-entity">Entity id, for development sign in</label>
+              <label htmlFor="issued-entity">{t('admin.entityIdForDev')}</label>
               <input id="issued-entity" type="text" className="mono" readOnly value={entity.entityId} onFocus={(e) => e.target.select()} />
             </div>
           )}
           <div className="row">
             <button type="button" className="primary" onClick={onClose}>
-              Done
+              {t('common.done')}
             </button>
           </div>
         </div>
       ) : (
         <form className="stack" onSubmit={(e) => void submit(e)}>
           <p className="small muted" style={{ margin: 0 }}>
-            The account can report for {entity.name} and nothing else. The person signs in; they
-            cannot sign up, and they cannot choose a different entity.
+            {t('admin.accountScope', entity.name)}
           </p>
           <div>
-            <label htmlFor="rep-name">Full name</label>
+            <label htmlFor="rep-name">{t('admin.fieldFullName')}</label>
             <input id="rep-name" type="text" value={name} maxLength={200} onChange={(e) => setName(e.target.value)} />
           </div>
           <div>
-            <label htmlFor="rep-email">Work email</label>
+            <label htmlFor="rep-email">{t('admin.fieldWorkEmail')}</label>
             <input id="rep-email" type="email" value={email} maxLength={200} onChange={(e) => setEmail(e.target.value)} />
           </div>
           {failure ? <p className="field-error" role="alert">{failure}</p> : null}
           <div className="row">
             <button type="submit" className="primary" disabled={name.trim() === '' || email.trim() === '' || saving}>
-              {saving ? <IconSpinner size={16} className="spin" /> : null} Issue account
+              {saving ? <IconSpinner size={16} className="spin" /> : null} {t('admin.issueAccount')}
             </button>
             <button type="button" onClick={onClose}>
-              Cancel
+              {t('common.cancel')}
             </button>
           </div>
         </form>

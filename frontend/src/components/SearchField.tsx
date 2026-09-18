@@ -14,6 +14,7 @@
  */
 import type { ChangeEvent, FormEvent, ReactNode } from 'react';
 import { IconSearch } from '../icons';
+import { useI18n } from '../lib/i18n';
 import './SearchField.css';
 
 interface Props {
@@ -34,12 +35,14 @@ export function SearchField({
   value,
   onChange,
   onSubmit,
-  placeholder = 'Search...',
+  placeholder,
   label,
   name = 'q',
   pill,
   className,
 }: Props) {
+  const { t } = useI18n();
+  const hint = placeholder ?? t('common.search') + '...';
   const content = (
     <>
       <span className="search-icon" aria-hidden="true">
@@ -48,7 +51,7 @@ export function SearchField({
       <input
         name={name}
         type="search"
-        placeholder={placeholder}
+        placeholder={hint}
         aria-label={label}
         value={value}
         onChange={onChange ? (e: ChangeEvent<HTMLInputElement>) => onChange(e.target.value) : undefined}

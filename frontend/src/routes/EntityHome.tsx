@@ -17,7 +17,9 @@ import { useAsync, useAction } from '../lib/useAsync';
 import { useAuth } from '../lib/auth';
 import { isOpenDispute, useLiveComments } from '../lib/useLiveComments';
 import type { SubmissionRow } from '../lib/types';
-import { date, dateTime, daysRemainingText, num, statusLabel } from '../lib/format';
+import { date, dateTime, num } from '../lib/format';
+import { useI18n } from '../lib/i18n';
+import { useLabels } from '../lib/labels';
 import { PeriodCard } from '../components/PeriodCard';
 import { DeadlineAlert } from '../components/DeadlineAlert';
 import { StateLine } from '../components/StateLine';
@@ -29,6 +31,8 @@ import {
 import './EntityHome.css';
 
 export function EntityHome() {
+  const { t } = useI18n();
+  const L = useLabels();
   const { me } = useAuth();
   const navigate = useNavigate();
   const entityId = me?.entityId ?? null;
@@ -108,10 +112,9 @@ export function EntityHome() {
     <div className="stack">
       <div className="section-head">
         <div>
-          <h1>{me?.entityName ?? 'Your entity'}</h1>
+          <h1>{me?.entityName ?? t('ws.yourEntity')}</h1>
           <p className="muted small">
-            Reporting as {me?.name ?? me?.email}. The entity is taken from your signed token, which
-            is why there is nothing here to choose.
+            {t('home.reportingAs', me?.name ?? me?.email ?? '')}
           </p>
         </div>
       </div>
@@ -158,11 +161,11 @@ export function EntityHome() {
             >
               {currentSub && currentSub.status !== 'DRAFT' && currentSub.status !== 'RETURNED' ? (
                 <>
-                  <IconCheckCircle size={16} /> Open this period
+                  <IconCheckCircle size={16} /> {t('home.openPeriod')}
                 </>
               ) : (
                 <>
-                  <IconList size={16} /> {currentSub ? 'Continue entering figures' : 'Enter figures'}
+                  <IconList size={16} /> {currentSub ? t('home.continueFigures') : t('home.enterFigures')}
                 </>
               )}
             </button>
@@ -174,12 +177,12 @@ export function EntityHome() {
                 void open.run(current.periodId, 'upload').finally(() => setOpening(false));
               }}
             >
-              <IconUpload size={16} /> Upload completed file
+              <IconUpload size={16} /> {t('home.uploadFile')}
             </button>
             <a
               className="btn"
               href={api.templateUrl(entityId, current.periodId)}
-              title="An .xlsx carrying your registered targets, their indicator codes and their annual targets, with the actuals column empty"
+              title={t('home.templateTitle')}
               onClick={(e) => {
                 // Through fetch, so the token travels with it. A plain navigation carries no
                 // Authorization header and landed the reporter on a JSON 401.
@@ -188,14 +191,14 @@ export function EntityHome() {
                 api
                   .download(api.templateUrl(entityId, current.periodId), 'vuka-template.xlsx')
                   .catch((err: unknown) =>
-                    setDownloadError(err instanceof Error ? err.message : 'The template could not be downloaded.'),
+                    setDownloadError(err instanceof Error ? err.message : t('home.templateFailed')),
                   );
               }}
             >
-              <IconDownload size={16} /> Download template
+              <IconDownload size={16} /> {t('home.downloadTemplate')}
             </a>
-            <a className="btn" href="/m" title="One indicator per screen, server rendered, under 5KB">
-              <IconPhone size={16} /> Capture on a phone
+            <a className="btn" href="/m" title={t('home.phoneTitle')}>
+              <IconPhone size={16} /> {t('home.captureOnPhone')}
             </a>
           </>
         ) : null}
@@ -214,21 +217,20 @@ export function EntityHome() {
       {/* Prior periods, because the risk engine reads exactly this history. */}
       <div className="card">
         <div className="section-head">
-          <h2>Prior periods</h2>
+          <h2>{t('reporter.priorPeriods')}</h2>
           <span className="spacer" />
           <p className="small muted">
-            The lateness signal in your risk score is computed from these rows and nothing else.
+            {t('home.latenessNote')}
           </p>
         </div>
 
         {subs.loading ? (
-          <Loading what="your reporting history" />
+          <Loading what={t('home.whatHistory')} />
         ) : subs.error ? (
           <ErrorState message={subs.error} onRetry={subs.reload} />
         ) : prior.length === 0 ? (
           <EmptyState>
-            No prior periods on record for this entity. That is an absence of history rather than a
-            clean history, and the risk engine treats it that way.
+            {t('home.noPrior')}
           </EmptyState>
         ) : (
           <ul className="prior">
@@ -237,19 +239,21 @@ export function EntityHome() {
                 <Link className="prior-period" to={'/entity/submission/' + s.submissionId + '/review'}>
                   {s.periodLabel}
                 </Link>
-                <span className="chip">{statusLabel(s.status)}</span>
+                <span className="chip">{L.status(s.status)}</span>
                 <span className="muted small">
-                  {num(s.confirmedCount)} of {num(s.targetCount)} reported
+                  {t('home.reportedOf', num(s.confirmedCount) ?? '', num(s.targetCount) ?? '')}
                 </span>
                 <span className="spacer" />
                 <span className={'small' + (s.daysLate && s.daysLate > 0 ? ' prior-late' : ' muted')}>
                   {s.submittedAt
                     ? s.daysLate === null
-                      ? 'submitted ' + date(s.submittedAt)
+                      ? t('home.submittedOn', date(s.submittedAt) ?? '')
                       : s.daysLate > 0
-                        ? 'submitted ' + s.daysLate + (s.daysLate === 1 ? ' day late' : ' days late')
-                        : 'submitted on time'
-                    : 'never submitted'}
+                        ? s.daysLate === 1
+                          ? t('home.submittedOneDayLate')
+                          : t('home.submittedDaysLate', s.daysLate)
+                        : t('home.submittedOnTime')
+                    : t('home.neverSubmitted')}
                 </span>
               </li>
             ))}
@@ -261,9 +265,7 @@ export function EntityHome() {
         <p className="ind-note">
           <IconAlert size={16} />
           <span>
-            {daysRemainingText(current.daysRemaining)} on {current.label}. The Department is notified
-            at thirty days, at fifteen days and hourly in the final day, so a late submission is
-            visible to them before it is late.
+            {t('home.deadlineNote', L.daysRemaining(current.daysRemaining) ?? '', current.label)}
           </span>
         </p>
       ) : null}
@@ -271,18 +273,18 @@ export function EntityHome() {
       <div className="tiles">
         <Tile
           value={targetCount === null ? null : num(targetCount)}
-          label="Targets registered for the year"
-          sub="Loaded from your tabled Annual Performance Plan"
+          label={t('home.targetsLabel')}
+          sub={t('home.targetsSub')}
         />
         <Tile
           value={confirmed === null ? null : num(confirmed)}
-          label="Figures confirmed this period"
-          sub="Written in your name, and not editable afterwards"
+          label={t('home.confirmedLabel')}
+          sub={t('home.confirmedSub')}
         />
         <Tile
           value={currentSub === null ? null : num(currentSub.evidenceCount)}
-          label="Evidence documents attached"
-          sub="A figure with none shows as unverifiable"
+          label={t('home.evidenceLabel')}
+          sub={t('home.evidenceSub')}
         />
       </div>
     </div>
@@ -298,6 +300,7 @@ export function EntityHome() {
  * figure the reviewer disputes while the reporter is looking appears here without a reload.
  */
 function ReturnedCard({ sub }: { sub: SubmissionRow }) {
+  const { t } = useI18n();
   const navigate = useNavigate();
   const live = useLiveComments(sub.submissionId);
   const disputes = (live.comments ?? []).filter(isOpenDispute);
@@ -307,22 +310,23 @@ function ReturnedCard({ sub }: { sub: SubmissionRow }) {
       <p className="row" style={{ gap: 8, margin: 0 }}>
         <IconReturn size={18} />
         <strong id={'returned-' + sub.submissionId}>
-          {sub.periodLabel} was returned to you
-          {sub.reviewedByName ? ' by ' + sub.reviewedByName : ''}
+          {sub.reviewedByName
+            ? t('home.returnedBy', sub.periodLabel, sub.reviewedByName)
+            : t('home.returnedToYou', sub.periodLabel)}
         </strong>
         <span className="spacer" />
         {sub.reviewedAt ? <span className="small muted">{dateTime(sub.reviewedAt)}</span> : null}
       </p>
 
       <p style={{ margin: 'var(--space-2) 0 0' }}>
-        {sub.returnReason ?? 'No overall reason was recorded. The disputed figures are listed below.'}
+        {sub.returnReason ?? t('home.noOverallReason')}
       </p>
 
       {live.comments === null ? (
-        <p className="small muted">Reading the reviewer's comments...</p>
+        <p className="small muted">{t('home.readingComments')}</p>
       ) : disputes.length === 0 ? (
         <p className="small muted">
-          No figure is marked as disputed, so the reason above is the whole of what was asked.
+          {t('home.noDisputes')}
         </p>
       ) : (
         <ul className="returned-disputes">
@@ -330,7 +334,7 @@ function ReturnedCard({ sub }: { sub: SubmissionRow }) {
             <li key={c.commentId}>
               <IconComment size={16} className="muted" />
               <span>
-                <strong className="mono">{c.indicatorRef ?? 'A figure'}</strong>{' '}
+                <strong className="mono">{c.indicatorRef ?? t('home.aFigure')}</strong>{' '}
                 <span>{c.body}</span>
                 <em className="small muted">
                   {' '}
@@ -344,9 +348,7 @@ function ReturnedCard({ sub }: { sub: SubmissionRow }) {
       )}
 
       <p className="small muted">
-        Only these figures were reopened. Everything else stays as filed, with the original
-        confirmation and its author on the record. Reply against a figure on the next screen and the
-        reviewer sees it within seconds.
+        {t('home.onlyTheseReopened')}
       </p>
 
       <button
@@ -355,10 +357,10 @@ function ReturnedCard({ sub }: { sub: SubmissionRow }) {
         onClick={() => navigate('/entity/submission/' + sub.submissionId + '/review')}
       >
         {disputes.length === 0
-          ? 'Open the returned period'
+          ? t('home.openReturned')
           : disputes.length === 1
-            ? 'Answer the disputed figure'
-            : 'Answer the ' + num(disputes.length) + ' disputed figures'}{' '}
+            ? t('home.answerOne')
+            : t('home.answerMany', num(disputes.length) ?? '')}{' '}
         <IconChevronRight size={16} />
       </button>
       <span className="visually-hidden" role="status">{live.announcement}</span>

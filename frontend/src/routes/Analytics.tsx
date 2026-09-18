@@ -19,7 +19,10 @@ import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useAsync } from '../lib/useAsync';
 import type { AnalyticsCohort, AnalyticsQuarter, AnalyticsSector, AnalyticsYear } from '../lib/types';
-import { auditOutcomeLabel, date, num, percent, randsShort, sectorLabel } from '../lib/format';
+import { date, num, percent, randsShort } from '../lib/format';
+import { useI18n } from '../lib/i18n';
+import type { I18n, Key } from '../lib/i18n';
+import { useLabels } from '../lib/labels';
 import { EmptyState, ErrorState, Loading, Tile } from '../components/Shell';
 import { PageHead } from '../components/AppShell';
 import { IconChart, IconCheckCircle, IconClock, IconInfo, IconTrend } from '../icons';
@@ -29,16 +32,19 @@ const OUTCOME_ORDER = [
   'UNQUALIFIED', 'UNQUALIFIED_WITH_FINDINGS', 'QUALIFIED', 'ADVERSE', 'DISCLAIMER', 'OUTSTANDING',
 ];
 
-const CHANNEL_LABELS: Record<string, string> = {
-  WEB: 'web', MOBILE: 'phone', WHATSAPP: 'WhatsApp', EMAIL: 'email',
+/* WhatsApp is a product name and stays as it is in every language. The other three are
+   ordinary words and are not. */
+const CHANNEL_KEYS: Record<string, Key> = {
+  WEB: 'an.chWeb', MOBILE: 'an.chPhone', WHATSAPP: 'an.chWhatsApp', EMAIL: 'an.chEmail',
 };
 
 export function Analytics() {
   const data = useAsync(() => api.analytics(), []);
+  const { t } = useI18n();
 
-  if (data.loading) return <Loading what="the analytics" />;
+  if (data.loading) return <Loading what={t('an.what')} />;
   if (data.error || !data.data) {
-    return <ErrorState message={data.error ?? 'The analytics could not be read.'} onRetry={data.reload} />;
+    return <ErrorState message={data.error ?? t('an.couldNotRead')} onRetry={data.reload} />;
   }
 
   const a = data.data;
@@ -50,8 +56,8 @@ export function Analytics() {
     <div>
       <PageHead
         icon={<IconChart size={26} />}
-        title="Analytics & Insights"
-        subtitle="Whether the portfolio is getting better, from published and confirmed figures only."
+        title={t('nav.analytics')}
+        subtitle={t('an.subtitle')}
       />
 
       <div className="tiles">
@@ -59,35 +65,35 @@ export function Analytics() {
           icon={<IconCheckCircle size={22} />}
           tone="ok"
           value={latestAudited ? percent(latestAudited.achievedPercent) : null}
-          label="Targets achieved, audited"
+          label={t('an.tileAchieved')}
           sub={
             latestAudited
-              ? `${latestAudited.financialYear}, ${num(latestAudited.entitiesWithCounts)} entities with published counts`
-              : 'No audited year with published counts'
+              ? t('an.tileAchievedSub', latestAudited.financialYear, num(latestAudited.entitiesWithCounts) ?? '')
+              : t('an.tileAchievedNone')
           }
         />
         <Tile
           icon={<IconTrend size={22} />}
           tone={a.cohort && a.cohort.declined > a.cohort.improved ? 'warn' : 'purple'}
-          value={a.cohort ? `${num(a.cohort.improved)} up, ${num(a.cohort.declined)} down` : null}
-          label="Same entities, year on year"
-          sub={a.cohort ? `${a.cohort.fromYear} to ${a.cohort.toYear}, ${num(a.cohort.entities)} entities` : 'Needs two audited years'}
+          value={a.cohort ? t('an.tileMovedValue', num(a.cohort.improved) ?? '', num(a.cohort.declined) ?? '') : null}
+          label={t('an.tileMoved')}
+          sub={a.cohort ? t('an.tileMovedSub', a.cohort.fromYear, a.cohort.toYear, num(a.cohort.entities) ?? '') : t('an.tileMovedNone')}
         />
         <Tile
           icon={<IconClock size={22} />}
           tone={review && review.late + (review.notFiled ?? 0) > 0 ? 'warn' : 'ok'}
-          value={review ? `${num(review.onTime)} of ${num(review.expected)}` : null}
-          label="Filed on time"
-          sub={review?.label ?? 'No quarter has fallen due'}
+          value={review ? t('an.ofCount', num(review.onTime) ?? '', num(review.expected) ?? '') : null}
+          label={t('an.tileOnTime')}
+          sub={review?.label ?? t('an.noQuarterDue')}
         />
         <Tile
           icon={<IconChart size={22} />}
           value={review ? percent(review.metPercent) : null}
-          label="Figures meeting the quarter target"
+          label={t('an.tileMet')}
           sub={
             review && review.metPercent !== null
-              ? `${num(review.metTarget)} of ${num(review.metTarget + review.belowTarget)} figures, ${review.label}`
-              : 'No figures confirmed yet'
+              ? t('an.tileMetSub', num(review.metTarget) ?? '', num(review.metTarget + review.belowTarget) ?? '', review.label)
+              : t('an.tileMetNone')
           }
         />
       </div>
@@ -108,11 +114,9 @@ export function Analytics() {
       />
 
       <p className="small muted">
-        Sources. Allocations: Estimates of National Expenditure 2026, Vote 37, Table 37.3. Audit
-        outcomes and targets achieved: published annual reports and the Auditor-General's briefing to
-        the Portfolio Committee, blank where not published. Quarterly figures are those confirmed in
-        Vuka by a named reporter; in this demonstration they are illustrative seed data. Not shown,
-        because nothing records them: any monthly series, and document views or downloads.
+        {/* The citation itself is a published reference and is not translated, exactly as
+            CitationLine treats the ones the API supplies. */}
+        {t('an.sources', 'Estimates of National Expenditure 2026, Vote 37, Table 37.3')}
       </p>
     </div>
   );
@@ -121,11 +125,12 @@ export function Analytics() {
 /* ---------- year on year ---------- */
 
 function YearOnYear({ years }: { years: AnalyticsYear[] }) {
+  const { t } = useI18n();
   if (years.length === 0) {
     return (
       <div className="card an-section">
-        <h2>Year on year</h2>
-        <EmptyState>No allocation or audit outcome is on record for any year.</EmptyState>
+        <h2>{t('an.yearOnYear')}</h2>
+        <EmptyState>{t('an.yearOnYearNone')}</EmptyState>
       </div>
     );
   }
@@ -136,20 +141,17 @@ function YearOnYear({ years }: { years: AnalyticsYear[] }) {
 
   return (
     <div className="card an-section">
-      <h2>Year on year</h2>
-      <p className="small muted">
-        Money from the ENE, results from the Auditor-General. A year not yet audited shows no rate
-        rather than a zero.
-      </p>
+      <h2>{t('an.yearOnYear')}</h2>
+      <p className="small muted">{t('an.yearOnYearNote')}</p>
       <div className="table-wrap">
         <table>
           <thead>
             <tr>
-              <th>Year</th>
-              <th className="num">Allocated</th>
-              <th className="num">Change</th>
-              <th>Targets achieved</th>
-              <th>Audit outcomes</th>
+              <th>{t('an.colYear')}</th>
+              <th className="num">{t('an.colAllocated')}</th>
+              <th className="num">{t('an.colChange')}</th>
+              <th>{t('an.colAchieved')}</th>
+              <th>{t('an.colOutcomes')}</th>
             </tr>
           </thead>
           <tbody>
@@ -163,7 +165,7 @@ function YearOnYear({ years }: { years: AnalyticsYear[] }) {
                 <tr key={y.financialYear}>
                   <td>
                     <strong>{y.financialYear}</strong>
-                    {y.current ? <span className="muted small"> current</span> : null}
+                    {y.current ? <span className="muted small"> {t('an.current')}</span> : null}
                   </td>
                   <td className="num">{randsShort(y.allocated) ?? '—'}</td>
                   <td className="num">{change === null ? '—' : signed(change, '%')}</td>
@@ -171,15 +173,15 @@ function YearOnYear({ years }: { years: AnalyticsYear[] }) {
                     {y.achievedPercent === null ? (
                       <span className="muted small">
                         {y.entitiesAudited > 0
-                          ? 'Audited, counts not published'
+                          ? t('an.auditedNoCounts')
                           : y.current
-                            ? 'In year, see the quarters below'
-                            : 'Not yet audited'}
+                            ? t('an.inYear')
+                            : t('an.notAudited')}
                       </span>
                     ) : (
                       <Bar
                         value={y.achievedPercent}
-                        text={`${percent(y.achievedPercent)} (${num(y.targetsAchieved)} of ${num(y.targetsTotal)}, ${num(y.entitiesWithCounts)} entities)`}
+                        text={t('an.achievedBar', percent(y.achievedPercent) ?? '', num(y.targetsAchieved) ?? '', num(y.targetsTotal) ?? '', num(y.entitiesWithCounts) ?? '')}
                       />
                     )}
                   </td>
@@ -196,9 +198,7 @@ function YearOnYear({ years }: { years: AnalyticsYear[] }) {
         <p className="an-note">
           <IconInfo size={16} />
           <span>
-            Each year's rate covers whichever entities published counts that year (
-            {auditedCounts.map((y) => `${y.entitiesWithCounts} in ${y.financialYear}`).join(', ')}),
-            so the rows are not the same population. The comparison below is like for like.
+            {t('an.mixedPopulation', auditedCounts.map((y) => t('an.countInYear', y.entitiesWithCounts, y.financialYear)).join(', '))}
           </span>
         </p>
       ) : null}
@@ -207,10 +207,12 @@ function YearOnYear({ years }: { years: AnalyticsYear[] }) {
 }
 
 function OutcomeStack({ outcomes }: { outcomes: Record<string, number> }) {
+  const { t } = useI18n();
+  const L = useLabels();
   const total = Object.values(outcomes).reduce((n, v) => n + v, 0);
-  if (total === 0) return <span className="muted small">None published</span>;
+  if (total === 0) return <span className="muted small">{t('an.nonePublished')}</span>;
   const present = OUTCOME_ORDER.filter((o) => outcomes[o]);
-  const summary = present.map((o) => `${outcomes[o]} ${auditOutcomeLabel(o).toLowerCase()}`).join(', ');
+  const summary = present.map((o) => outcomes[o] + ' ' + L.outcome(o).toLowerCase()).join(', ');
   return (
     <div className="an-outcomes">
       <div className="an-stack" role="img" aria-label={summary}>
@@ -219,7 +221,7 @@ function OutcomeStack({ outcomes }: { outcomes: Record<string, number> }) {
             key={o}
             className={'an-seg an-o-' + o.toLowerCase()}
             style={{ width: (outcomes[o] / total) * 100 + '%' }}
-            title={`${auditOutcomeLabel(o)}: ${outcomes[o]}`}
+            title={L.outcome(o) + ': ' + outcomes[o]}
           />
         ))}
       </div>
@@ -231,34 +233,37 @@ function OutcomeStack({ outcomes }: { outcomes: Record<string, number> }) {
 /* ---------- who moved ---------- */
 
 function Movers({ cohort }: { cohort: AnalyticsCohort | null }) {
+  const { t } = useI18n();
+  const L = useLabels();
   return (
     <div className="card an-section">
-      <h2>Who moved{cohort ? `, ${cohort.fromYear} to ${cohort.toYear}` : ''}</h2>
+      <h2>{cohort ? t('an.whoMovedYears', cohort.fromYear, cohort.toYear) : t('an.whoMoved')}</h2>
       {!cohort || cohort.entities === 0 ? (
-        <EmptyState>
-          Movement needs published targets-achieved counts for the same entity in two audited
-          years, and none are on record yet.
-        </EmptyState>
+        <EmptyState>{t('an.whoMovedNone')}</EmptyState>
       ) : (
         <>
           <p>
-            Across the <strong>{num(cohort.entities)} entities</strong> with published counts in
-            both years, targets achieved went from{' '}
-            <strong>{percent(cohort.fromPercent)}</strong> to{' '}
-            <strong>{percent(cohort.toPercent)}</strong>. {num(cohort.improved)} improved,{' '}
-            {num(cohort.declined)} declined
-            {cohort.unchanged ? `, ${num(cohort.unchanged)} unchanged` : ''}. Largest fall first.
+            {t(
+              'an.moversSummary',
+              num(cohort.entities) ?? '',
+              percent(cohort.fromPercent) ?? '',
+              percent(cohort.toPercent) ?? '',
+              num(cohort.improved) ?? '',
+              num(cohort.declined) ?? '',
+            )}
+            {cohort.unchanged ? ' ' + t('an.moversUnchanged', num(cohort.unchanged) ?? '') : ''}{' '}
+            {t('an.largestFallFirst')}
           </p>
           <div className="table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th>Entity</th>
-                  <th>Sector</th>
+                  <th>{t('an.colEntity')}</th>
+                  <th>{t('an.colSector')}</th>
                   <th className="num">{cohort.fromYear}</th>
                   <th className="num">{cohort.toYear}</th>
-                  <th className="num">Change</th>
-                  <th>Audit outcome</th>
+                  <th className="num">{t('an.colChange')}</th>
+                  <th>{t('an.colOutcome')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -267,23 +272,24 @@ function Movers({ cohort }: { cohort: AnalyticsCohort | null }) {
                     <td>
                       <Link to={'/portfolio/entity/' + m.entityId}>{m.name}</Link>
                     </td>
-                    <td>{sectorLabel(m.sector)}</td>
-                    <td className="num" title={`${m.fromAchieved} of ${m.fromTotal}`}>
+                    <td>{L.sector(m.sector)}</td>
+                    <td className="num" title={t('an.ofCount', String(m.fromAchieved), String(m.fromTotal))}>
                       {percent(m.fromPercent)}
                     </td>
-                    <td className="num" title={`${m.toAchieved} of ${m.toTotal}`}>
+                    <td className="num" title={t('an.ofCount', String(m.toAchieved), String(m.toTotal))}>
                       {percent(m.toPercent)}
                     </td>
                     <td className={'num ' + (m.changePoints < 0 ? 'an-down' : m.changePoints > 0 ? 'an-up' : '')}>
                       {signed(m.changePoints, ' pts')}
                       <span className="visually-hidden">
-                        {m.changePoints < 0 ? ' worse' : m.changePoints > 0 ? ' better' : ' unchanged'}
+                        {' '}
+                        {m.changePoints < 0 ? t('an.worse') : m.changePoints > 0 ? t('an.better') : t('an.unchanged')}
                       </span>
                     </td>
                     <td className="small">
                       {m.fromOutcome === m.toOutcome
-                        ? auditOutcomeLabel(m.toOutcome)
-                        : `${auditOutcomeLabel(m.fromOutcome)} to ${auditOutcomeLabel(m.toOutcome).toLowerCase()}`}
+                        ? L.outcome(m.toOutcome)
+                        : t('an.outcomeMoved', L.outcome(m.fromOutcome), L.outcome(m.toOutcome).toLowerCase())}
                     </td>
                   </tr>
                 ))}
@@ -301,31 +307,28 @@ function Movers({ cohort }: { cohort: AnalyticsCohort | null }) {
 function Quarters({
   quarters, year, reviewId, withoutTargets,
 }: { quarters: AnalyticsQuarter[]; year: string | null; reviewId: string | null; withoutTargets: number }) {
+  const { t } = useI18n();
   const active = quarters.filter((q) => q.open || q.filed > 0 || q.drafts > 0);
   return (
     <div className="card an-section">
-      <h2>Quarter by quarter{year ? `, ${year}` : ''}</h2>
-      <p className="small muted">
-        Filing against the due date the Department set, figures against each target's own quarter
-        value, and the stored risk bands. A quarter not yet due has no "not filed" count, because
-        nothing is late before the due date.
-      </p>
+      <h2>{year ? t('an.quarterByQuarterYear', year) : t('an.quarterByQuarter')}</h2>
+      <p className="small muted">{t('an.quarterNote')}</p>
       {active.length === 0 ? (
-        <EmptyState>No quarter of the current year has opened yet.</EmptyState>
+        <EmptyState>{t('an.noQuarterOpen')}</EmptyState>
       ) : (
         <div className="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>Quarter</th>
-                <th>Due</th>
-                <th className="num">Filed</th>
-                <th className="num">On time</th>
-                <th className="num">Late</th>
-                <th className="num">Not filed</th>
-                <th>Review</th>
-                <th>Met quarter target</th>
-                <th className="num">High or critical</th>
+                <th>{t('an.colQuarter')}</th>
+                <th>{t('an.colDue')}</th>
+                <th className="num">{t('an.colFiled')}</th>
+                <th className="num">{t('an.colOnTime')}</th>
+                <th className="num">{t('an.colLate')}</th>
+                <th className="num">{t('an.colNotFiled')}</th>
+                <th>{t('an.colReview')}</th>
+                <th>{t('an.colMet')}</th>
+                <th className="num">{t('an.colHighCritical')}</th>
               </tr>
             </thead>
             <tbody>
@@ -334,45 +337,45 @@ function Quarters({
                   <td>
                     <strong>{q.label}</strong>
                     <div className="small muted">
-                      {q.periodId === reviewId ? 'under review' : q.fallenDue ? 'fallen due' : 'open'}
+                      {q.periodId === reviewId ? t('an.underReview') : q.fallenDue ? t('an.fallenDue') : t('an.open')}
                     </div>
                   </td>
                   <td className="small">{date(q.dueDate) ?? '—'}</td>
                   <td className="num">
-                    {num(q.filed)} of {num(q.expected)}
-                    {q.drafts ? <div className="small muted">{num(q.drafts)} in draft</div> : null}
-                    {q.filed ? <div className="small muted">{channels(q.channels)}</div> : null}
+                    {t('an.ofCount', num(q.filed) ?? '', num(q.expected) ?? '')}
+                    {q.drafts ? <div className="small muted">{t('an.inDraft', num(q.drafts) ?? '')}</div> : null}
+                    {q.filed ? <div className="small muted">{channels(q.channels, t)}</div> : null}
                   </td>
                   <td className="num">{num(q.onTime)}</td>
                   <td className={'num' + (q.late ? ' an-down' : '')}>{num(q.late)}</td>
                   <td className={'num' + (q.notFiled ? ' an-down' : '')}>
-                    {q.notFiled === null ? <span className="muted small">not due</span> : num(q.notFiled)}
+                    {q.notFiled === null ? <span className="muted small">{t('an.notDue')}</span> : num(q.notFiled)}
                   </td>
                   <td className="small">
                     {q.filed === 0
                       ? '—'
-                      : `${num(q.approved)} approved, ${num(q.returned)} returned, ${num(q.awaitingReview)} waiting`}
+                      : t('an.reviewSplit', num(q.approved) ?? '', num(q.returned) ?? '', num(q.awaitingReview) ?? '')}
                   </td>
                   <td>
                     {q.metPercent === null ? (
-                      <span className="muted small">No figures filed</span>
+                      <span className="muted small">{t('an.noFiguresFiled')}</span>
                     ) : (
                       <Bar
                         value={q.metPercent}
-                        text={`${percent(q.metPercent)} (${num(q.metTarget)} of ${num(q.metTarget + q.belowTarget)})`}
+                        text={t('an.metBar', percent(q.metPercent) ?? '', num(q.metTarget) ?? '', num(q.metTarget + q.belowTarget) ?? '')}
                       />
                     )}
                     {q.noFigure ? (
-                      <div className="small muted">{num(q.noFigure)} with no figure, reason given</div>
+                      <div className="small muted">{t('an.noFigureReason', num(q.noFigure) ?? '')}</div>
                     ) : null}
                     {q.figuresReported ? (
                       <div className="small muted">
-                        {num(q.figuresVerified)} of {num(q.figuresReported)} approved
+                        {t('an.figuresApproved', num(q.figuresVerified) ?? '', num(q.figuresReported) ?? '')}
                       </div>
                     ) : null}
                   </td>
                   <td className="num">
-                    {q.scored === 0 ? <span className="muted small">not scored</span> : `${num(q.highOrCritical)} of ${num(q.scored)}`}
+                    {q.scored === 0 ? <span className="muted small">{t('an.notScored')}</span> : t('an.ofCount', num(q.highOrCritical) ?? '', num(q.scored) ?? '')}
                   </td>
                 </tr>
               ))}
@@ -384,9 +387,7 @@ function Quarters({
         <p className="an-note">
           <IconInfo size={16} />
           <span>
-            {num(withoutTargets)} of {num(active[0]?.expected ?? 0)} funded entities have no target
-            registered for {year ?? 'this year'}. They still owe a quarterly report and are counted
-            as expected, but have nothing to report a figure against until their plan is loaded.
+            {t('an.withoutTargets', num(withoutTargets) ?? '', num(active[0]?.expected ?? 0) ?? '', year ?? t('an.thisYear'))}
           </span>
         </p>
       ) : null}
@@ -399,29 +400,27 @@ function Quarters({
 function Sectors({
   sectors, periodLabel, year, earliest,
 }: { sectors: AnalyticsSector[]; periodLabel: string | null; year: string | null; earliest: string | null }) {
+  const { t } = useI18n();
+  const L = useLabels();
   const showChange = earliest !== null && earliest !== year;
   return (
     <div className="card an-section">
-      <h2>By sector{periodLabel ? `, ${periodLabel}` : ''}</h2>
-      <p className="small muted">
-        Money and delivery side by side, never divided into a cost per outcome. Each entity is
-        measured against its own targets, so the rates compare how well each sector keeps its own
-        promises, not what its outputs are worth.
-      </p>
+      <h2>{periodLabel ? t('an.bySectorPeriod', periodLabel) : t('an.bySector')}</h2>
+      <p className="small muted">{t('an.bySectorNote')}</p>
       {sectors.length === 0 ? (
-        <EmptyState>No quarter has fallen due, so there is nothing to split by sector yet.</EmptyState>
+        <EmptyState>{t('an.noSectorSplit')}</EmptyState>
       ) : (
         <div className="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>Sector</th>
-                <th className="num">Entities</th>
-                <th className="num">Allocated {year ?? ''}</th>
-                {showChange ? <th className="num">Since {earliest}</th> : null}
-                <th className="num">Filed</th>
-                <th>Met quarter target</th>
-                <th className="num">High or critical</th>
+                <th>{t('an.colSector')}</th>
+                <th className="num">{t('an.colEntities')}</th>
+                <th className="num">{t('an.colAllocatedYear', year ?? '')}</th>
+                {showChange ? <th className="num">{t('an.colSince', earliest ?? '')}</th> : null}
+                <th className="num">{t('an.colFiled')}</th>
+                <th>{t('an.colMet')}</th>
+                <th className="num">{t('an.colHighCritical')}</th>
               </tr>
             </thead>
             <tbody>
@@ -432,23 +431,23 @@ function Sectors({
                     : null;
                 return (
                   <tr key={s.sector}>
-                    <td><strong>{sectorLabel(s.sector)}</strong></td>
+                    <td><strong>{L.sector(s.sector)}</strong></td>
                     <td className="num">{num(s.entities)}</td>
                     <td className="num">{randsShort(s.allocated) ?? '—'}</td>
                     {showChange ? <td className="num">{change === null ? '—' : signed(change, '%')}</td> : null}
-                    <td className="num">{num(s.filed)} of {num(s.expected)}</td>
+                    <td className="num">{t('an.ofCount', num(s.filed) ?? '', num(s.expected) ?? '')}</td>
                     <td>
                       {s.metPercent === null ? (
-                        <span className="muted small">No figures filed</span>
+                        <span className="muted small">{t('an.noFiguresFiled')}</span>
                       ) : (
                         <Bar
                           value={s.metPercent}
-                          text={`${percent(s.metPercent)} (${num(s.metTarget)} of ${num(s.figuresReported)})`}
+                          text={t('an.metBarShort', percent(s.metPercent) ?? '', num(s.metTarget) ?? '', num(s.figuresReported) ?? '')}
                         />
                       )}
                     </td>
                     <td className={'num' + (s.highOrCritical ? ' an-down' : '')}>
-                      {s.scored === 0 ? '—' : `${num(s.highOrCritical)} of ${num(s.scored)}`}
+                      {s.scored === 0 ? '—' : t('an.ofCount', num(s.highOrCritical) ?? '', num(s.scored) ?? '')}
                     </td>
                   </tr>
                 );
@@ -480,8 +479,8 @@ function signed(value: number, unit: string): string {
   return (rounded > 0 ? '+' : '') + rounded.toFixed(1) + unit;
 }
 
-function channels(c: Record<string, number>): string {
+function channels(c: Record<string, number>, t: I18n['t']): string {
   return Object.entries(c)
-    .map(([k, v]) => `${v} ${CHANNEL_LABELS[k] ?? k.toLowerCase()}`)
+    .map(([k, v]) => v + ' ' + (CHANNEL_KEYS[k] ? t(CHANNEL_KEYS[k]) : k.toLowerCase()))
     .join(', ');
 }

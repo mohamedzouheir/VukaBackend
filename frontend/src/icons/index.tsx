@@ -222,14 +222,6 @@ export const IconMenu = (p: Props) => (
   <Icon {...p}><path d="M4 7h16" /><path d="M4 12h16" /><path d="M4 17h16" /></Icon>
 );
 
-/** The national coat of arms is not redrawn here. A simple mark stands in beside the wordmark. */
-export const IconArms = (p: Props) => (
-  <Icon {...p}>
-    <path d="M12 3 5 6v5.5c0 4 2.9 7.4 7 8.5 4.1-1.1 7-4.5 7-8.5V6Z" />
-    <path d="M9.5 12.5 12 15l2.5-4" />
-  </Icon>
-);
-
 export const IconTrend = (p: Props) => (
   <Icon {...p}><path d="m3.5 15.5 5-5 3.5 3.5 6-6.5" /><path d="M14 7.5h4.5V12" /></Icon>
 );

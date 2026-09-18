@@ -20,6 +20,7 @@ import { num, percent, signedPercent, statusLabel, dateTime } from '../lib/forma
 import { ProvenanceCell } from './ProvenanceCell';
 import { EvidenceChip } from './EvidenceChip';
 import { IconAlert, IconCheck, IconCheckCircle, IconComment, IconUser } from '../icons';
+import { useI18n } from '../lib/i18n';
 import './components.css';
 
 /** Section 10: a variance past twenty percent needs a reason before it can be confirmed. */
@@ -41,6 +42,7 @@ interface CommonProps {
 /* ------------------------------------------------------------------ */
 
 export function IndicatorRowRead({ row, documentUrl }: CommonProps) {
+  const { t } = useI18n();
   return (
     <div className="ind">
       <div className="ind-head">
@@ -53,22 +55,22 @@ export function IndicatorRowRead({ row, documentUrl }: CommonProps) {
           value={num(row.actual)}
           sourceLocation={row.sourceLocation}
           documentUrl={documentUrl && row.extractionId ? documentUrl(row.extractionId) : null}
-          linkDisabledReason={row.sourceLocation && !documentUrl ? 'Source file not openable here.' : null}
+          linkDisabledReason={row.sourceLocation && !documentUrl ? t('ind.sourceNotOpenable') : null}
         />
         <dl className="ind-targets">
           <div>
-            <dt>Quarter target</dt>
-            <dd>{num(row.quarterTarget) ?? 'not set'}</dd>
+            <dt>{t('reporter.quarterTarget')}</dt>
+            <dd>{num(row.quarterTarget) ?? t('common.notSet')}</dd>
           </div>
           <div>
-            <dt>Annual target</dt>
-            <dd>{num(row.annualTarget) ?? 'not set'}</dd>
+            <dt>{t('reporter.annualTarget')}</dt>
+            <dd>{num(row.annualTarget) ?? t('common.notSet')}</dd>
           </div>
           <div>
-            <dt>Variance</dt>
+            <dt>{t('reporter.variance')}</dt>
             <dd>
               {row.actual === null
-                ? 'not applicable'
+                ? t('common.notApplicable')
                 : (num(row.variance) ?? '0') +
                   (row.variancePercent !== null ? ' (' + signedPercent(row.variancePercent) + ')' : '')}
             </dd>
@@ -80,7 +82,7 @@ export function IndicatorRowRead({ row, documentUrl }: CommonProps) {
         <p className="ind-note">
           <IconAlert size={15} />
           <span>
-            <strong>No result this quarter.</strong> {row.noResultReason}
+            <strong>{t('ind.noResultThisQuarter')}</strong> {row.noResultReason}
           </span>
         </p>
       ) : null}
@@ -96,7 +98,7 @@ export function IndicatorRowRead({ row, documentUrl }: CommonProps) {
         <p className="ind-confirmed">
           <IconUser size={14} />
           <span>
-            Confirmed by {row.confirmedByName ?? 'an official at the entity'}
+            {t('ind.confirmedBy', row.confirmedByName ?? t('ind.anOfficial'))}
             {row.confirmedAt ? ', ' + dateTime(row.confirmedAt) : null}
           </span>
         </p>
@@ -155,6 +157,7 @@ interface ReviewProps extends CommonProps {
 }
 
 export function IndicatorRowReview(props: ReviewProps) {
+  const { t } = useI18n();
   const { row, documentUrl, value, onValue, explanation, onExplanation } = props;
   const parsed = value.trim() === '' ? null : Number(value);
   const numeric = parsed !== null && !Number.isNaN(parsed);
@@ -188,10 +191,10 @@ export function IndicatorRowReview(props: ReviewProps) {
         <span className="mono ind-ref">{row.indicatorRef}</span>
         <h3>{row.indicator}</h3>
         {props.reopened ? (
-          <span className="ind-badge">Reopened for correction</span>
+          <span className="ind-badge">{t('ind.reopened')}</span>
         ) : row.confirmed ? (
           <span className="ind-badge ind-badge-ok">
-            <IconCheckCircle size={14} /> Confirmed
+            <IconCheckCircle size={14} /> {t('ind.confirmed')}
           </span>
         ) : null}
       </div>
@@ -200,8 +203,8 @@ export function IndicatorRowReview(props: ReviewProps) {
         <p className="ind-note ind-note-warn">
           <IconComment size={15} />
           <span>
-            <strong>The Department disputed this figure.</strong>{' '}
-            {row.disputeComment ?? 'No comment was recorded.'}
+            <strong>{t('ind.deptDisputed')}</strong>{' '}
+            {row.disputeComment ?? t('ind.noComment')}
           </span>
         </p>
       ) : null}
@@ -219,22 +222,22 @@ export function IndicatorRowReview(props: ReviewProps) {
             }
             sourceLocation={row.sourceLocation}
             documentUrl={documentUrl && row.extractionId ? documentUrl(row.extractionId) : null}
-            emptyText={row.confirmed ? 'No result' : 'Not parsed'}
+            emptyText={row.confirmed ? t('ind.noResult') : t('ind.notParsedShort')}
           />
           <dl className="ind-targets">
             <div>
-              <dt>Quarter target</dt>
-              <dd>{num(row.quarterTarget) ?? 'not set'}</dd>
+              <dt>{t('reporter.quarterTarget')}</dt>
+              <dd>{num(row.quarterTarget) ?? t('common.notSet')}</dd>
             </div>
             <div>
-              <dt>Annual target</dt>
-              <dd>{num(row.annualTarget) ?? 'not set'}</dd>
+              <dt>{t('reporter.annualTarget')}</dt>
+              <dd>{num(row.annualTarget) ?? t('common.notSet')}</dd>
             </div>
             <div>
-              <dt>Variance</dt>
+              <dt>{t('reporter.variance')}</dt>
               <dd>
                 {liveVariance === null
-                  ? 'not applicable'
+                  ? t('common.notApplicable')
                   : num(parsed! - (qt ?? 0)) + ' (' + signedPercent(liveVariance) + ')'}
               </dd>
             </div>
@@ -246,10 +249,9 @@ export function IndicatorRowReview(props: ReviewProps) {
         <p className="ind-note">
           <IconAlert size={15} />
           <span>
-            <strong>Not a number.</strong>{' '}
-            {row.sourceLocation ? 'Cell ' + row.sourceLocation : 'The file'} reads &ldquo;
-            {row.extractedValue}&rdquo;. Enter the figure as a number, or record that there is no
-            result this quarter.
+            <strong>{t('ind.notANumber')}</strong>{' '}
+            {row.sourceLocation ? t('ind.readsCell', row.sourceLocation) : t('ind.readsFile')} &ldquo;
+            {row.extractedValue}&rdquo;. {t('ind.enterAsNumber')}
           </span>
         </p>
       ) : null}
@@ -258,13 +260,13 @@ export function IndicatorRowReview(props: ReviewProps) {
         <p className="ind-note">
           <IconAlert size={15} />
           <span>
-            <strong>Not parsed.</strong>{' '}
+            <strong>{t('ind.notParsed')}</strong>{' '}
             {row.sourceLocation
-              ? 'Cell ' + row.sourceLocation + ' could not be read as a number.'
+              ? t('ind.cellUnreadable', row.sourceLocation)
               : props.fileParsed
-                ? 'No value for this indicator was found in the uploaded file.'
-                : 'No file has been uploaded for this period.'}{' '}
-            Enter it here, or record that there is no result this quarter.
+                ? t('ind.noValueFound')
+                : t('ind.noFileUploaded')}{' '}
+            {t('ind.enterItHere')}
           </span>
         </p>
       ) : null}
@@ -273,7 +275,7 @@ export function IndicatorRowReview(props: ReviewProps) {
         <div className="ind-form">
           <div className="ind-field">
             <label htmlFor={inputId}>
-              Reported figure{row.unitOfMeasure ? ' (' + row.unitOfMeasure + ')' : ''}
+              {t('ind.reportedFigure')}{row.unitOfMeasure ? ' (' + row.unitOfMeasure + ')' : ''}
             </label>
             <input
               id={inputId}
@@ -292,7 +294,7 @@ export function IndicatorRowReview(props: ReviewProps) {
 
           <div className="ind-field ind-field-wide">
             <label htmlFor={noteId}>
-              {explanationRequired ? 'Reason for the variance (required)' : 'Note for the Department (optional)'}
+              {explanationRequired ? t('reporter.varianceReasonRequired') : t('reporter.noteOptional')}
             </label>
             <textarea
               id={noteId}
@@ -304,9 +306,7 @@ export function IndicatorRowReview(props: ReviewProps) {
             />
             {explanationRequired ? (
               <p className="field-error" id={errorId}>
-                A variance past {VARIANCE_EXPLANATION_THRESHOLD} percent needs a reason before you
-                can confirm. Giving it now avoids the submission being returned, which costs about
-                two weeks.
+                {t('ind.varianceNeedsReason', VARIANCE_EXPLANATION_THRESHOLD)}
               </p>
             ) : null}
           </div>
@@ -322,12 +322,12 @@ export function IndicatorRowReview(props: ReviewProps) {
               disabled={props.disabled}
               onChange={(e) => props.onNoResult(e.target.checked)}
             />
-            <span>No result this quarter, because</span>
+            <span>{t('ind.noResultBecause')}</span>
           </label>
           {props.noResult ? (
             <input
               type="text"
-              aria-label="Reason there is no result this quarter"
+              aria-label={t('ind.noResultReasonLabel')}
               value={props.noResultReason}
               disabled={props.disabled}
               onChange={(e) => props.onNoResultReason(e.target.value)}
@@ -350,9 +350,8 @@ export function IndicatorRowReview(props: ReviewProps) {
         <p className="ind-confirmed">
           <IconUser size={14} />
           <span>
-            Confirmed by {row.confirmedByName ?? 'you'}
-            {row.confirmedAt ? ', ' + dateTime(row.confirmedAt) : null}. This figure cannot be
-            edited. A reviewer who disputes it returns the submission.
+            {t('ind.confirmedBy', row.confirmedByName ?? t('ind.you'))}
+            {row.confirmedAt ? ', ' + dateTime(row.confirmedAt) : null}. {t('ind.lockedNote')}
           </span>
         </p>
       ) : (
@@ -360,10 +359,10 @@ export function IndicatorRowReview(props: ReviewProps) {
           <button type="button" className="primary" disabled={!canConfirm} onClick={props.onConfirm}>
             <IconCheck size={16} />
             {props.noResult
-              ? 'Record no result'
+              ? t('ind.recordNoResult')
               : numeric
-                ? 'Confirm ' + num(parsed)
-                : 'Confirm'}
+                ? t('ind.confirmValue', num(parsed) ?? '')
+                : t('reporter.confirm')}
           </button>
         </div>
       )}
@@ -390,6 +389,7 @@ export function IndicatorRowVerify({
   disputeComment,
   disabled,
 }: VerifyProps) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(disputed);
   const [comment, setComment] = useState(disputeComment);
   const commentId = 'dispute-' + row.targetId;
@@ -401,7 +401,7 @@ export function IndicatorRowVerify({
         <h3>{row.indicator}</h3>
         {disputed ? (
           <span className="ind-badge ind-badge-warn">
-            <IconComment size={14} /> Disputed
+            <IconComment size={14} /> {t('ind.disputed')}
           </span>
         ) : null}
       </div>
@@ -411,28 +411,28 @@ export function IndicatorRowVerify({
           value={num(row.actual)}
           sourceLocation={row.sourceLocation}
           documentUrl={documentUrl && row.extractionId ? documentUrl(row.extractionId) : null}
-          emptyText={row.noResultReason ? 'No result, reason given' : 'No result reported'}
+          emptyText={row.noResultReason ? t('ind.noResultReasonShort') : t('common.noResultReported')}
         />
         <dl className="ind-targets">
           <div>
-            <dt>Quarter target</dt>
-            <dd>{num(row.quarterTarget) ?? 'not set'}</dd>
+            <dt>{t('reporter.quarterTarget')}</dt>
+            <dd>{num(row.quarterTarget) ?? t('common.notSet')}</dd>
           </div>
           <div>
-            <dt>Variance</dt>
+            <dt>{t('reporter.variance')}</dt>
             <dd>
               {row.actual === null
-                ? 'not applicable'
+                ? t('common.notApplicable')
                 : (num(row.variance) ?? '0') +
                   (row.variancePercent !== null ? ' (' + signedPercent(row.variancePercent) + ')' : '')}
             </dd>
           </div>
           <div>
-            <dt>Delivery against annual</dt>
+            <dt>{t('ind.deliveryAgainstAnnual')}</dt>
             <dd>
               {row.actual !== null && row.annualTarget
                 ? percent((row.actual / row.annualTarget) * 100)
-                : 'not applicable'}
+                : t('common.notApplicable')}
             </dd>
           </div>
         </dl>
@@ -442,7 +442,7 @@ export function IndicatorRowVerify({
         <p className="ind-note">
           <IconAlert size={15} />
           <span>
-            <strong>No result, reason given.</strong> {row.noResultReason}
+            <strong>{t('ind.noResultReasonGiven')}</strong> {row.noResultReason}
           </span>
         </p>
       ) : null}
@@ -451,7 +451,7 @@ export function IndicatorRowVerify({
         <p className="ind-note ind-note-plain">
           <IconComment size={15} />
           <span>
-            <strong>The entity said: </strong>
+            <strong>{t('ind.entitySaid')}</strong>
             {row.varianceExplanation}
           </span>
         </p>
@@ -468,7 +468,7 @@ export function IndicatorRowVerify({
         <p className="ind-confirmed">
           <IconUser size={14} />
           <span>
-            Confirmed by {row.confirmedByName ?? 'an official at the entity'}
+            {t('ind.confirmedBy', row.confirmedByName ?? t('ind.anOfficial'))}
             {row.confirmedAt ? ', ' + dateTime(row.confirmedAt) : null}
           </span>
         </p>
@@ -480,13 +480,13 @@ export function IndicatorRowVerify({
       {!open ? (
         <div className="ind-actions">
           <button type="button" disabled={disabled} onClick={() => setOpen(true)}>
-            <IconComment size={16} /> Dispute this figure
+            <IconComment size={16} /> {t('review.disputeFigure')}
           </button>
         </div>
       ) : (
         <div className="ind-dispute">
           <label htmlFor={commentId}>
-            Reason. The entity sees this against this target only
+            {t('ind.disputeReason')}
           </label>
           <textarea
             id={commentId}
@@ -501,7 +501,7 @@ export function IndicatorRowVerify({
               disabled={disabled || comment.trim() === ''}
               onClick={() => onDispute(row.targetId, comment.trim())}
             >
-              <IconCheck size={16} /> Mark disputed
+              <IconCheck size={16} /> {t('review.markDisputed')}
             </button>
             <button
               type="button"

@@ -14,7 +14,9 @@
  * on a blank card assumes the system is broken and goes back to email.
  */
 import type { PeriodView } from '../lib/types';
-import { date, daysRemainingText, deadlineBasisText, num } from '../lib/format';
+import { date, num } from '../lib/format';
+import { useI18n } from '../lib/i18n';
+import { useLabels } from '../lib/labels';
 import { IconAlert, IconCalendar, IconClock, IconInfo } from '../icons';
 import './components.css';
 
@@ -30,6 +32,9 @@ interface Props {
 }
 
 export function PeriodCard({ period, confirmed, targetCount, loading, error, children }: Props) {
+  const { t } = useI18n();
+  const L = useLabels();
+
   if (loading) {
     return (
       <div className="card period-card" aria-hidden="true">
@@ -45,7 +50,7 @@ export function PeriodCard({ period, confirmed, targetCount, loading, error, chi
       <div className="card period-card">
         <p className="period-notice">
           <IconAlert size={16} />
-          <span>Could not load the reporting period. {error}</span>
+          <span>{t('period.loadFailed')} {error}</span>
         </p>
       </div>
     );
@@ -56,10 +61,7 @@ export function PeriodCard({ period, confirmed, targetCount, loading, error, chi
       <div className="card period-card">
         <p className="period-notice">
           <IconInfo size={16} />
-          <span>
-            No open reporting period. Periods are opened by the Department for each quarter of the
-            financial year. Contact your DSAC reviewer if you expected one to be open.
-          </span>
+          <span>{t('deadline.noPeriod')} {t('period.contactReviewer')}</span>
         </p>
       </div>
     );
@@ -92,7 +94,7 @@ export function PeriodCard({ period, confirmed, targetCount, loading, error, chi
           {left !== null ? (
             <p className={'row period-due-line' + (late ? ' period-late' : '')}>
               <IconClock size={16} />
-              <span>{daysRemainingText(left)}</span>
+              <span>{L.daysRemaining(left)}</span>
             </p>
           ) : null}
         </div>
@@ -102,21 +104,15 @@ export function PeriodCard({ period, confirmed, targetCount, loading, error, chi
       <p className="period-basis">
         <IconInfo size={15} />
         <span>
-          {period.statutory ? (
-            <strong>Statutory date. </strong>
-          ) : (
-            <strong>Not a statutory date. </strong>
-          )}
-          {deadlineBasisText(period.deadlineBasis)}
+          <strong>{period.statutory ? t('deadline.statutory') : t('deadline.notStatutory')} </strong>
+          {L.basis(period.deadlineBasis)}
         </span>
       </p>
 
       {total !== null && done !== null ? (
         <div className="period-progress">
           <p className="row">
-            <strong>
-              {num(done)} of {num(total)} targets reported
-            </strong>
+            <strong>{t('period.reportedOf', num(done) ?? '', num(total) ?? '')}</strong>
             <span className="spacer" />
             <span className="muted small">{pct}%</span>
           </p>
@@ -126,7 +122,7 @@ export function PeriodCard({ period, confirmed, targetCount, loading, error, chi
             aria-valuenow={pct}
             aria-valuemin={0}
             aria-valuemax={100}
-            aria-label="Targets with a confirmed result"
+            aria-label={t('period.confirmed')}
           >
             <span style={{ width: pct + '%' }} />
           </div>

@@ -29,6 +29,7 @@
 .rail-brand-link:hover { text-decoration: none; }
 
 .rail-collapse {
+  --btn-hover-bg: rgba(255, 255, 255, 0.18);
   flex: none;
   min-height: 28px;
   width: 28px;
@@ -44,6 +45,7 @@
   display: flex; align-items: center; gap: 2px;
   font-size: 1.75rem; font-weight: 800; letter-spacing: -0.02em; color: #fff;
 }
+.rail-wordmark-v { color: var(--gold-light); }
 .rail-tagline {
   margin: 2px 0 0;
   font-size: 0.6875rem;
@@ -65,11 +67,13 @@
   text-decoration: none;
 }
 .rail-nav a:hover { background: var(--navy-700); color: #fff; text-decoration: none; }
+/* Gold marks where you are. On the green rail the brand green would be invisible, and gold is
+   the Department's own accent, which is what the landing page uses it for. */
 .rail-nav a[aria-current="page"] {
-  background: var(--brand);
-  color: #fff;
-  font-weight: 600;
-  box-shadow: 0 2px 8px rgba(29, 107, 243, 0.35);
+  background: var(--gold);
+  color: #241C0E;
+  font-weight: 650;
+  box-shadow: 0 2px 8px rgba(12, 32, 25, 0.35);
 }
 .rail-nav a .spacer { flex: 1 1 auto; }
 
@@ -90,9 +94,9 @@
 }
 .rail-dept { display: flex; gap: var(--space-3); align-items: flex-start; margin-bottom: var(--space-4); }
 .rail-dept-arms {
-  width: 34px; height: 34px; flex: none;
+  /* Sized by the drawing rather than a square slot: the arms is taller than it is wide. */
+  height: 34px; flex: none;
   display: grid; place-items: center;
-  color: var(--rail-text);
 }
 .rail-dept-text { font-size: 0.6875rem; line-height: 1.35; color: var(--rail-text-dim); }
 .rail-dept-text strong { display: block; color: #fff; font-size: 0.8125rem; font-weight: 700; }
@@ -129,6 +133,7 @@
 .topbar-right { display: flex; align-items: center; gap: var(--space-3); margin-left: auto; }
 
 .topbar-bell {
+  --btn-hover-bg: var(--canvas);
   position: relative;
   min-height: 0; padding: 8px;
   border: 0; background: none; color: var(--ink-muted);
@@ -197,7 +202,7 @@
   .topbar-who { display: none; }
   .shell-content { padding: var(--space-4); }
   .rail-scrim {
-    position: fixed; inset: 0; background: rgba(7, 26, 56, 0.45); z-index: 30;
+    position: fixed; inset: 0; background: rgba(12, 32, 25, 0.45); z-index: 30;
   }
 }
 

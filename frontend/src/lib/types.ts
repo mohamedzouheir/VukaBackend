@@ -368,6 +368,35 @@ export interface WorkspaceTask {
   createdAt: string | null;
 }
 
+/* ------------------------------------------------------------------ */
+/* The audit trail.                                                    */
+/*                                                                     */
+/* Assembled from the records themselves rather than from an event     */
+/* table, so a row here is a record and not a note about one.          */
+/* ------------------------------------------------------------------ */
+
+/** AuditController.AuditRow */
+export interface AuditRow {
+  /** Already formatted, South African Standard Time. */
+  at: string;
+  type: string;
+  /** As recorded at the time, never resolved fresh. "Not recorded" where no name was stored. */
+  actor: string;
+  entity: string;
+  summary: string;
+  detail: string | null;
+  entityId: string | null;
+  recordId: string;
+}
+
+/** AuditController.AuditPage */
+export interface AuditPage {
+  events: AuditRow[];
+  types: string[];
+  /** True for a reporter, who sees their own entity and no other. */
+  scopedToOwnEntity: boolean;
+  note: string;
+}
 /** AdminController, the entity register as the administrator sees it. */
 export interface AdminEntityRow {
   entityId: string;

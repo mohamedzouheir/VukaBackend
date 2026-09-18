@@ -15,7 +15,9 @@ import { useMemo, useState } from 'react';
 import { api, openFile } from '../lib/api';
 import { useAsync } from '../lib/useAsync';
 import { useAuth, isDsac } from '../lib/auth';
-import { criterionLabel, dateTime, fileSize, num } from '../lib/format';
+import { dateTime, fileSize, num } from '../lib/format';
+import { useI18n } from '../lib/i18n';
+import { useLabels } from '../lib/labels';
 import { PageHead } from '../components/AppShell';
 import { EmptyState, ErrorState, Loading, Tile } from '../components/Shell';
 import {
@@ -23,6 +25,8 @@ import {
 } from '../icons';
 
 export function Documents() {
+  const { t } = useI18n();
+  const L = useLabels();
   const { me } = useAuth();
   const dsac = isDsac(me?.role);
 
@@ -47,17 +51,17 @@ export function Documents() {
     <div>
       <PageHead
         icon={<IconFolder size={26} />}
-        title="Documents"
-        subtitle="Evidence and supporting files, with their version history and proof of receipt."
+        title={t('docs.title')}
+        subtitle={t('docs.sub')}
       >
         {dsac ? (
           <select
-            aria-label="Entity"
+            aria-label={t('entities.colEntity')}
             style={{ minWidth: '18rem' }}
             value={chosen ?? ''}
             onChange={(e) => setEntityId(e.target.value || null)}
           >
-            <option value="">Choose an entity...</option>
+            <option value="">{t('docs.chooseEntity')}</option>
             {(portfolio.data ?? [])
               .slice()
               .sort((a, b) => a.name.localeCompare(b.name))
@@ -72,27 +76,26 @@ export function Documents() {
 
       {!chosen ? (
         <EmptyState>
-          Choose an entity to see the documents held for it. A reporter sees their own entity
-          automatically, because the entity comes off the signed token rather than from a dropdown.
+          {t('docs.chooseNote')}
         </EmptyState>
       ) : docs.loading ? (
-        <Loading what="documents" />
+        <Loading what={t('docs.what')} />
       ) : docs.notFound ? (
-        <EmptyState>No such entity, or it is not yours to read.</EmptyState>
+        <EmptyState>{t('docs.notYours')}</EmptyState>
       ) : docs.error ? (
         <ErrorState message={docs.error} onRetry={docs.reload} />
       ) : (
         <>
           <div className="tiles">
-            <Tile icon={<IconFolder size={22} />} value={num(counts.total)} label="Documents" sub="All versions on record" />
-            <Tile icon={<IconPaperclip size={22} />} tone="purple" value={num(counts.current)} label="Current versions" sub="Superseded ones stay on record" />
-            <Tile icon={<IconShield size={22} />} tone="ok" value={num(counts.receipted)} label="Receipted" sub="The Department acknowledges holding these" />
-            <Tile icon={<IconCheckCircle size={22} />} tone="ok" value={num(counts.approved)} label="Approved" sub="Decided by a named official" />
+            <Tile icon={<IconFolder size={22} />} value={num(counts.total)} label={t('docs.title')} sub={t('docs.allVersions')} />
+            <Tile icon={<IconPaperclip size={22} />} tone="purple" value={num(counts.current)} label={t('docs.currentVersions')} sub={t('docs.supersededStay')} />
+            <Tile icon={<IconShield size={22} />} tone="ok" value={num(counts.receipted)} label={t('docs.receipted')} sub={t('docs.receiptedSub')} />
+            <Tile icon={<IconCheckCircle size={22} />} tone="ok" value={num(counts.approved)} label={t('docs.approved')} sub={t('docs.decidedBy')} />
           </div>
 
           <div className="card" style={{ marginTop: 'var(--space-4)' }}>
             <div className="section-head">
-              <h2>Files</h2>
+              <h2>{t('docs.files')}</h2>
             </div>
 
             {rows.length === 0 ? (
@@ -105,11 +108,11 @@ export function Documents() {
                 <table>
                   <thead>
                     <tr>
-                      <th>File</th>
-                      <th className="num">Version</th>
-                      <th>Receipt</th>
-                      <th>Decision</th>
-                      <th>Satisfies</th>
+                      <th>{t('docs.colFile')}</th>
+                      <th className="num">{t('docs.colVersion')}</th>
+                      <th>{t('docs.colReceipt')}</th>
+                      <th>{t('docs.colDecision')}</th>
+                      <th>{t('docs.colSatisfies')}</th>
                       <th />
                     </tr>
                   </thead>
@@ -118,7 +121,7 @@ export function Documents() {
                       <tr key={d.id}>
                         <td>
                           <strong style={{ display: 'block', color: 'var(--navy-ink)' }}>
-                            {d.fileName ?? 'Unnamed file'}
+                            {d.fileName ?? t('common.unnamedFile')}
                           </strong>
                           <span className="small muted">
                             {fileSize(d.sizeBytes)}
@@ -130,7 +133,7 @@ export function Documents() {
                           v{d.version}
                           {d.current ? (
                             <span className="chip chip-ok" style={{ marginLeft: 6 }}>
-                              current
+                              {t('docs.current')}
                             </span>
                           ) : null}
                         </td>
@@ -142,30 +145,30 @@ export function Documents() {
                               <span className="muted">{dateTime(d.receivedAt)}</span>
                             </>
                           ) : (
-                            <span className="chip chip-warn">awaiting receipt</span>
+                            <span className="chip chip-warn">{t('docs.awaitingReceipt')}</span>
                           )}
                         </td>
                         <td className="small">
                           {d.approvalStatus === 'APPROVED' ? (
-                            <span className="chip chip-ok">approved</span>
+                            <span className="chip chip-ok">{t('docs.approved')}</span>
                           ) : d.approvalStatus === 'REJECTED' ? (
-                            <span className="chip chip-danger">returned</span>
+                            <span className="chip chip-danger">{t('docs.returned')}</span>
                           ) : (
-                            <span className="chip chip-muted">pending</span>
+                            <span className="chip chip-muted">{t('docs.pending')}</span>
                           )}
                           {d.decidedBy ? (
-                            <span className="muted"> by {d.decidedBy}</span>
+                            <span className="muted"> {t('docs.by', d.decidedBy)}</span>
                           ) : null}
                         </td>
                         <td className="small muted">
-                          {d.agsaCriterion ? criterionLabel(d.agsaCriterion) : 'not stated'}
+                          {d.agsaCriterion ? L.criterion(d.agsaCriterion) : t('docs.notStated')}
                         </td>
                         <td>
                           <a
                             href={api.documentContentUrl(d.id)}
                             onClick={(e) => openFile(e, api.documentContentUrl(d.id), d.fileName ?? 'document')}
                           >
-                            Open <IconExternal size={13} />
+                            {t('common.open')} <IconExternal size={13} />
                           </a>
                         </td>
                       </tr>
@@ -177,9 +180,7 @@ export function Documents() {
           </div>
 
           <p className="small muted" style={{ marginTop: 'var(--space-4)' }}>
-            A document is offered against one of the Auditor-General's tests, which is what makes
-            this a readiness tool rather than a folder. Where the criterion reads "not stated" the
-            uploader did not say, and that is itself worth a reviewer's attention.
+            {t('docs.criterionNote')}
           </p>
         </>
       )}

@@ -33,6 +33,9 @@
 /* An svg inside the box must not reintroduce the baseline it was taken out of. */
 .search-field .search-icon svg { display: block; }
 
+/* The [type="search"] here is load bearing, not decorative: it outranks the global input rule
+   in tokens.css. Without it the two tie and the left padding depends on stylesheet order, which
+   puts the placeholder under the icon. */
 .search-field input[type="search"] {
   width: 100%;
   height: var(--search-height);
