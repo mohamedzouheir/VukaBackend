@@ -1,107 +1,16 @@
 /*
- * The frame every office screen sits in, plus the small pieces that are not one of the
- * nine components: the modal, the states a screen shows when a request fails, and the
- * sector chip.
+ * The pieces every screen shares that are not one of the nine components: the five states a
+ * screen shows while a request is in flight or after it fails, the modal used for the two
+ * irreversible actions, and the stat tile.
  *
- * The navigation is built from the role rather than filtered by it. A reporter has no
- * route into the portfolio in the first place, which is a weaker claim than the backend's
- * but it means the interface never shows a control that will be refused.
+ * The frame itself moved to AppShell when the interface was rebuilt against the screens in
+ * docs/Front End designs/.
  */
 import { useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
-import { Link, NavLink } from 'react-router-dom';
-import { useAuth, can, isDsac } from '../lib/auth';
 import { sectorLabel } from '../lib/format';
-import {
-  IconAlert, IconChart, IconGauge, IconInfo, IconLandmark, IconList, IconLock,
-  IconSignOut, IconSpinner, IconX,
-} from '../icons';
+import { IconAlert, IconInfo, IconSpinner, IconX } from '../icons';
 import './Shell.css';
-
-export function Shell({ children }: { children: ReactNode }) {
-  const { me, devAuth, signOut } = useAuth();
-  const role = me?.role;
-
-  return (
-    <div className="app">
-      {devAuth ? (
-        <p className="dev-banner">
-          <IconLock size={15} />
-          <span>
-            Development sign in is enabled. Tokens are not verified and any role can be assumed.
-            Never run a deployed environment this way.
-          </span>
-        </p>
-      ) : null}
-
-      <header className="topbar">
-        <Link to="/" className="wordmark">
-          VUKA
-        </Link>
-
-        {me ? (
-          <span className="context">
-            {me.entityName ?? (isDsac(role) ? 'Department of Sport, Arts and Culture' : null)}
-          </span>
-        ) : null}
-
-        <span className="spacer" />
-
-        {me ? (
-          <>
-            <nav className="nav" aria-label="Main">
-              {can(me, 'SUBMIT_REPORTING') ? (
-                <NavLink to="/entity">
-                  <IconLandmark size={16} /> My entity
-                </NavLink>
-              ) : null}
-              {can(me, 'REVIEW_SUBMISSIONS') ? (
-                <NavLink to="/review">
-                  <IconList size={16} /> Review queue
-                </NavLink>
-              ) : null}
-              {can(me, 'VIEW_PORTFOLIO') ? (
-                <NavLink to="/portfolio">
-                  <IconChart size={16} /> Portfolio
-                </NavLink>
-              ) : null}
-              {can(me, 'ADMINISTER') ? (
-                <NavLink to="/admin/entities">
-                  <IconGauge size={16} /> Administration
-                </NavLink>
-              ) : null}
-            </nav>
-
-            <span className="context nowrap">
-              {me.name ?? me.email}
-              {role === 'DSAC_EXECUTIVE' ? ', read only' : null}
-            </span>
-
-            <button type="button" className="signout" onClick={() => void signOut()}>
-              <IconSignOut size={16} />
-              <span className="visually-hidden">Sign out</span>
-            </button>
-          </>
-        ) : null}
-      </header>
-
-      <main>{children}</main>
-
-      <footer className="footer">
-        <p className="small muted">
-          Vuka. Performance reporting and audit readiness for the bodies funded by the Department of
-          Sport, Arts and Culture. Risk weights are fixed and published, and every score is
-          arithmetic rather than a prediction.
-        </p>
-        <p className="small muted">
-          {/* A plain link: /public is server rendered, so a router Link lands on the not found route. */}
-          <a href="/public">The citizen view</a> is open to anyone and shows only the entities
-          the Department has chosen to publish.
-        </p>
-      </footer>
-    </div>
-  );
-}
 
 /* ---------- the states a screen shows when a request does not succeed ---------- */
 
@@ -224,17 +133,23 @@ export function Tile({
   label,
   sub,
   tone,
+  icon,
 }: {
+  /** Already formatted. Null renders as a dash, never as a zero. */
   value: string | null;
   label: string;
   sub?: string;
-  tone?: 'critical';
+  tone?: 'ok' | 'warn' | 'critical' | 'purple';
+  icon?: ReactNode;
 }) {
   return (
-    <div className={'tile' + (tone === 'critical' ? ' tile-critical' : '')}>
-      <p className="tile-value">{value ?? '—'}</p>
-      <p className="tile-label">{label}</p>
-      {sub ? <p className="tile-sub">{sub}</p> : null}
+    <div className={'tile' + (tone ? ' tile-' + tone : '')}>
+      {icon ? <span className="tile-icon">{icon}</span> : null}
+      <div className="tile-body">
+        <p className="tile-value">{value ?? '—'}</p>
+        <p className="tile-label">{label}</p>
+        {sub ? <p className="tile-sub">{sub}</p> : null}
+      </div>
     </div>
   );
 }

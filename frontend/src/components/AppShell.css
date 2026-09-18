@@ -1,0 +1,367 @@
+/* The frame from docs/Front End designs/: navy rail, search bar, content, optional right rail. */
+
+.shell {
+  display: grid;
+  grid-template-columns: var(--rail-width) 1fr;
+  min-height: 100vh;
+}
+
+/* ---------------------------------------------------------------- rail */
+
+.rail {
+  background: linear-gradient(180deg, var(--navy-800) 0%, var(--navy-900) 100%);
+  color: var(--rail-text);
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.rail-brand {
+  padding: var(--space-5) var(--space-4) var(--space-4);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+.rail-brand-link { flex: 1 1 auto; min-width: 0; text-decoration: none; }
+.rail-brand-link:hover { text-decoration: none; }
+
+.rail-collapse {
+  flex: none;
+  min-height: 28px;
+  width: 28px;
+  padding: 0;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--rail-text);
+}
+.rail-collapse:hover { background: rgba(255, 255, 255, 0.18); color: #fff; }
+.rail-collapse svg { transition: transform 160ms ease; transform: rotate(180deg); }
+.rail-wordmark {
+  display: flex; align-items: center; gap: 2px;
+  font-size: 1.75rem; font-weight: 800; letter-spacing: -0.02em; color: #fff;
+}
+.rail-tagline {
+  margin: 2px 0 0;
+  font-size: 0.6875rem;
+  color: var(--rail-text-dim);
+  letter-spacing: 0.01em;
+}
+
+.rail-nav { padding: var(--space-2) var(--space-3); flex: 1 1 auto; }
+.rail-nav a {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 11px var(--space-3);
+  margin-bottom: 2px;
+  border-radius: var(--radius-sm);
+  color: var(--rail-text);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+.rail-nav a:hover { background: var(--navy-700); color: #fff; text-decoration: none; }
+.rail-nav a[aria-current="page"] {
+  background: var(--brand);
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(29, 107, 243, 0.35);
+}
+.rail-nav a .spacer { flex: 1 1 auto; }
+
+/* A count the rail carries. Never the only signal: the screen it leads to says the same thing. */
+.rail-badge {
+  min-width: 20px; height: 20px; padding: 0 6px;
+  border-radius: var(--radius-pill);
+  background: var(--danger); color: #fff;
+  font-size: 0.6875rem; font-weight: 700;
+  display: grid; place-items: center;
+}
+
+.rail-foot {
+  padding: var(--space-4);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.8125rem;
+  color: var(--rail-text-dim);
+}
+.rail-dept { display: flex; gap: var(--space-3); align-items: flex-start; margin-bottom: var(--space-4); }
+.rail-dept-arms {
+  width: 34px; height: 34px; flex: none;
+  display: grid; place-items: center;
+  color: var(--rail-text);
+}
+.rail-dept-text { font-size: 0.6875rem; line-height: 1.35; color: var(--rail-text-dim); }
+.rail-dept-text strong { display: block; color: #fff; font-size: 0.8125rem; font-weight: 700; }
+
+.rail-motto { line-height: 1.5; margin: 0; }
+.rail-flag {
+  display: flex; height: 4px; margin-top: var(--space-3); border-radius: 2px; overflow: hidden;
+}
+.rail-flag span { flex: 1; }
+
+/* ---------------------------------------------------------------- topbar */
+
+.shell-main { display: flex; flex-direction: column; min-width: 0; }
+
+.topbar {
+  height: var(--topbar-height);
+  background: var(--surface);
+  border-bottom: 1px solid var(--rule);
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: 0 var(--space-5);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.topbar-search {
+  flex: 1 1 auto;
+  max-width: 640px;
+  margin: 0 auto;
+  position: relative;
+}
+.topbar-right { display: flex; align-items: center; gap: var(--space-3); margin-left: auto; }
+
+.topbar-bell {
+  position: relative;
+  min-height: 0; padding: 8px;
+  border: 0; background: none; color: var(--ink-muted);
+}
+.topbar-bell:hover { background: var(--canvas); }
+.topbar-bell .rail-badge {
+  position: absolute; top: 0; right: 0;
+  transform: translate(25%, -25%);
+}
+
+.topbar-user {
+  display: flex; align-items: center; gap: var(--space-3);
+  padding-left: var(--space-3);
+  border-left: 1px solid var(--rule);
+}
+.topbar-avatar {
+  width: 38px; height: 38px; border-radius: 50%;
+  background: var(--brand-wash); color: var(--brand);
+  display: grid; place-items: center;
+  font-weight: 700; font-size: 0.8125rem;
+  flex: none;
+}
+.topbar-who { line-height: 1.3; min-width: 0; }
+.topbar-who strong { display: block; font-size: 0.875rem; color: var(--navy-ink); }
+.topbar-who span { font-size: 0.75rem; color: var(--ink-muted); }
+
+/* ---------------------------------------------------------------- content */
+
+.shell-content {
+  flex: 1 1 auto;
+  padding: var(--space-5);
+  max-width: 1560px;
+  width: 100%;
+}
+
+/* Main column plus the right rail the designs put Quick Actions and Recent Activity in. */
+.with-aside {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: var(--space-5);
+  align-items: start;
+}
+.aside { display: flex; flex-direction: column; gap: var(--space-4); }
+
+@media (max-width: 1200px) {
+  .with-aside { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ---------------------------------------------------------------- narrow */
+
+.rail-toggle { display: none; }
+
+@media (max-width: 900px) {
+  .shell { grid-template-columns: 1fr; }
+  .rail {
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: var(--rail-width);
+    transform: translateX(-100%);
+    transition: transform 180ms ease;
+    z-index: 40;
+  }
+  .rail-open .rail { transform: translateX(0); }
+  .rail-toggle { display: inline-flex; min-height: 40px; padding: 8px; }
+  .topbar-search { margin: 0; }
+  .topbar-who { display: none; }
+  .shell-content { padding: var(--space-4); }
+  .rail-scrim {
+    position: fixed; inset: 0; background: rgba(7, 26, 56, 0.45); z-index: 30;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rail { transition: none; }
+}
+
+/* ---------------------------------------------------------------- stat tiles */
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(226px, 1fr));
+  gap: var(--space-4);
+}
+
+/*
+ * Stat tile.
+ *
+ * The first cut had an accent stripe down the left edge and the icon aligned to the top of the
+ * number. Both were wrong. The stripe was decoration competing with the icon for the same
+ * meaning, and top aligning the icon left it floating above a two line label. This is the
+ * arrangement the design screenshots actually use: icon and text block centred on each other,
+ * the number leading, and colour carried once by the icon wash.
+ */
+.tile {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding: var(--space-4) var(--space-5);
+  box-shadow: var(--shadow-card);
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-height: 92px;
+  transition: box-shadow 140ms ease, border-color 140ms ease;
+}
+.tile:hover { box-shadow: var(--shadow-raised); border-color: var(--rule-strong); }
+
+.tile-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  background: var(--brand-wash);
+  color: var(--brand);
+}
+
+.tile-body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  /* The number and its label are one unit; the caption sits slightly further off. */
+  gap: 1px;
+}
+
+.tile-value {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  color: var(--navy-ink);
+}
+
+.tile-label {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--ink);
+}
+
+.tile-sub {
+  margin: 3px 0 0;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: var(--ink-muted);
+}
+
+/* Colour is carried once, by the icon. A tone never changes the number except where the number
+   is the warning itself, which is the critical count and nothing else. */
+.tile-ok .tile-icon { background: var(--ok-wash); color: var(--ok); }
+.tile-warn .tile-icon { background: var(--warn-wash); color: var(--warn); }
+.tile-purple .tile-icon { background: var(--purple-wash); color: var(--purple); }
+.tile-critical .tile-icon { background: var(--danger-wash); color: var(--danger); }
+.tile-critical .tile-value { color: var(--danger); }
+
+@media (max-width: 480px) {
+  .tile { padding: var(--space-4); gap: var(--space-3); min-height: 0; }
+  .tile-icon { width: 46px; height: 46px; border-radius: 12px; }
+  .tile-value { font-size: 1.5rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tile { transition: none; }
+}
+
+/* ---------------------------------------------------------------- chips */
+
+.chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 0.75rem; font-weight: 600;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--brand-wash);
+  color: var(--brand-dark);
+  white-space: nowrap;
+}
+.chip-ok { background: var(--ok-wash); color: var(--ok); }
+.chip-warn { background: var(--warn-wash); color: var(--warn); }
+.chip-danger, .chip-warn.chip-danger { background: var(--danger-wash); color: var(--danger); }
+.chip-muted { background: var(--canvas); color: var(--ink-muted); }
+
+
+/* ==================================================================
+ * Collapsed rail.
+ *
+ * Icons only at 76px. Every label carries .rail-label so exactly the words disappear and
+ * nothing else has to know about the state. The nav items keep their full height and hit area,
+ * and each carries a title attribute, so the collapsed rail is still usable by pointer and
+ * still announced properly.
+ * ================================================================== */
+
+.shell-collapsed { grid-template-columns: 76px 1fr; }
+
+.shell-collapsed .rail-label { display: none; }
+
+.shell-collapsed .rail-brand { justify-content: center; padding: var(--space-5) 0 var(--space-4); }
+.shell-collapsed .rail-brand-link { flex: 0 0 auto; }
+.shell-collapsed .rail-wordmark { font-size: 1.5rem; justify-content: center; }
+.shell-collapsed .rail-collapse { position: absolute; top: var(--space-4); right: 10px; }
+.shell-collapsed .rail-collapse svg { transform: rotate(0deg); }
+
+.shell-collapsed .rail { position: relative; }
+.shell-collapsed .rail-nav { padding: var(--space-2); }
+.shell-collapsed .rail-nav a { justify-content: center; padding: 12px 0; gap: 0; }
+
+/* The badge still has to be visible when the label it sat beside is gone. */
+.shell-collapsed .rail-nav a { position: relative; }
+.shell-collapsed .rail-badge {
+  position: absolute;
+  top: 5px;
+  right: 9px;
+  min-width: 17px;
+  height: 17px;
+  font-size: 0.625rem;
+  padding: 0 4px;
+}
+
+.shell-collapsed .rail-foot { display: none; }
+
+@media (max-width: 900px) {
+  /* On a phone the rail is a drawer, so collapsing it makes no sense: it is either over the
+     page at full width or not there at all. */
+  .shell-collapsed { grid-template-columns: 1fr; }
+  .shell-collapsed .rail { width: var(--rail-width); }
+  .shell-collapsed .rail-label { display: revert; }
+  .shell-collapsed .rail-nav a { justify-content: flex-start; padding: 11px var(--space-3); gap: var(--space-3); }
+  .shell-collapsed .rail-foot { display: block; }
+  .rail-collapse { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rail-collapse svg { transition: none; }
+}

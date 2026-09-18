@@ -5,8 +5,8 @@
   gap: var(--space-2);
   margin: 0;
   padding: 6px var(--space-4);
-  background: #FDF6F1;
-  border-bottom: 1px solid #F0D9C8;
+  background: var(--warn-wash);
+  border-bottom: 1px solid var(--warn-border);
   color: var(--band-high);
   font-size: 0.8125rem;
   text-align: center;
@@ -42,7 +42,7 @@
   color: var(--ink-muted);
   font-size: 0.9375rem;
 }
-.screen-state-error { color: var(--band-critical); border-color: #E8CFCF; background: #FBF2F2; }
+.screen-state-error { color: var(--band-critical); border-color: var(--danger-border); background: var(--danger-wash); }
 
 @keyframes vuka-spin { to { transform: rotate(360deg); } }
 .spin { animation: vuka-spin 0.9s linear infinite; }

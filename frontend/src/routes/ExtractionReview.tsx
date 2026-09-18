@@ -54,6 +54,11 @@ export function ExtractionReview() {
   const [submitModal, setSubmitModal] = useState(false);
   const [evidenceFor, setEvidenceFor] = useState<IndicatorRowView | null>(null);
   const [busy, setBusy] = useState(false);
+  /* UC-6. A returned period is a request to correct specific figures, so once the Department
+     has disputed something the screen opens on those and nothing else. The reporter can still
+     see the whole filing, but they should not have to scroll twenty rows to find the three
+     that were sent back. */
+  const [disputedOnly, setDisputedOnly] = useState(true);
 
   // A dispute written while this screen is open appears against the figure without a reload.
   // Until the first poll answers, the row keeps what the page was served with.
@@ -95,6 +100,15 @@ export function ExtractionReview() {
       return new Date(row.confirmedAt).getTime() < new Date(raised).getTime();
     },
     [returned, disputedAt],
+  );
+
+  const reopenedCount = useMemo(() => rows.filter(isReopened).length, [rows, isReopened]);
+
+  /* Filtering never changes the counts in the footer or the submit modal: those are statements
+     about the whole filing and must not follow the view. */
+  const visibleRows = useMemo(
+    () => (disputedOnly && reopenedCount > 0 ? rows.filter(isReopened) : rows),
+    [rows, disputedOnly, reopenedCount, isReopened],
   );
 
   /* The draft for a row starts from whatever the parser read, which is what the reporter
@@ -242,7 +256,26 @@ export function ExtractionReview() {
 
       {actionError ? <ErrorState message={actionError} /> : null}
 
-      {rows.length === 0 ? (
+      {/* UC-6: only what was sent back, unless the reporter asks for the rest. */}
+      {reopenedCount > 0 ? (
+        <div className="er-scope">
+          <span>
+            <strong>
+              {num(reopenedCount)} {reopenedCount === 1 ? 'figure was' : 'figures were'} returned
+              for correction.
+            </strong>{' '}
+            {disputedOnly
+              ? 'Everything else stays as filed.'
+              : 'Showing the whole filing.'}
+          </span>
+          <span className="spacer" />
+          <button type="button" className="link" onClick={() => setDisputedOnly((v) => !v)}>
+            {disputedOnly ? 'Show all ' + num(rows.length) + ' figures' : 'Show only what was returned'}
+          </button>
+        </div>
+      ) : null}
+
+      {visibleRows.length === 0 ? (
         <EmptyState>
           No targets are registered for this entity for the current financial year, so there is
           nothing to report against. An administrator loads targets from the tabled Annual
@@ -250,7 +283,7 @@ export function ExtractionReview() {
         </EmptyState>
       ) : null}
 
-      {rows.map((row) => {
+      {visibleRows.map((row) => {
         const draft = draftFor(row);
         return (
           <IndicatorRowReview

@@ -36,8 +36,8 @@
   padding: var(--space-3);
   border-radius: var(--radius);
   font-size: 0.875rem;
-  background: #FDF6F1;
-  border: 1px solid #F0D9C8;
+  background: var(--warn-wash);
+  border: 1px solid var(--warn-border);
   color: var(--ink);
 }
 

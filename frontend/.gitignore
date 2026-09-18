@@ -4,3 +4,6 @@ dist
 
 # Vite dev server cache
 .vite/
+
+# TypeScript's incremental build cache. Machine local, and it was committed by accident.
+*.tsbuildinfo

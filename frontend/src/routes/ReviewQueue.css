@@ -46,7 +46,7 @@
 .queue-row-head h2 { font-size: 1.0625rem; }
 .queue-row-head .spacer { flex: 1 1 auto; }
 
-.chip-warn { color: var(--band-critical); border-color: #E8CFCF; background: #FBF2F2; }
+.chip-warn { color: var(--band-critical); border-color: var(--danger-border); background: var(--danger-wash); }
 
 .queue-factor { margin: 0 0 var(--space-1); font-size: 0.9375rem; }
 .queue-factor strong { color: var(--brand); }

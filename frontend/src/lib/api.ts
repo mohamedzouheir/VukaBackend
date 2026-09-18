@@ -10,7 +10,7 @@
 import type {
   ChainView, CommentView, EntityDetail, ExtractionView, IndicatorRowView, MeView,
   ParseReport, PeerComparison, PeriodView, PortfolioRow, SubmissionDetail, SubmissionRow,
-  UnitCostView,
+  UnitCostView, WorkspaceDocument, WorkspaceTask,
 } from './types';
 
 export class ApiError extends Error {
@@ -59,8 +59,23 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   if (!res.ok) throw new ApiError(res.status, await failureMessage(res));
   if (res.status === 204) return undefined as T;
 
+  // A JSON client that hands back HTML is broken, whatever put the HTML there. This used to
+  // return the body as a string, so a dev server proxying /api to the single page shell produced
+  // a 200 full of markup, every caller got a string where it expected a list, and the first
+  // .filter threw "filter is not a function" from inside a component. The cause was three layers
+  // away from the message. Fail here instead, and say what actually arrived.
   const type = res.headers.get('content-type') ?? '';
-  if (!type.includes('application/json')) return (await res.text()) as unknown as T;
+  if (!type.includes('application/json')) {
+    const body = await res.text().catch(() => '');
+    const looksLikeShell = body.trimStart().startsWith('<!doctype') || body.trimStart().startsWith('<html');
+    throw new ApiError(
+      res.status,
+      looksLikeShell
+        ? 'The API returned the application shell instead of data, which means the request never reached the backend. '
+          + 'In development that is the Vite proxy: check the backend is running on 8080 and restart the dev server.'
+        : 'Expected JSON from ' + path + ' but the response was ' + (type || 'an unknown type') + '.',
+    );
+  }
   return (await res.json()) as T;
 }
 
@@ -285,6 +300,38 @@ export const api = {
 
   templateUrl: (entityId: string, periodId: string) =>
     '/api/submissions/template' + qs({ entityId, periodId }),
+
+  /* ---------- workspace, documents and tasks ---------- */
+
+  workspaceDocuments: (entityId: string) =>
+    request<WorkspaceDocument[]>('/api/workspace/entity/' + entityId + '/documents'),
+
+  documentHistory: (documentId: string) =>
+    request<WorkspaceDocument[]>('/api/workspace/document/' + documentId + '/history'),
+
+  documentContentUrl: (documentId: string) =>
+    '/api/workspace/document/' + documentId + '/content',
+
+  decideDocument: (documentId: string, approve: boolean, note: string) =>
+    request<unknown>('/api/workspace/document/' + documentId + '/decision', {
+      method: 'POST',
+      body: JSON.stringify({ approve, note }),
+    }),
+
+  /** The caller's own open work. What the rail badge counts. */
+  myTasks: () => request<WorkspaceTask[]>('/api/workspace/tasks/mine'),
+
+  entityTasks: (entityId: string) =>
+    request<WorkspaceTask[]>('/api/workspace/entity/' + entityId + '/tasks'),
+
+  setTaskStatus: (taskId: string, status: string) =>
+    request<unknown>('/api/workspace/task/' + taskId + '/status', {
+      method: 'POST',
+      body: JSON.stringify({ status }),
+    }),
+
+  /** Whether a Microsoft tenant is actually bound, so the screen can say so rather than guess. */
+  microsoftStatus: () => request<Record<string, unknown>>('/api/workspace/microsoft/status'),
 
   /* ---------- administration ---------- */
 

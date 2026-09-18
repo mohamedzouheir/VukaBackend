@@ -1,0 +1,81 @@
+/*
+ * One search field. The numbers below are stated once and everything derives from them, so the
+ * icon and the text cannot drift apart again.
+ */
+.search-field {
+  --search-height: 42px;
+  --search-inset: 14px;   /* icon centre sits here in from the left edge */
+  --search-icon: 18px;
+
+  position: relative;
+  display: block;
+  width: 100%;
+}
+
+/*
+ * Pinned to the input's own top and bottom, not to the wrapper, and a flex box rather than a
+ * bare svg. That is what makes it centre on the control instead of on a line box, and it holds
+ * when the font or the zoom changes.
+ */
+.search-field .search-icon {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: var(--search-height);
+  width: calc(var(--search-inset) * 2 + var(--search-icon));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-faint);
+  pointer-events: none;
+  z-index: 1;
+}
+/* An svg inside the box must not reintroduce the baseline it was taken out of. */
+.search-field .search-icon svg { display: block; }
+
+.search-field input[type="search"] {
+  width: 100%;
+  height: var(--search-height);
+  min-height: var(--search-height);
+  /* Text starts exactly one inset past the icon, so both gaps are the same. */
+  padding: 0 var(--space-4) 0 calc(var(--search-inset) * 2 + var(--search-icon));
+  font-size: 0.875rem;
+  /* A line height equal to the box removes the browser's own vertical guesswork. */
+  line-height: var(--search-height);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  appearance: none;
+}
+
+.search-field input::placeholder {
+  color: var(--ink-faint);
+  /* Placeholders inherit the tall line-height above and sit low without this. */
+  line-height: normal;
+}
+
+.search-field input:focus {
+  border-color: var(--brand);
+  background: var(--surface);
+}
+.search-field:focus-within .search-icon { color: var(--brand); }
+
+/* Chrome's own clear button sits hard against the edge otherwise. */
+.search-field input::-webkit-search-cancel-button { margin-right: 2px; }
+
+/* The top bar variant: taller, pill shaped, sunk into the canvas until focused. */
+.search-pill {
+  --search-height: 44px;
+  --search-inset: 15px;
+}
+.search-pill input[type="search"] {
+  border-radius: var(--radius-pill);
+  background: var(--canvas);
+  border-color: var(--rule);
+}
+.search-pill input:focus { background: var(--surface); }
+
+@media (max-width: 640px) {
+  .search-field { --search-height: 44px; }
+}

@@ -80,8 +80,8 @@
 .ev-ok { color: var(--band-low); }
 .ev-warn {
   color: var(--band-high);
-  background: #FDF6F1;
-  border: 1px solid #F0D9C8;
+  background: var(--warn-wash);
+  border: 1px solid var(--warn-border);
   border-radius: var(--radius);
   padding: var(--space-2) var(--space-3);
 }
@@ -268,12 +268,12 @@
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius);
   font-size: 0.875rem;
-  background: #FDF6F1;
-  border: 1px solid #F0D9C8;
+  background: var(--warn-wash);
+  border: 1px solid var(--warn-border);
   color: var(--ink);
 }
 .ind-note-plain { background: var(--canvas-sunk); border-color: var(--rule); }
-.ind-note-warn { background: #FBF2F2; border-color: #E8CFCF; }
+.ind-note-warn { background: var(--danger-wash); border-color: var(--danger-border); }
 
 .ind-form {
   display: flex;
