@@ -4,8 +4,8 @@
   gap: var(--space-2);
   margin: 0;
   padding: var(--space-3) var(--space-4);
-  background: #FDF6F1;
-  border: 1px solid #F0D9C8;
+  background: var(--warn-wash);
+  border: 1px solid var(--warn-border);
   border-left: 3px solid var(--band-high);
   border-radius: var(--radius);
   font-size: 0.9375rem;

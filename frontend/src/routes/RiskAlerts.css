@@ -1,0 +1,58 @@
+.ra-block { margin-top: var(--space-4); }
+
+.ra-band {
+  display: inline-block;
+  font-size: 0.6875rem; font-weight: 800; letter-spacing: 0.05em;
+  padding: 4px 9px;
+  border-radius: var(--radius-pill);
+  background: var(--canvas);
+  color: var(--ink-muted);
+}
+.ra-band[data-band="CRITICAL"] { background: var(--danger-wash); color: var(--danger); }
+.ra-band[data-band="HIGH"] { background: var(--high-wash); color: var(--band-high); }
+.ra-band[data-band="MEDIUM"] { background: var(--warn-wash); color: var(--warn); }
+.ra-band[data-band="LOW"] { background: var(--ok-wash); color: var(--ok); }
+
+.ra-factor { font-size: 0.875rem; max-width: 30rem; color: var(--ink); }
+
+.ra-selected { background: var(--brand-wash) !important; }
+
+/* ---------- detail panel ---------- */
+
+.ra-detail { padding: 0; overflow: hidden; }
+
+.ra-detail-head {
+  display: flex; align-items: center; gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: var(--ink-muted);
+  color: #fff;
+  font-size: 0.8125rem; letter-spacing: 0.04em;
+}
+.ra-detail-head .spacer { flex: 1 1 auto; }
+.ra-detail-head[data-band="CRITICAL"] { background: var(--danger); }
+.ra-detail-head[data-band="HIGH"] { background: var(--band-high); }
+.ra-detail-head[data-band="MEDIUM"] { background: var(--warn); }
+.ra-detail-head[data-band="LOW"] { background: var(--ok); }
+
+.ra-close {
+  min-height: 0; padding: 4px;
+  background: rgba(255,255,255,0.18);
+  border: 0; color: #fff;
+}
+.ra-close:hover { background: rgba(255,255,255,0.3); }
+
+.ra-detail-body { padding: var(--space-4); }
+
+.ra-signals { list-style: none; margin: var(--space-2) 0 0; padding: 0; }
+.ra-signals li {
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--rule);
+}
+.ra-signals li:last-child { border-bottom: 0; }
+.ra-sig-head { display: flex; align-items: baseline; gap: var(--space-2); }
+.ra-sig-head strong { font-size: 0.875rem; flex: 1 1 auto; }
+.ra-sig-contrib {
+  font-size: 0.8125rem; font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--brand);
+}

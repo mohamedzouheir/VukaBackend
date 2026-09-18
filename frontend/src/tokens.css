@@ -1,26 +1,73 @@
 /*
- * Design tokens, section 10 of the Vuka frontend design.
+ * Design tokens.
  *
- * The palette is deliberately small. Risk band colour is the only place colour carries
- * meaning, and it never carries it alone: every band renders a swatch, the numeric score
- * and the band word together, because a briefing note goes out in greyscale and roughly
- * eight percent of men have some colour vision deficiency.
+ * Rebuilt against the screens in docs/Front End designs/. That set replaces the palette in
+ * section 10 of the frontend design document, which was a tight government-document look: ink
+ * on white, one brand green, 4px radius everywhere. The new direction is a product interface,
+ * with a navy rail, a light blue canvas, white cards on a soft shadow and pastel icon tiles.
+ *
+ * Two rules from the old token set survive untouched, because they are arguments rather than
+ * decoration:
+ *
+ *   Risk band colour is never the only carrier. Every band still renders a swatch, the numeric
+ *   score and the band word together. Roughly eight percent of men have some colour vision
+ *   deficiency and a briefing note goes out in greyscale.
+ *
+ *   Absent is never zero. Nothing here gives a figure and its absence the same treatment, and
+ *   .prov-empty is deliberately styled as prose rather than as a number.
  */
 :root {
-  --ink: #1A1A1A;
-  --ink-muted: #5A6B64;
-  --rule: #D8E0DC;
-  --canvas: #FFFFFF;
-  --canvas-sunk: #F4F8F6;
-  --brand: #0F3D2E;
-  --brand-light: #17614A;
+  /* ---------- canvas and rail ---------- */
+  --navy-900: #071A38;   /* rail, darkest */
+  --navy-800: #0A1F44;   /* rail body */
+  --navy-700: #12305F;   /* rail hover */
+  --navy-ink: #0F2D5C;   /* headings on light */
 
-  --band-low: #2E7D5B;
-  --band-medium: #B8860B;
-  --band-high: #C1571A;
-  --band-critical: #A32E2E;
-  --band-none: #5A6B64;
+  --canvas: #F4F8FD;     /* page behind the cards */
+  --surface: #FFFFFF;    /* cards */
+  --surface-sunk: #F7FAFE;
+  --rule: #E4ECF7;       /* borders, dividers */
+  --rule-strong: #CFDCEC;
 
+  --ink: #1F2D3D;        /* body text */
+  --ink-muted: #6B7C93;  /* secondary, citations */
+  --ink-faint: #9AABC0;
+
+  --rail-text: #C2D2E8;
+  --rail-text-dim: #8AA0BF;
+
+  /* ---------- accent ---------- */
+  --brand: #1D6BF3;
+  --brand-dark: #1557C7;
+  --brand-wash: #E8F0FE;
+
+  /* ---------- meaning ---------- */
+  --ok: #16A34A;
+  --ok-wash: #E7F7EE;
+  --warn: #D97706;
+  --warn-wash: #FEF3E2;
+  --danger: #DC2626;
+  --danger-wash: #FDECEC;
+  --purple: #7C5CFC;
+  --purple-wash: #F1EDFE;
+
+  /* Borders for the washes. Every callout in the product draws from these, so a notice cannot
+     end up a different colour on one screen than on another. */
+  --ok-border: #BFE6D0;
+  --warn-border: #F5DEB8;
+  --danger-border: #F3C9C9;
+  --high-wash: #FFF1E6;
+  --teal: #0E9AA7;
+  --teal-wash: #E4F6F8;
+
+  /* ---------- risk bands, unchanged in meaning ---------- */
+  --band-low: #16A34A;
+  --band-medium: #D97706;
+  --band-high: #EA580C;
+  --band-critical: #DC2626;
+  --band-none: #6B7C93;
+
+  /* ---------- space and shape ---------- */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -29,11 +76,22 @@
   --space-6: 32px;
   --space-7: 48px;
 
-  /* Radius is 4px everywhere, no exceptions. */
-  --radius: 4px;
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
 
-  /* No web fonts anywhere in the product. A font request is a request that can fail. */
-  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --shadow-card: 0 1px 2px rgba(15, 45, 92, 0.04), 0 1px 3px rgba(15, 45, 92, 0.06);
+  --shadow-raised: 0 4px 12px rgba(15, 45, 92, 0.08);
+
+  --rail-width: 240px;
+  --topbar-height: 68px;
+
+  /* Inter on this surface only. The Thymeleaf citizen and phone pages carry no web font and
+     keep the system stack, because a font request is a request that can fail and those pages
+     have to open on one bar of signal. The system stack stays as the fallback here too, so a
+     blocked font downgrades rather than breaks. */
+  --font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
@@ -44,141 +102,135 @@ html { -webkit-text-size-adjust: 100%; }
 body {
   margin: 0;
   font-family: var(--font);
-  /* 16px base, 1.55 line height. */
-  font-size: 16px;
+  font-size: 15px;
   line-height: 1.55;
   color: var(--ink);
-  background: var(--canvas-sunk);
+  background: var(--canvas);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Inter's contextual alternates clean up a few letter pairs at UI sizes. */
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+/*
+ * Every figure in this product sits in a column that updates. Tabular figures keep those columns
+ * from jittering, and this is the single most visible alignment fix in the interface.
+ */
+.tile-value, .chain-value, .prov-value, .risk-score, .band-count, .sector-count,
+td.num, th.num, .mono, .ra-sig-contrib, .traj-value, .uc-figure, .uc-year, .signal-contrib {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
 }
 
 h1, h2, h3, h4 {
-  color: var(--brand);
+  color: var(--navy-ink);
   line-height: 1.25;
   margin: 0;
-  font-weight: 650;
-}
-h1 { font-size: 1.5rem; }
-h2 { font-size: 1.25rem; }
-h3 { font-size: 1.0625rem; }
-h4 { font-size: 0.9375rem; color: var(--brand-light); }
-
-a { color: var(--brand-light); }
-a:hover { color: var(--brand); }
-
-/* Focus is a 2px brand-light outline and it is never removed. */
-:focus-visible {
-  outline: 2px solid var(--brand-light);
-  outline-offset: 2px;
-  border-radius: var(--radius);
-}
-
-/* ---------- layout ---------- */
-
-.app { min-height: 100vh; display: flex; flex-direction: column; }
-
-.topbar {
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  padding: var(--space-3) var(--space-4);
-  background: var(--brand);
-  color: #fff;
-  flex-wrap: wrap;
-}
-.topbar a { color: #fff; text-decoration: none; }
-.topbar .wordmark {
   font-weight: 700;
-  letter-spacing: 0.08em;
-  font-size: 1.0625rem;
 }
-.topbar .context { color: #CFE0D7; font-size: 0.875rem; min-width: 0; }
-.topbar .spacer { flex: 1 1 auto; }
+h1 { font-size: 1.75rem; letter-spacing: -0.021em; }
+h2 { font-size: 1.125rem; letter-spacing: -0.013em; }
+h3 { font-size: 1rem; letter-spacing: -0.009em; }
+h4 { font-size: 0.875rem; letter-spacing: -0.005em; }
 
-.nav { display: flex; gap: var(--space-1); flex-wrap: wrap; }
-.nav a {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  border-radius: var(--radius);
-  font-size: 0.875rem;
-  /* 44px minimum touch target on narrow viewports. */
-  min-height: 32px;
-}
-.nav a[aria-current="page"] { background: rgba(255,255,255,0.16); font-weight: 600; }
-.nav a:hover { background: rgba(255,255,255,0.1); }
+a { color: var(--brand); text-decoration: none; }
+a:hover { color: var(--brand-dark); text-decoration: underline; }
 
-main { flex: 1 1 auto; width: 100%; max-width: 1080px; margin: 0 auto; padding: var(--space-5) var(--space-4) var(--space-7); }
-
-@media (max-width: 640px) {
-  main { padding: var(--space-4) var(--space-3) var(--space-6); }
-  .nav a { min-height: 44px; padding: 10px 12px; }
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
 }
 
 /* ---------- surfaces ---------- */
 
 .card {
-  background: var(--canvas);
+  background: var(--surface);
   border: 1px solid var(--rule);
   border-radius: var(--radius);
-  padding: var(--space-4);
+  padding: var(--space-5);
+  box-shadow: var(--shadow-card);
 }
 .card + .card { margin-top: var(--space-4); }
-.card-sunk { background: var(--canvas-sunk); }
+.card-sunk { background: var(--surface-sunk); box-shadow: none; }
 
 .section-head {
   display: flex; align-items: baseline; gap: var(--space-3);
-  flex-wrap: wrap; margin-bottom: var(--space-3);
+  flex-wrap: wrap; margin-bottom: var(--space-4);
 }
 .section-head .spacer { flex: 1 1 auto; }
 
 .muted { color: var(--ink-muted); }
 .small { font-size: 0.8125rem; }
-.mono { font-family: var(--font-mono); font-size: 0.875rem; }
+.mono { font-family: var(--font-mono); font-size: 0.8125rem; }
 .nowrap { white-space: nowrap; }
 
-.stack > * + * { margin-top: var(--space-3); }
+.stack > * + * { margin-top: var(--space-4); }
 .stack-tight > * + * { margin-top: var(--space-2); }
 .row { display: flex; gap: var(--space-3); align-items: center; flex-wrap: wrap; }
 
 hr.rule { border: 0; border-top: 1px solid var(--rule); margin: var(--space-4) 0; }
 
+/* ---------- page header, the icon-tile + title + subtitle pattern ---------- */
+
+.page-head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+  flex-wrap: wrap;
+}
+.page-head .spacer { flex: 1 1 auto; }
+.page-head p { margin: var(--space-1) 0 0; color: var(--ink-muted); font-size: 0.9375rem; }
+
+.page-icon {
+  flex: none;
+  width: 52px; height: 52px;
+  border-radius: var(--radius);
+  display: grid; place-items: center;
+  background: var(--brand-wash);
+  color: var(--brand);
+}
+
 /* ---------- buttons ---------- */
 
 button, .btn {
   font: inherit;
-  font-size: 0.9375rem;
+  font-size: 0.875rem;
+  font-weight: 600;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 7px;
   min-height: 40px;
-  padding: 8px 14px;
-  border-radius: var(--radius);
-  border: 1px solid var(--rule);
-  background: var(--canvas);
+  padding: 9px 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--rule-strong);
+  background: var(--surface);
   color: var(--ink);
   cursor: pointer;
   text-decoration: none;
+  transition: background 120ms ease, border-color 120ms ease;
 }
-button:hover:not(:disabled), .btn:hover { background: var(--canvas-sunk); }
-button:disabled { opacity: 0.5; cursor: not-allowed; }
+button:hover:not(:disabled), .btn:hover { background: var(--surface-sunk); text-decoration: none; }
+button:disabled { opacity: 0.45; cursor: not-allowed; }
 
 .btn-primary, button.primary {
   background: var(--brand);
   border-color: var(--brand);
   color: #fff;
+  box-shadow: 0 1px 2px rgba(29, 107, 243, 0.3);
 }
-.btn-primary:hover, button.primary:hover:not(:disabled) { background: var(--brand-light); }
+.btn-primary:hover, button.primary:hover:not(:disabled) { background: var(--brand-dark); border-color: var(--brand-dark); }
 
-button.danger { border-color: var(--band-critical); color: var(--band-critical); }
-button.danger:hover:not(:disabled) { background: #FBF2F2; }
+button.danger { border-color: var(--danger); color: var(--danger); }
+button.danger:hover:not(:disabled) { background: var(--danger-wash); }
 
 button.link {
   border: 0; background: none; padding: 0; min-height: 0;
-  color: var(--brand-light); text-decoration: underline; text-underline-offset: 2px;
+  color: var(--brand); font-weight: 600; text-decoration: none;
 }
-button.link:hover:not(:disabled) { background: none; color: var(--brand); }
+button.link:hover:not(:disabled) { background: none; text-decoration: underline; }
 
 @media (max-width: 640px) {
   button, .btn { min-height: 44px; }
@@ -186,22 +238,24 @@ button.link:hover:not(:disabled) { background: none; color: var(--brand); }
 
 /* ---------- forms ---------- */
 
-label { display: block; font-size: 0.875rem; font-weight: 600; margin-bottom: var(--space-1); }
+label { display: block; font-size: 0.8125rem; font-weight: 600; margin-bottom: 6px; color: var(--ink); }
 
 input[type="text"], input[type="number"], input[type="email"], input[type="password"],
-input[type="file"], select, textarea {
+input[type="file"], input[type="search"], select, textarea {
   font: inherit;
+  font-size: 0.9375rem;
   width: 100%;
-  min-height: 40px;
-  padding: 8px 10px;
-  border: 1px solid var(--rule);
-  border-radius: var(--radius);
-  background: var(--canvas);
+  min-height: 42px;
+  padding: 10px 12px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
   color: var(--ink);
 }
-textarea { min-height: 72px; resize: vertical; }
+input:focus, select:focus, textarea:focus { border-color: var(--brand); }
+textarea { min-height: 80px; resize: vertical; }
 
-.field-error { color: var(--band-critical); font-size: 0.8125rem; margin-top: var(--space-1); }
+.field-error { color: var(--danger); font-size: 0.8125rem; margin-top: 6px; }
 
 @media (max-width: 640px) {
   input, select, textarea { min-height: 44px; }
@@ -212,14 +266,16 @@ textarea { min-height: 72px; resize: vertical; }
 table { width: 100%; border-collapse: collapse; font-size: 0.9375rem; }
 th {
   text-align: left; font-size: 0.75rem; text-transform: uppercase;
-  letter-spacing: 0.06em; color: var(--ink-muted); font-weight: 650;
-  padding: var(--space-2) var(--space-2); border-bottom: 1px solid var(--rule);
+  letter-spacing: 0.05em; color: var(--ink-muted); font-weight: 700;
+  padding: var(--space-3) var(--space-3); border-bottom: 1px solid var(--rule);
+  background: var(--surface-sunk);
 }
-td { padding: var(--space-3) var(--space-2); border-bottom: 1px solid var(--rule); vertical-align: top; }
-tr:last-child td { border-bottom: 0; }
+td { padding: var(--space-3); border-bottom: 1px solid var(--rule); vertical-align: middle; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover { background: var(--surface-sunk); }
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 
-.table-wrap { overflow-x: auto; }
+.table-wrap { overflow-x: auto; border-radius: var(--radius); }
 
 /* ---------- skeletons ---------- */
 
@@ -227,7 +283,7 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .skeleton {
   display: inline-block;
   background: var(--rule);
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
   animation: vuka-pulse 1.4s ease-in-out infinite;
   min-height: 0.9em;
   min-width: 2rem;
@@ -242,3 +298,204 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 }
 
 .icon { flex: none; }
+
+/* ==================================================================
+ * Alignment pass.
+ *
+ * The things below are what made the interface read as untidy rather than as ugly: rows whose
+ * baselines disagreed, cards of different heights in one grid, icons sitting half a pixel low
+ * beside their labels, and headings whose margins came from whatever element happened to be
+ * first inside them.
+ * ================================================================== */
+
+/* An inline icon sits on the text baseline rather than on the line box, which is what stops it
+   floating a pixel or two above its label in every chip, button and link. */
+.row > svg, button > svg, .btn > svg, .chip > svg, a > svg,
+.quick-item > svg, .ws-link > svg, .tasklist svg {
+  vertical-align: middle;
+  flex: none;
+}
+
+/* Cards in a grid match height, so a row of three never steps down on the right. The tile
+   sets its own minimum, so it stretches rather than being forced to a fixed height. */
+.tiles, .ws-grid { align-items: stretch; }
+.ws-grid > * { height: 100%; }
+
+/* The first and last child of a card should not add margin on top of the card's own padding.
+   Most of the untidiness in the original pass was this. */
+.card > :first-child { margin-top: 0; }
+.card > :last-child { margin-bottom: 0; }
+.aside .card > h2:first-child { margin-bottom: var(--space-3); }
+
+/* A section head sitting directly on a table needs the table to start flush, not indented by a
+   stray paragraph margin. */
+.section-head + .table-wrap { margin-top: var(--space-2); }
+.section-head p { margin: 0; }
+
+/* Page header: the icon tile, the title and the actions share one optical baseline. */
+.page-head { align-items: center; }
+.page-head > div:not(.row) { min-width: 0; flex: 0 1 auto; }
+.page-head h1 { margin: 0; }
+
+/* Tables: a consistent first and last cell gutter, so the content lines up with the card edge
+   rather than with the cell border. */
+.card > .table-wrap table th:first-child,
+.card > .table-wrap table td:first-child { padding-left: var(--space-5); }
+.card > .table-wrap table th:last-child,
+.card > .table-wrap table td:last-child { padding-right: var(--space-5); }
+
+/* Numbers right-align to each other, never to the header word. */
+th.num { padding-right: var(--space-5); }
+
+/* Chips and status pills sit on one line with their neighbours. */
+.chip { line-height: 1.4; }
+
+/* The state line is a full-width statement, not a floating sentence. */
+.state-line { margin-top: var(--space-4); border-radius: var(--radius); }
+
+/* Stack rhythm inside the right rail matches the main column. */
+.aside > * + * { margin-top: 0; }
+
+/* Indicator rows: the figure, its targets and its evidence share a left edge. */
+.ind { border-radius: var(--radius); box-shadow: var(--shadow-card); }
+.ind-figures { align-items: flex-start; row-gap: var(--space-3); }
+.ind-targets { align-items: flex-start; }
+
+/* Forms inside a row of controls align on their inputs rather than their labels. */
+.ind-form { align-items: flex-start; }
+
+/* Modal footer buttons align right and keep an even gap at every width. */
+.modal-foot { align-items: center; }
+
+/* Long entity names wrap rather than stretching a table column past the card. */
+td, th { overflow-wrap: anywhere; }
+td.num, th.num { overflow-wrap: normal; }
+
+/* The scope banner on a returned period. */
+.er-scope {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-4);
+  background: var(--warn-wash);
+  border: 1px solid #F3DFBF;
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+}
+.er-scope .spacer { flex: 1 1 auto; }
+.er-scope strong { color: var(--navy-ink); }
+
+/* ==================================================================
+ * Notices.
+ *
+ * There were eight callout patterns across the screens: the state line, the irreversibility
+ * warning, the evidence warning, the deadline basis, the sign-in error, the empty and error
+ * states, the workspace status and the scope banner. Each had been styled where it was written,
+ * so they disagreed about padding, radius, border weight and which grey to use. Reading them one
+ * after another is most of what made the interface feel unfinished.
+ *
+ * They are one thing now, in four tones, and every existing class maps onto it. Tone carries
+ * meaning and never carries it alone: each of these has words in it saying the same thing.
+ * ================================================================== */
+
+.state-line,
+.er-warning,
+.ind-note,
+.period-basis,
+.period-notice,
+.screen-state,
+.signin-error,
+.ws-status,
+.er-scope,
+.portfolio-quote,
+.uc-absent,
+.panel-notice,
+.panel-empty,
+.ev-warn {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--surface-sunk);
+  color: var(--ink);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  margin: 0;
+  box-shadow: none;
+}
+
+/* The icon in a notice aligns to the first line of text, not to the block. */
+.state-line > svg, .er-warning > svg, .ind-note > svg, .period-basis > svg,
+.period-notice > svg, .screen-state > svg, .signin-error > svg, .ws-status > svg,
+.portfolio-quote > svg, .panel-notice > svg, .panel-empty > svg, .ev-warn > svg {
+  flex: none;
+  margin-top: 1px;
+}
+
+.state-line strong, .er-warning strong, .ind-note strong, .period-basis strong,
+.ws-status strong, .er-scope strong, .portfolio-quote strong, .uc-absent strong {
+  color: var(--navy-ink);
+  font-weight: 650;
+}
+
+/* ---- tones ---- */
+
+.er-warning,
+.ind-note,
+.er-scope,
+.ev-warn {
+  background: var(--warn-wash);
+  border-color: var(--warn-border);
+}
+
+.ind-note-warn,
+.screen-state-error,
+.signin-error {
+  background: var(--danger-wash);
+  border-color: var(--danger-border);
+}
+.screen-state-error { color: var(--ink); }
+.screen-state-error strong { color: var(--danger); }
+
+.ind-note-plain,
+.period-basis,
+.period-notice,
+.ws-status,
+.uc-absent,
+.panel-empty {
+  background: var(--surface-sunk);
+  border-color: var(--rule);
+}
+
+/* The state line and the quote keep a left rule, because they are the one sentence on the
+   screen that says who holds the work. */
+.state-line { border-left: 3px solid var(--rule-strong); }
+.state-line-active { border-left-color: var(--brand); background: var(--brand-wash); border-color: #CFE0FB; }
+.portfolio-quote { border-left: 3px solid var(--brand); background: var(--brand-wash); border-color: #CFE0FB; }
+.uc-absent { border-left: 3px solid var(--ink-faint); }
+
+/* The evidence chip is a notice only when it is warning. Otherwise it is a line of text. */
+.ev { padding: var(--space-2) 0; border: 0; background: none; font-size: 0.8125rem; }
+.ev-ok { color: var(--ok); }
+
+/* ==================================================================
+ * Rhythm.
+ *
+ * Screens had been spacing their sections by hand, so one used 16px between blocks and the next
+ * used 24px. Stated once here.
+ * ================================================================== */
+
+.shell-content > * + * { margin-top: var(--space-5); }
+.dash-block, .ra-block { margin-top: var(--space-5); }
+.tiles + .card, .tiles + section, .card + section, section + section { margin-top: var(--space-5); }
+.page-head + .tiles, .page-head + .card { margin-top: 0; }
+
+/* A card that holds only a table keeps its padding on the header and lets the table run full
+   width, rather than being given padding: 0 inline on each screen. */
+.card-table { padding: 0; }
+.card-table > .section-head { padding: var(--space-5) var(--space-5) 0; }
+.card-table > .table-wrap { margin-top: var(--space-3); }

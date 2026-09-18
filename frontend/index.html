@@ -4,6 +4,27 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="description" content="Vuka. Performance reporting and audit readiness for the bodies funded by the Department of Sport, Arts and Culture." />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    <!--
+      Inter, for the office dashboard only.
+
+      Section 11 of the frontend design rules out web fonts, and that rule still holds where it
+      was written: the citizen view and the phone reporter surface are server-rendered Thymeleaf
+      with a 5KB budget, and neither loads this page or this font. This surface has a 250KB
+      budget and office users on a desk connection.
+
+      Inter rather than a display face because this product is mostly numbers in tables, and
+      Inter has proper tabular figures, which is what stops a column of rands jittering as it
+      updates. preconnect first so the request starts before the CSS is parsed, and swap so text
+      paints in the system font rather than waiting.
+    -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
     <title>Vuka</title>
   </head>
   <body>

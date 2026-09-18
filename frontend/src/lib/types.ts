@@ -298,3 +298,53 @@ export interface UnitCostView {
   verdict: string;
   history: { financialYear: string; unitCost: number | null }[];
 }
+
+/* ------------------------------------------------------------------ */
+/* Workspace, documents and tasks.                                     */
+/*                                                                     */
+/* Added by the accessibility-and-languages branch. Typed against      */
+/* WorkspaceController's records, nullable wherever those are, because */
+/* a document that has never been decided on has no decider and that   */
+/* is different from having been rejected by nobody.                   */
+/* ------------------------------------------------------------------ */
+
+/** WorkspaceController.DocumentView */
+export interface WorkspaceDocument {
+  id: string;
+  documentKey: string | null;
+  fileName: string | null;
+  documentType: string | null;
+  version: number;
+  current: boolean;
+  sizeBytes: number;
+  contentHash: string | null;
+  source: string | null;
+  uploadedBy: string | null;
+  uploadedAt: string | null;
+  /** Proof of receipt. Null until the department has acknowledged the file. */
+  receiptNumber: string | null;
+  receivedAt: string | null;
+  approvalStatus: string | null;
+  decidedBy: string | null;
+  decidedAt: string | null;
+  decisionNote: string | null;
+  agsaCriterion: string | null;
+  microsoftState: string | null;
+  microsoftVersionLabel: string | null;
+  microsoftWebUrl: string | null;
+  microsoftError: string | null;
+}
+
+/** WorkspaceController.TaskView */
+export interface WorkspaceTask {
+  id: string;
+  title: string | null;
+  description: string | null;
+  assignedToName: string | null;
+  createdByName: string | null;
+  dueDate: string | null;
+  status: string | null;
+  external: boolean;
+  documentId: string | null;
+  createdAt: string | null;
+}

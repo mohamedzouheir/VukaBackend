@@ -174,3 +174,66 @@ export const IconLock = (p: Props) => (
 export const IconUser = (p: Props) => (
   <Icon {...p}><circle cx="12" cy="8.5" r="3.5" /><path d="M4.5 20.5a7.5 7.5 0 0 1 15 0" /></Icon>
 );
+
+/* ------------------------------------------------------------------ */
+/* Navigation and chrome, added for the rail in docs/Front End designs */
+/* ------------------------------------------------------------------ */
+
+export const IconHome = (p: Props) => (
+  <Icon {...p}><path d="m3 10.5 9-7 9 7" /><path d="M5.5 9.5V20h13V9.5" /><path d="M10 20v-5.5h4V20" /></Icon>
+);
+
+export const IconFolder = (p: Props) => (
+  <Icon {...p}><path d="M3 7.5a2 2 0 0 1 2-2h3.7a2 2 0 0 1 1.5.7l1 1.3H19a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" /></Icon>
+);
+
+export const IconSettings = (p: Props) => (
+  <Icon {...p}>
+    <circle cx="12" cy="12" r="3" />
+    <path d="M12 2.5v2M12 19.5v2M21.5 12h-2M4.5 12h-2M18.7 5.3l-1.4 1.4M6.7 17.3l-1.4 1.4M18.7 18.7l-1.4-1.4M6.7 6.7 5.3 5.3" />
+  </Icon>
+);
+
+/** Workspaces: a group, matching the rail icon in the designs. */
+export const IconWorkspaces = (p: Props) => (
+  <Icon {...p}>
+    <circle cx="9" cy="8.5" r="2.8" /><path d="M3.5 19a5.5 5.5 0 0 1 11 0" />
+    <circle cx="17.5" cy="9.5" r="2.2" /><path d="M15 18.6a4.6 4.6 0 0 1 5.9-2.4" />
+  </Icon>
+);
+
+export const IconTasks = (p: Props) => (
+  <Icon {...p}><rect x="3.5" y="3.5" width="17" height="17" rx="3" /><path d="m8 12.3 2.6 2.6L16.5 9" /></Icon>
+);
+
+export const IconSearch = (p: Props) => (
+  <Icon {...p}><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4.5 4.5" /></Icon>
+);
+
+export const IconBell = (p: Props) => (
+  <Icon {...p}><path d="M18 9a6 6 0 1 0-12 0c0 5-2 6-2 6h16s-2-1-2-6Z" /><path d="M10.5 20a2 2 0 0 0 3 0" /></Icon>
+);
+
+export const IconChevronDown = (p: Props) => (
+  <Icon {...p}><path d="m5 9 7 7 7-7" /></Icon>
+);
+
+export const IconMenu = (p: Props) => (
+  <Icon {...p}><path d="M4 7h16" /><path d="M4 12h16" /><path d="M4 17h16" /></Icon>
+);
+
+/** The national coat of arms is not redrawn here. A simple mark stands in beside the wordmark. */
+export const IconArms = (p: Props) => (
+  <Icon {...p}>
+    <path d="M12 3 5 6v5.5c0 4 2.9 7.4 7 8.5 4.1-1.1 7-4.5 7-8.5V6Z" />
+    <path d="M9.5 12.5 12 15l2.5-4" />
+  </Icon>
+);
+
+export const IconTrend = (p: Props) => (
+  <Icon {...p}><path d="m3.5 15.5 5-5 3.5 3.5 6-6.5" /><path d="M14 7.5h4.5V12" /></Icon>
+);
+
+export const IconPlus = (p: Props) => (
+  <Icon {...p}><path d="M12 5v14" /><path d="M5 12h14" /></Icon>
+);

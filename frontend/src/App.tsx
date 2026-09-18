@@ -1,20 +1,35 @@
 /*
- * Routes and route gating.
+ * Routes, route gating, and the shell they render inside.
  *
- * Block 2 of the build order in section 12: four roles land in four different places, and
- * a reporter cannot reach the portfolio. The gate here is a convenience and a courtesy,
- * not the security boundary. The boundary is FirebaseTokenFilter and the entityId claim on
- * the signed token, and it holds whether or not this file is correct.
+ * The gate is a convenience and a courtesy, not the security boundary. The boundary is
+ * FirebaseTokenFilter, the capability table and the entityId claim on the signed token, and it
+ * holds whether or not this file is correct. What the gate buys is that the interface never
+ * offers a control that will be refused, because a refused click reads as a broken product.
  *
- * What the gate does buy is that the interface never offers a control that will be
- * refused, which matters because a refused click reads as a broken product.
+ * Gating is by capability rather than by role, and the capability list comes from the server, so
+ * a route is open exactly when the API behind it would answer. That is one table read by both
+ * sides instead of two lists that drift.
+ *
+ * The two counts the rail badges carry are fetched once here rather than per screen, so the
+ * number beside Risk & Alerts and the number beside Tasks are the same numbers those screens
+ * show. A failed fetch leaves a badge absent rather than showing a zero.
  */
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
-import { can, homeFor, useAuth } from './lib/auth';
+import { can, useAuth } from './lib/auth';
+import { api } from './lib/api';
+import { useAsync } from './lib/useAsync';
 import type { Capability } from './lib/types';
-import { Loading, NotFoundState, Shell } from './components/Shell';
+import { AppShell } from './components/AppShell';
+import { Loading, NotFoundState } from './components/Shell';
 import { SignIn } from './routes/SignIn';
+import { Dashboard } from './routes/Dashboard';
+import { Entities } from './routes/Entities';
+import { RiskAlerts } from './routes/RiskAlerts';
+import { Workspaces } from './routes/Workspaces';
+import { Documents } from './routes/Documents';
+import { Tasks } from './routes/Tasks';
+import { Analytics } from './routes/Analytics';
 import { EntityHome } from './routes/EntityHome';
 import { TemplateUpload } from './routes/TemplateUpload';
 import { ExtractionReview } from './routes/ExtractionReview';
@@ -28,104 +43,62 @@ import { EntityAdmin } from './routes/EntityAdmin';
 export function App() {
   const { ready, me } = useAuth();
 
-  if (!ready) {
-    return (
-      <Shell>
-        <Loading what="your account" />
-      </Shell>
-    );
-  }
+  const signedIn = Boolean(me);
+  const oversight = can(me, 'VIEW_PORTFOLIO' as Capability);
 
+  const portfolio = useAsync(() => api.portfolio(), [signedIn, oversight], signedIn && oversight);
+  const tasks = useAsync(() => api.myTasks(), [signedIn], signedIn);
+
+  if (!ready) return <Loading what="your account" />;
   if (!me) return <SignIn />;
 
+  const criticalCount = portfolio.data
+    ? portfolio.data.filter((r) => r.band === 'CRITICAL').length
+    : null;
+  const openTaskCount = tasks.data ? tasks.data.filter((t) => t.status !== 'DONE').length : null;
+
   return (
-    <Shell>
+    <AppShell criticalCount={criticalCount} openTaskCount={openTaskCount}>
       <Routes>
-        <Route path="/" element={<Navigate to={homeFor(me)} replace />} />
-        <Route path="/signin" element={<Navigate to={homeFor(me)} replace />} />
+        {/* Every role lands on the same route and the screen reads its own capabilities, so a
+            reporter and a Director-General get different content from one address. */}
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/signin" element={<Navigate to="/" replace />} />
+
+        {/* Oversight. */}
+        <Route path="/entities" element={<Gate need="VIEW_PORTFOLIO"><Entities /></Gate>} />
+        <Route path="/risk" element={<Gate need="VIEW_PORTFOLIO"><RiskAlerts /></Gate>} />
+        <Route path="/analytics" element={<Gate need="VIEW_PORTFOLIO"><Analytics /></Gate>} />
+        <Route path="/portfolio" element={<Gate need="VIEW_PORTFOLIO"><Portfolio /></Gate>} />
+        <Route path="/portfolio/entity/:entityId" element={<Gate need="VIEW_PORTFOLIO"><EntityDrilldown /></Gate>} />
+        <Route path="/portfolio/entity/:entityId/unit-cost" element={<Gate need="VIEW_PORTFOLIO"><UnitCost /></Gate>} />
+
+        {/* Shared. Every signed-in role has a workspace, documents and tasks. */}
+        <Route path="/workspaces" element={<Workspaces />} />
+        <Route path="/documents" element={<Documents />} />
+        <Route path="/tasks" element={<Tasks />} />
 
         {/* The reporter path. No entity selector anywhere: the entity is on the token. */}
-        <Route
-          path="/entity"
-          element={
-            <Gate need="SUBMIT_REPORTING">
-              <EntityHome />
-            </Gate>
-          }
-        />
+        <Route path="/entity" element={<Gate need="SUBMIT_REPORTING"><EntityHome /></Gate>} />
         <Route
           path="/entity/submission/:submissionId/upload"
-          element={
-            <Gate need="SUBMIT_REPORTING">
-              <TemplateUpload />
-            </Gate>
-          }
+          element={<Gate need="SUBMIT_REPORTING"><TemplateUpload /></Gate>}
         />
         <Route
           path="/entity/submission/:submissionId/review"
-          element={
-            <Gate need="SUBMIT_REPORTING">
-              <ExtractionReview />
-            </Gate>
-          }
+          element={<Gate need="SUBMIT_REPORTING"><ExtractionReview /></Gate>}
         />
 
         {/* The reviewer path. */}
-        <Route
-          path="/review"
-          element={
-            <Gate need="REVIEW_SUBMISSIONS">
-              <ReviewQueue />
-            </Gate>
-          }
-        />
-        <Route
-          path="/review/:submissionId"
-          element={
-            <Gate need="REVIEW_SUBMISSIONS">
-              <SubmissionReview />
-            </Gate>
-          }
-        />
+        <Route path="/review" element={<Gate need="REVIEW_SUBMISSIONS"><ReviewQueue /></Gate>} />
+        <Route path="/review/:submissionId" element={<Gate need="REVIEW_SUBMISSIONS"><SubmissionReview /></Gate>} />
 
-        {/* The executive path. Read only by design for DSAC_EXECUTIVE. */}
-        <Route
-          path="/portfolio"
-          element={
-            <Gate need="VIEW_PORTFOLIO">
-              <Portfolio />
-            </Gate>
-          }
-        />
-        <Route
-          path="/portfolio/entity/:entityId"
-          element={
-            <Gate need="VIEW_PORTFOLIO">
-              <EntityDrilldown />
-            </Gate>
-          }
-        />
-        <Route
-          path="/portfolio/entity/:entityId/unit-cost"
-          element={
-            <Gate need="VIEW_PORTFOLIO">
-              <UnitCost />
-            </Gate>
-          }
-        />
-
-        <Route
-          path="/admin/entities"
-          element={
-            <Gate need="ADMINISTER">
-              <EntityAdmin />
-            </Gate>
-          }
-        />
+        {/* Administration. */}
+        <Route path="/admin/entities" element={<Gate need="ADMINISTER"><EntityAdmin /></Gate>} />
 
         <Route path="*" element={<NotFoundState what="page" />} />
       </Routes>
-    </Shell>
+    </AppShell>
   );
 }
 

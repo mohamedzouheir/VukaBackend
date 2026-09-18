@@ -4,7 +4,7 @@ A record of what was decided, what was checked, what changed and what is still o
 somebody who was not in the session can pick the project up, and so we can defend any of it in the
 judging room.
 
-Last updated: 18 September 2026, after the workspace, Microsoft 365, capability and live comment work.
+Last updated: 18 September 2026, after merging that work and rebuilding the interface.
 
 ---
 
@@ -428,7 +428,7 @@ scenario, and the largest factor it reports for Robben Island on real data is th
 instruction". The inputs are simply thinner, because the seed has one prior period of history where
 the wireframes assume three.
 
-This has to be decided before the demo, and it is first in section 10.
+This has to be decided before the demo, and it is first in section 11.
 
 ---
 
@@ -490,7 +490,85 @@ and is the one page whose weight depends on the conversation. Figures are in
 
 ---
 
-## 10. Still open
+## 10. Merging it, and rebuilding the interface
+
+Section 9 was written on a branch. This section is what happened when it met the work described in
+sections 6 and 8, and what changed afterwards.
+
+### 10.1 The same bug, found twice, twice over
+
+`Target.q1Target` was fixed independently by two people hours apart, to the same conclusion. The
+authentication entry point defect was also found twice. That is two problems, each solved twice,
+inside a 48 hour window.
+
+The cause is not carelessness. Nobody could start the application until section 8, so everyone was
+reading rather than running, and reading finds the same things. It is a working practice point
+rather than a fault: get it started early, even badly.
+
+### 10.2 Two conflicts, resolved in opposite directions
+
+**`SecurityConfig` was taken wholesale from the branch**, not combined. It was better on every
+point, including two the other side had not reached:
+
+- `dispatcherTypeMatchers(ERROR, FORWARD).permitAll()`, the same fault as the `/error` rule found
+  in section 8.3, fixed by dispatcher type so it covers forwards as well
+- `AccessResponses`, a table of what a caller is actually told: 401 against 403, API against
+  phone, with JSON naming the role and what it can do instead so a client can recover
+- `NullAuthenticatedSessionStrategy` on CSRF. Authentication is rebuilt from a token on every
+  request, so with the default strategy every request counted as a fresh sign in and deleted the
+  CSRF cookie. The browser's own favicon request was enough to break every form on the phone
+- `/m/signout` moved out from behind the reporter-only rule, so a reviewer signed in on a phone
+  could sign out again
+
+**`DashboardController` kept both sides.** The capability check replaces the role list, which is
+the point of the capability table. `@Transactional(readOnly = true)` stayed, because the lazy load
+fault from section 8.3 was still live on the branch and would have taken the executive drilldown
+down again on merge.
+
+`./mvnw clean test` after the merge: **64 tests, 0 failures.**
+
+### 10.3 The interface was rebuilt against the design screenshots
+
+`docs/Front End designs/` arrived: twelve screenshots of a complete product interface, different
+from the one section 6 describes. A navy rail with ten sections, a global search bar, a user chip,
+cards with pastel icon tiles, a right rail, and a separate marketing landing page.
+
+New tokens, a new `AppShell`, and new screens for Dashboard, Entities, Risk and Alerts,
+Workspaces, Documents and Tasks. The existing screens inherit the look through the shared class
+vocabulary rather than being rewritten. **122KB gzipped against the 250KB budget.**
+
+**The decision that shaped it.** Roughly forty percent of what those screens show has no source in
+the schema: a performance trend by month, an on track rate by sector, provinces, acronyms,
+document view and download counts, days left on an alert, and "Predicted Impact: potential
+shortfall of 1 900 beneficiaries if current trend continues".
+
+Section 11 says never invent a number, and the risk engine is defensible precisely because it is
+arithmetic rather than a prediction. A panel headed Predicted Impact contradicts the one sentence
+a Director-General is meant to be able to say in public.
+
+So the look was taken and the invented figures were not:
+
+| Design element | What is there instead |
+|---|---|
+| Performance trend by month | Risk band distribution, stored and self explaining |
+| Alerts trend, seven day line | Nothing. Nothing stores a score per day |
+| Predicted impact, recommended actions | The five stored signals with their contributions |
+| Province, acronym, registration number | Absent, and the footnote says so |
+| Document views and downloads | Absent. Nothing counts either |
+| Analytics and Insights, whole screen | A screen saying what is missing and what it would take |
+
+The Analytics screen is the one to defend out loud. Built as designed it would have been the most
+persuasive thing in the product and the only part that could not survive being clicked into.
+
+**Tasks and Documents turned out to be real.** They were going to be honest empty states until
+reading the branch showed `/api/workspace/tasks/mine` and
+`/api/workspace/entity/{id}/documents` already exist. Both are wired to live data, and the rail
+badge counts open tasks from the same endpoint the screen reads, so the badge cannot disagree with
+the page.
+
+---
+
+## 11. Still open
 
 Ordered by how much it costs us if it is not done.
 
@@ -534,7 +612,7 @@ Ordered by how much it costs us if it is not done.
 
 ---
 
-## 11. Standing preferences and constraints
+## 12. Standing preferences and constraints
 
 - **No em dashes or dashes in written output.** Natural flowing prose. This applies to every
   message and document produced for this project.
