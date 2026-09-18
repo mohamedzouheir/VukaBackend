@@ -29,6 +29,10 @@ const DB_VERSION = 1;
 const M_OUTBOX = 'm-outbox';
 const SAVED_AT = 'X-Vuka-Saved-At';
 
+// Every lookup below passes ignoreVary. The server varies on Origin, and a module script is
+// requested with an Origin header that the same file fetched at install time was not, so an
+// honest Vary match misses a file that is sitting in the cache and the bundle fails offline.
+
 /* ------------------------------------------------------------------ */
 /* Lifecycle                                                          */
 /* ------------------------------------------------------------------ */
@@ -140,7 +144,7 @@ async function dashboardPage(req) {
     if (res.ok && isHtml(res)) keepShell('/index.html', res.clone()).catch(() => {});
     return res;
   } catch {
-    const cached = await caches.match('/index.html', { cacheName: SHELL });
+    const cached = await caches.match('/index.html', { cacheName: SHELL, ignoreVary: true });
     return cached || offlinePage('Vuka is offline', 'This page has not been opened on this device yet, so there is no copy of it here. Open it again when you have a connection.');
   }
 }
@@ -156,17 +160,17 @@ async function dashboardPage(req) {
 async function keepShell(key, res) {
   const cache = await caches.open(SHELL);
   const html = await res.clone().text();
-  const previous = await cache.match(key);
+  const previous = await cache.match(key, { ignoreVary: true });
   const before = previous ? assetsIn(await previous.text()) : [];
   await cache.put(key, res);
   const wanted = new Set(assetsIn(html));
   for (const other of SHELL_PAGES) {
     if (other === key) continue;
-    const kept = await cache.match(other);
+    const kept = await cache.match(other, { ignoreVary: true });
     if (kept) for (const a of assetsIn(await kept.text())) wanted.add(a);
   }
   for (const a of wanted) {
-    if (!(await cache.match(a))) {
+    if (!(await cache.match(a, { ignoreVary: true }))) {
       try {
         await cache.add(a);
       } catch {
@@ -189,7 +193,7 @@ function assetsIn(html) {
 
 async function staleWhileRevalidate(req) {
   const cache = await caches.open(SHELL);
-  const hit = await cache.match(req);
+  const hit = await cache.match(req, { ignoreVary: true });
   const fresh = fetch(req).then((res) => {
     if (res.ok) cache.put(req, res.clone()).catch(() => {});
     return res;
@@ -203,7 +207,7 @@ async function staleWhileRevalidate(req) {
 
 async function cacheFirst(req) {
   const cache = await caches.open(SHELL);
-  const hit = await cache.match(req);
+  const hit = await cache.match(req, { ignoreVary: true });
   if (hit) return hit;
   const res = await fetch(req);
   if (res.ok) cache.put(req, res.clone()).catch(() => {});
@@ -232,7 +236,7 @@ async function publicPage(req, url) {
     const hit =
       (await cache.match(req, { ignoreVary: true })) ||
       (await cache.match(req, { ignoreVary: true, ignoreSearch: true })) ||
-      (!lite && (await caches.match('/citizen.html', { cacheName: SHELL })));
+      (!lite && (await caches.match('/citizen.html', { cacheName: SHELL, ignoreVary: true })));
     if (hit) return revealOfflineNote(hit, url);
     return offlinePage(
       'No signal',
@@ -493,22 +497,28 @@ async function discard(id) {
 
 /** Fetches every indicator of a report once, so the reporter can move forward with no signal. */
 async function warm(urls) {
-  const user = await getUser();
-  if (!user) return;
-  const cache = await caches.open(MOBILE_PREFIX + user);
+  // On a phone's first visit the worker takes over after the page has loaded, so it has not yet
+  // seen a page with X-Vuka-User on it. The first page fetched here tells it.
+  let user = await getUser();
   for (const u of urls.slice(0, 200)) {
     const path = sameOriginPath(u);
     if (!path || !path.startsWith('/m/') || !keepable(path)) continue;
-    if (await cache.match(path, { ignoreVary: true })) continue;
+    if (user && (await caches.match(path, { cacheName: MOBILE_PREFIX + user, ignoreVary: true }))) continue;
     try {
       const res = await fetch(path, { credentials: 'same-origin' });
-      if (res.ok && !res.redirected && res.headers.get('X-Vuka-User') === user) {
-        await cache.put(path, stamped(res.clone(), await res.clone().blob()));
+      const who = res.headers.get('X-Vuka-User');
+      if (!who || !res.ok || res.redirected) continue;
+      if (who !== user) {
+        await setUser(who);
+        user = who;
       }
+      const cache = await caches.open(MOBILE_PREFIX + user);
+      await cache.put(path, stamped(res.clone(), await res.clone().blob()));
     } catch {
       return;
     }
   }
+  await broadcast();
 }
 
 async function broadcast(extra = {}) {
@@ -575,7 +585,7 @@ function sameOriginPath(href) {
 function formatDate(iso, lang) {
   const d = new Date(iso);
   try {
-    return new Intl.DateTimeFormat(lang, { dateStyle: 'long', timeStyle: 'short' }).format(d);
+    return new Intl.DateTimeFormat(lang === 'en' ? 'en-ZA' : lang, { dateStyle: 'long', timeStyle: 'short' }).format(d);
   } catch {
     return d.toISOString().slice(0, 16).replace('T', ' ');
   }

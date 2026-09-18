@@ -71,10 +71,15 @@ export function rand(n: number): string {
   return 'R ' + money.format(n);
 }
 
+/** South African English rather than the browser's default English, so dates read 2 August 2026 as the light view does. */
+function locale(lang: string) {
+  return lang === 'en' ? 'en-ZA' : lang;
+}
+
 export function longDate(iso: string, lang: string): string {
   const d = new Date(iso);
   try {
-    return new Intl.DateTimeFormat(lang, { day: 'numeric', month: 'long', year: 'numeric' }).format(d);
+    return new Intl.DateTimeFormat(locale(lang), { day: 'numeric', month: 'long', year: 'numeric' }).format(d);
   } catch {
     return d.toISOString().slice(0, 10);
   }
@@ -83,7 +88,7 @@ export function longDate(iso: string, lang: string): string {
 export function dateTime(iso: string, lang: string): string {
   const d = new Date(iso);
   try {
-    return new Intl.DateTimeFormat(lang, { dateStyle: 'long', timeStyle: 'short' }).format(d);
+    return new Intl.DateTimeFormat(locale(lang), { dateStyle: 'long', timeStyle: 'short' }).format(d);
   } catch {
     return d.toISOString().slice(0, 16).replace('T', ' ');
   }

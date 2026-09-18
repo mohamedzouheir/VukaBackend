@@ -724,7 +724,46 @@ the footnote says so.
 
 ---
 
-## 11. Still open
+## 11. Two citizen views, and offline for every audience
+
+Asked for: the citizen view in React where the bandwidth allows, the Thymeleaf page where it does
+not, chosen automatically or by the reader; and offline working for citizens, DSAC users and
+entities alike.
+
+**Two views, one address.** `/public` serves the light Thymeleaf view or the full React view
+(`frontend/citizen.html`, `src/citizen/`), chosen by `CitizenSurface`: the reader's `?view=` first,
+then `Save-Data`, then the `ECT` and `Downlink` client hints, else the full view, which rechecks
+`navigator.connection` in the browser and falls back after ten seconds if its bundle has not
+started. The choice lives in the URL like `lang`, never a cookie, per `LocaleConfig`'s reasoning.
+The full view is its own Vite entry so it never loads Firebase or the dashboard: about 55KB gzipped.
+It reads `/public/api/entities` and `/public/api/messages`, so it renders in the same five languages
+from the same files. New citizen strings were added to all five bundles; the four translations are
+unreviewed like the rest.
+
+**Offline.** One service worker (`frontend/public/sw.js`), a phone script (`public/offline/
+mobile.js`) and a dashboard layer (`src/lib/offline.ts`). Citizens read pages already read, dated.
+Reporters on the phone keep answering with no signal, including indicators never opened, and
+answers go in order when the signal returns. Dashboard users open screens already visited and can
+comment, review, confirm, submit, move tasks and decide documents offline; each is listed until
+sent. The safety rules: never a copy when the network answered; a kept change goes under the same
+person's session or not at all (`OfflineIdentity` puts a digest of the uid on every `/m` page, and
+the worker fetches the form again before sending, which also refreshes the CSRF token); the server's
+state checks still decide, and a refusal blocks what was kept after it; sign-out deletes it all.
+
+**Faults found by running it rather than by reading it.** Kept assets failed offline because the
+server varies on Origin and a module script sends one, so every cache lookup now ignores Vary. On a
+phone's first visit the worker took over after the page loaded, so it knew neither the page nor the
+reporter; the page now asks it to fetch itself once. Comments were missing offline because the
+live poll bypassed the cache. Six dashboard routes (`/entities`, `/risk`, `/analytics`,
+`/workspaces`, `/documents`, `/tasks`) answered 401 on reload; they are now forwarded and permitted.
+`/favicon.svg` answered 401 too.
+
+**Verified** in headless Chrome against a running backend, listed in the README under Offline. Not
+run: an accepted replay end to end, because it writes to the append-only record.
+
+---
+
+## 12. Still open
 
 Ordered by how much it costs us if it is not done.
 
@@ -762,10 +801,18 @@ Ordered by how much it costs us if it is not done.
    entity, a real missed statutory deadline, a documented cause, a committee that had flagged it,
    and an audit excluded from portfolio outcomes. Our system surfaces exactly that pattern, and
    the risk engine reproduces it from published facts.
+11. **Run one accepted offline replay before relying on it in a demonstration.** Answer an indicator
+   on a phone with no signal, reconnect, and check the figure lands with the reporter's name on it.
+   Every step up to the send was verified; the accepted send was not, to keep the demo record clean.
+12. **Two pages are over the 5KB rendered budget.** `mobile-step.html` (5.8KB) and
+   `public-entity.html` (6.0KB) were both over before the offline layer. Gzipped they are 2.3KB.
+   Either trim them or restate the budget as gzipped bytes, which is what a phone downloads.
+13. **Background sync is Chrome only.** Elsewhere, kept answers go when the reporter next opens a
+   page with signal, not by themselves.
 
 ---
 
-## 12. Standing preferences and constraints
+## 13. Standing preferences and constraints
 
 - **No em dashes or dashes in written output.** Natural flowing prose. This applies to every
   message and document produced for this project.

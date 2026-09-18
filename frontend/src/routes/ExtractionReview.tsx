@@ -14,10 +14,11 @@
  *   distinguishes unverifiable from unverified, in the Auditor-General's own words
  *   makes the irreversibility of confirming explicit before the click rather than after
  */
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useAsync } from '../lib/useAsync';
+import { isQueued, pendingFor, useOffline } from '../lib/offline';
 import { isOpenDispute, useLiveComments } from '../lib/useLiveComments';
 import { BulkEvidence } from '../components/BulkEvidence';
 import { CommentPanel } from '../components/CommentPanel';
@@ -50,6 +51,35 @@ export function ExtractionReview() {
   const detail = useAsync(() => api.submission(submissionId!), [submissionId]);
 
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
+
+  /* Figures confirmed with no connection and not sent yet go back into their boxes, so a reload
+     offline, or coming back to this screen, shows what the reporter typed rather than what the
+     parser read. The kept copy of the submission predates them. */
+  const { outbox } = useOffline();
+  useEffect(() => {
+    if (!submissionId) return;
+    const kept: Record<string, Draft> = {};
+    for (const item of pendingFor('/api/submissions/' + submissionId + '/confirm')) {
+      try {
+        const body = JSON.parse(item.body ?? '{}') as {
+          rows?: { targetId: string; actualValue: number | null; varianceExplanation: string | null }[];
+        };
+        for (const r of body.rows ?? []) {
+          const reason = r.varianceExplanation ?? '';
+          const none = r.actualValue === null;
+          kept[r.targetId] = {
+            value: none ? '' : String(r.actualValue),
+            noResult: none,
+            noResultReason: none ? reason.replace(/^No result this quarter\. /, '') : '',
+            explanation: none ? '' : reason,
+          };
+        }
+      } catch {
+        // A kept change this screen cannot read is still in the outbox and still listed there.
+      }
+    }
+    if (Object.keys(kept).length > 0) setDrafts((d) => ({ ...kept, ...d }));
+  }, [submissionId, outbox]);
   const [pendingRow, setPendingRow] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -237,7 +267,7 @@ export function ExtractionReview() {
     setBusy(true);
     setActionError(null);
     try {
-      await api.confirm(
+      const res = await api.confirm(
         submissionId!,
         toWrite.map((r) => {
           const d = draftFor(r);
@@ -252,8 +282,12 @@ export function ExtractionReview() {
           };
         }),
       );
-      setDrafts({});
       setConfirmModal(null);
+      // Kept offline rather than written: the figures stay in the boxes, and the bar at the top
+      // lists the confirmation as waiting. Clearing them would show the parsed values again and
+      // read as if the reporter's figures had been lost.
+      if (isQueued(res)) return;
+      setDrafts({});
       detail.reload();
     } catch (e) {
       setActionError(e instanceof Error ? e.message : 'The figures were not written.');

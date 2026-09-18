@@ -4,9 +4,23 @@ Surface B of `docs/Vuka-Frontend-Design.pdf`: the reporter's desktop path, the D
 and the executive portfolio. Vite, React and TypeScript, talking to the Spring Boot API in the
 parent directory.
 
-The low bandwidth surfaces are not here. `/m` and `/public` are server rendered Thymeleaf in the
-backend, they carry no JavaScript at all, and that is deliberate: a small NPO reporting from a
-phone on mobile data is the primary user of those pages, not a fallback for them.
+Two more things live here, and neither is part of the dashboard bundle:
+
+- **The full citizen view**, `citizen.html` and `src/citizen/`. A second Vite entry, so a member of
+  the public loads React and one small page (about 55KB gzipped), never the dashboard, its router or
+  Firebase. It is served at `/public` when the connection can carry it; the light view is the
+  server-rendered Thymeleaf page in the backend. See `web/CitizenSurface.java` for the choice. In
+  development, `npm run dev` serves it for any `/public` page request unless `?view=lite` is asked
+  for, so both can be compared side by side.
+- **The offline layer.** `public/sw.js` is the service worker for every surface, `public/offline/
+  mobile.js` is the reporter phone pages' half of it, and `src/lib/offline.ts` keeps the dashboard's
+  data per signed-in person and holds changes made with no connection. See "Offline" in the top
+  level README for what each audience gets and the four rules that make it safe. The worker is only
+  registered in production builds, so test offline against the built jar, not the dev server.
+
+The reporter's phone surface, `/m`, is not here. It is server-rendered Thymeleaf in the backend,
+with no framework, and that is deliberate: a small NPO reporting from a phone on mobile data is the
+primary user of those pages, not a fallback for them. It carries one optional script, for offline.
 
 ---
 

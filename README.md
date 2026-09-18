@@ -74,7 +74,8 @@ First start runs the Flyway migrations and loads the real data described below. 
 
 | Surface | URL | Who |
 |---|---|---|
-| Citizen view | http://localhost:8080/public | Anyone, no login |
+| Citizen view | http://localhost:8080/public, chosen by connection | Anyone, no login |
+| Citizen view, light or full by choice | http://localhost:8080/public?view=lite, ?view=rich | Anyone, no login |
 | Reporter sign-in | http://localhost:8080/m/signin | Entity reporters |
 | Mobile submission | http://localhost:8080/m | Entity reporters |
 | Office dashboard | http://localhost:5173 in development, http://localhost:8080 once built | Everyone who signs in |
@@ -531,15 +532,85 @@ step page, whose page budget is nearly spent. Replies on a phone happen on the t
 
 ## The low-bandwidth surfaces
 
-Server-rendered Thymeleaf, no JavaScript framework, every page under 5KB before compression and
-under 2KB once gzip is on. Response compression is configured in `application.yml`; do not turn it
-off.
+Server-rendered Thymeleaf, no JavaScript framework, and every page under 2.5KB once gzip is on.
+Response compression is configured in `application.yml`; do not turn it off. The 5KB budget before
+compression that the design document set is no longer met by every page: the one-indicator step page
+is 5.8KB and the light citizen entity page 6.0KB, and both were over it before the offline layer
+added about 170 and 350 bytes to them. Gzipped, which is what a phone downloads, they are 2.3KB.
+See [docs/frontend-design-corrections.md](docs/frontend-design-corrections.md) for the table.
 
-One page qualifies that. The comment thread, `mobile-thread.html`, carries the only script on these
-surfaces, an inline poller of about 600 bytes, and it grows with the conversation. Empty it is
-4.0KB, 1.8KB gzipped. With three comments of realistic length it is 4.9KB, 2.1KB gzipped, and at
-about four comments it passes 5KB. The poll that keeps it live is a 304 with no body while nothing
-changes, and roughly 380 bytes gzipped when something does.
+Script on these surfaces is optional everywhere and required nowhere. The comment thread,
+`mobile-thread.html`, carries an inline poller of about 600 bytes, and grows with the conversation;
+the poll is a 304 with no body while nothing changes. Every reporter page loads
+`static/offline/mobile.js` (about 3KB gzipped, fetched once and then served from the phone), and
+the light citizen pages carry one line that registers the offline worker. With scripts off, every
+page still works, it just does not work offline.
+
+### Two citizen views
+
+`/public` is served in one of two forms, chosen per request by `CitizenSurface`:
+
+| | Light view | Full view |
+|---|---|---|
+| Built with | Thymeleaf, server-rendered | React, its own Vite entry (`citizen.html`, `src/citizen/`) |
+| On the wire | 1.7KB to 2.3KB gzipped per page | about 55KB gzipped once (React 46KB, the page 4KB, CSS 2.4KB), then JSON |
+| Has | every figure, five languages | the same figures and languages, plus search, sector filters, a delivery chart per entity and portfolio totals |
+| Loads | no framework, no Firebase, no web font | no Firebase, no router, no web font: never the dashboard bundle |
+
+How the choice is made, in order: the reader's own choice in `?view=lite` or `?view=rich`, which
+always wins; `Save-Data: on`; the `ECT` and `Downlink` client hints, where a 3G effective connection
+or under 1 Mbps gets the light view; otherwise the full view. The full view checks again in the
+browser before its bundle runs, using `navigator.connection`, and a watchdog offers the light view
+after three seconds and moves there after ten if the bundle has not started. That covers Safari and
+Firefox, which send no hints. A browser with no script at all is sent to the light view by a
+`<noscript>` refresh. Each view links to the other, and every link in the light view carries
+`view=lite`, so the choice holds for the visit. It is in the URL rather than a cookie for the reason
+the language is: nothing is stored about a reader who never signed in. A build without the frontend
+has no full view, and serves the light one to everybody.
+
+Both read `PublicationService`, the full view through `/public/api/entities` and
+`/public/api/messages`, so they cannot disagree about a figure, and both return 404 for an entity
+DSAC has not published.
+
+### Offline
+
+One service worker, `frontend/public/sw.js`, served at `/sw.js`, with a different rule for each
+audience because each needs something different from a dropped connection.
+
+| Who | What works with no connection | How |
+|---|---|---|
+| Citizen, either view | every page and figure already read on this device, with the date it was saved at the top | pages and `/public/api/*` answers kept by the worker, network first |
+| Entity reporter, phone | every page opened, every indicator of a report once any of it has been opened, and answering: each answer typed with no signal is kept on the phone and sent in order when the signal returns | pages kept per person; answers kept in IndexedDB; a bar at the bottom says how many are waiting |
+| DSAC staff and entity reporters, dashboard | the dashboard opens, every screen already visited shows its last data with the time it was saved, and comments, replies, approving or returning a submission, confirming figures, submitting a period, task moves and document decisions are kept and sent when the connection returns | the shell and bundle kept by the worker; data kept per person by `lib/offline.ts`; a bar under the top bar lists every kept change |
+
+Four rules hold across all three, because they are what make offline safe rather than merely
+convenient:
+
+- **Never a copy when the network answered.** Every read tries the network first. A copy is only
+  shown when there was no answer, and it always says when it was saved.
+- **Sent as the person who made it, or not at all.** Every figure and decision in Vuka carries a
+  name. A kept change is stamped with who was signed in and is only sent under that same session.
+  On the phone, the worker fetches the form again before sending, which proves the same reporter is
+  signed in through the `X-Vuka-User` header (`OfflineIdentity`) and gets a fresh CSRF token. An
+  answer kept by one reporter on a shared phone waits for that reporter.
+- **The server stays the judge.** Kept changes are sent oldest first, through the same endpoints and
+  state checks as anything else. A refusal, such as a missing reason or a submission approved in the
+  meantime, is shown in the server's own words against the kept change, and nothing after it is sent
+  until it is discarded or corrected.
+- **Sign-out takes it all.** Kept pages and data for the person signing out are deleted. On the
+  dashboard, unsent changes are deleted too, after a confirmation that says how many.
+
+What is never kept for later: uploads, opening a period, setting a task, publication and recompute.
+Each either needs the server's answer before the screen can go on, or is a decision that should not
+be made against a copy. They say they need a connection instead.
+
+Verified in headless Chrome against a running backend: both citizen views offline in English and
+Afrikaans, the full view moving to the light one on an emulated 3G connection and staying put with
+`?view=rich`, the reviewer's dashboard opening offline with its comments, a reply kept and
+discarded without reaching the server, a reporter answering an indicator they had never opened, and
+a kept answer sent on reconnection and refused with the server's own sentence. An accepted replay
+was not run end to end, because it writes to the append-only record and there is no undoing that on
+a demo database.
 
 **Two different arguments, and they should not be confused.** The citizen page is a genuine
 bandwidth case: no login, no training, a low-end phone, prepaid data, and a reader who may never
@@ -551,7 +622,8 @@ screens they can finish on a phone between other work is a different proposition
 with a spreadsheet. Requirement (d) asks for full functionality on mobile devices in any case.
 
 The mobile flow puts one indicator per screen and carries the step index in the URL rather than in
-session state, so a dropped connection loses nothing.
+session state, so a dropped connection loses nothing, and with the offline layer above it the
+reporter can keep going through one.
 
 ### Accessibility
 

@@ -139,16 +139,21 @@
     post({ type: 'status' });
     if (navigator.onLine) post({ type: 'flush' });
 
-    // Every indicator of this report, and the page after the last one, which holds the submit form.
+    if (!navigator.onLine) return;
+    // This page first. On the first visit the worker took over after it loaded, so it holds no
+    // copy of it yet and does not know who is signed in; fetching it once settles both. Skipped
+    // by the worker when a copy is already there.
+    var urls = [location.pathname + location.search];
+    // Then every indicator of this report, and the page after the last one, which holds the
+    // submit form. Not on Save-Data: that is a reporter who has asked the phone to spend less.
     var main = document.querySelector('[data-step-base][data-step-count]');
     var saveData = navigator.connection && navigator.connection.saveData;
-    if (main && navigator.onLine && !saveData) {
+    if (main && !saveData) {
       var base = main.getAttribute('data-step-base');
       var count = parseInt(main.getAttribute('data-step-count'), 10) || 0;
-      var urls = [];
       for (var i = 0; i <= count; i++) urls.push(base + i);
-      post({ type: 'warm', urls: urls });
     }
+    post({ type: 'warm', urls: urls });
   });
 
   if (document.readyState === 'loading') {

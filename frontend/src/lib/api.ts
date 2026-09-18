@@ -323,16 +323,29 @@ export const api = {
     if (token) headers.set('Authorization', 'Bearer ' + token);
     if (etag) headers.set('If-None-Match', etag);
 
-    const res = await fetch('/api/submissions/' + submissionId + '/comments', { headers });
+    const path = '/api/submissions/' + submissionId + '/comments';
+    let res: Response;
+    try {
+      res = await fetch(path, { headers });
+    } catch {
+      reachable(false);
+      // The first poll with no connection answers from this person's kept copy, once. The
+      // placeholder validator makes every poll after it a failure until the server can answer,
+      // and the server treats it as stale, so the first real answer replaces the copy whole.
+      if (etag === null) {
+        const copy = await copyOf<CommentView[]>(path);
+        if (copy !== null) return { changed: true, etag: 'W/"offline-copy"', comments: copy };
+      }
+      throw new ApiError(0, 'Comments could not be refreshed.');
+    }
+    reachable(true);
     if (res.status === 304) return { changed: false };
     if (res.status === 401) throw new ApiError(401, 'Your session has expired. Sign in again.');
     if (res.status === 403 || res.status === 404) throw new ApiError(res.status, 'Not found.', true);
     if (!res.ok) throw new ApiError(res.status, 'Comments could not be refreshed.');
-    return {
-      changed: true,
-      etag: res.headers.get('ETag'),
-      comments: (await res.json()) as CommentView[],
-    };
+    const comments = (await res.json()) as CommentView[];
+    void keep(path, comments);
+    return { changed: true, etag: res.headers.get('ETag'), comments };
   },
 
   /* ---------- export ---------- */
