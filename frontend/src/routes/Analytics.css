@@ -46,3 +46,5 @@ tr.an-current td { background: var(--brand-wash); }
   color: var(--ink-muted);
 }
 .an-note svg { flex: 0 0 auto; margin-top: 2px; }
+
+.an-section td strong, .an-section td.num { white-space: nowrap; }
