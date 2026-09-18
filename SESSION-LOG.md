@@ -862,6 +862,33 @@ rebuild, and that PanSALB, which is in the seeded portfolio, is the obvious part
 Claiming twelve reviewed languages and demonstrating five machine-drafted ones would be worse than
 saying this.
 
+### 12.8 After the merge with the citizen and offline work
+
+The language work and the work in section 11 grew from the same commit without seeing each other,
+so the merge brought in six surfaces written in English: the reviewer's day on the dashboard,
+Analytics as rebuilt from stored data, Administration, the offline connection bar, the deadline
+warning, and bulk evidence. It also reverted two headers that had been translated, because git kept
+their line where both sides had touched it. All of it now reads from the dictionaries, which stand
+at 1,204 keys in each of the five languages.
+
+Three things came out of doing it.
+
+**The criterion wording was rendered twice.** `er.validity` already carried its own label, so the
+merged extraction review showed "Validity. Validity. The reported figure..." The three sentences
+now live in `lib/labels.ts` as `criterionText`, shared with bulk evidence, which needed the same
+wording.
+
+**Counts read as whole sentences, one key for one and one for many.** The connection bar and the
+paste summary had built their English by gluing a count, a noun and a range together. The five
+languages do not agree on the order those fall in, so each case is a sentence of its own.
+
+**Section 12.1 overstated it.** It says every error message is translated. The ones raised inside
+React are. The ones raised in `lib/api.ts`, `lib/auth.tsx` and `lib/useAsync.ts` are not, and were
+not before the merge either: they are thrown outside any component, where the translation hook
+cannot reach, and reach the screen as English. The same holds for the offline outbox, which stores
+each change's description in the language it was made in. Fixing either means the library layer
+raising keys and arguments rather than sentences. It is listed in section 13.
+
 ---
 
 ## 13. Still open
@@ -910,6 +937,14 @@ Ordered by how much it costs us if it is not done.
    Either trim them or restate the budget as gzipped bytes, which is what a phone downloads.
 13. **Background sync is Chrome only.** Elsewhere, kept answers go when the reporter next opens a
    page with signal, not by themselves.
+14. **Translate the library layer.** Errors raised in `lib/api.ts`, `lib/auth.tsx` and
+   `lib/useAsync.ts`, and the offline outbox descriptions, still reach the screen in English
+   whatever language is chosen. Section 12.8 says why. A reviewer choosing isiZulu sees an English
+   error exactly when something has gone wrong, which is the worst moment for it.
+15. **Decide which translation system owns what.** `messages*.properties` on the server and
+   `lib/i18n/` on the client now both carry the same five languages. The obvious split is the
+   properties files for the Thymeleaf mobile and citizen templates and the dictionaries for the
+   React app, but nobody has decided it, and until someone does a sentence can be translated twice.
 
 ---
 

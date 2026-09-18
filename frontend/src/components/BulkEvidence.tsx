@@ -18,6 +18,9 @@ import { useRef, useState } from 'react';
 import { api } from '../lib/api';
 import { guessCriterion, matchIndicator, RELIABILITY, type Criterion } from '../lib/evidenceMatch';
 import { fileSize, num } from '../lib/format';
+import { useI18n } from '../lib/i18n';
+import type { I18n } from '../lib/i18n';
+import { useLabels } from '../lib/labels';
 import type { IndicatorRowView } from '../lib/types';
 import { Modal } from './Shell';
 import { IconAlert, IconCheck, IconPaperclip, IconSpinner, IconUpload, IconX } from '../icons';
@@ -39,7 +42,7 @@ interface Item {
   refused: boolean;
 }
 
-function toItem(file: File, rows: IndicatorRowView[]): Item {
+function toItem(file: File, rows: IndicatorRowView[], t: I18n['t']): Item {
   const match = matchIndicator(file.name, rows);
   const tooBig = file.size > MAX_BYTES;
   return {
@@ -50,10 +53,10 @@ function toItem(file: File, rows: IndicatorRowView[]): Item {
     why: match.row
       ? null
       : match.candidates.length > 1
-        ? 'The name mentions ' + match.candidates.map((r) => r.indicatorRef).join(' and ') + '.'
-        : 'No indicator code in the name.',
+        ? t('be.whyAmbiguous', match.candidates.map((r) => r.indicatorRef).join(t('be.and')))
+        : t('be.whyNoCode'),
     state: tooBig ? 'failed' : 'waiting',
-    error: tooBig ? 'Larger than 15 MB, which the server refuses.' : null,
+    error: tooBig ? t('be.tooBig') : null,
     refused: tooBig,
   };
 }
@@ -68,6 +71,8 @@ export function BulkEvidence({
   /** Called with whether anything was attached, so the screen only reloads when it changed. */
   onClose: (attachedAny: boolean) => void;
 }) {
+  const { t } = useI18n();
+  const L = useLabels();
   const [items, setItems] = useState<Item[]>([]);
   const [sending, setSending] = useState(false);
   const [dragging, setDragging] = useState(false);
@@ -75,7 +80,7 @@ export function BulkEvidence({
 
   function add(files: FileList | null) {
     if (!files) return;
-    const incoming = Array.from(files).map((f) => toItem(f, rows));
+    const incoming = Array.from(files).map((f) => toItem(f, rows, t));
     setItems((current) => {
       // The same file dropped twice is one file.
       const held = new Set(current.map((i) => i.key));
@@ -103,7 +108,7 @@ export function BulkEvidence({
       } catch (e) {
         update(item.key, {
           state: 'failed',
-          error: e instanceof Error ? e.message : 'The file was not stored.',
+          error: e instanceof Error ? e.message : t('be.notStored'),
         });
       }
     }
@@ -117,19 +122,19 @@ export function BulkEvidence({
   return (
     <Modal
       wide
-      title="Attach evidence for the quarter"
+      title={t('be.title')}
       onClose={close}
       footer={
         <>
           <span className="small muted be-tally">
             {items.length === 0
               ? null
-              : num(ready.length) + ' ready' +
-                (unplaced.length ? ', ' + num(unplaced.length) + ' need a choice' : '') +
-                (attached.length ? ', ' + num(attached.length) + ' attached' : '')}
+              : t('be.ready', num(ready.length) ?? '') +
+                (unplaced.length ? ', ' + t('be.needChoice', num(unplaced.length) ?? '') : '') +
+                (attached.length ? ', ' + t('be.attachedCount', num(attached.length) ?? '') : '')}
           </span>
           <button type="button" onClick={close} disabled={sending}>
-            {attached.length > 0 && ready.length === 0 ? 'Done' : 'Cancel'}
+            {attached.length > 0 && ready.length === 0 ? t('common.done') : t('common.cancel')}
           </button>
           <button
             type="button"
@@ -138,7 +143,7 @@ export function BulkEvidence({
             onClick={() => void attachAll()}
           >
             {sending ? <IconSpinner size={16} className="spin" /> : <IconPaperclip size={16} />}
-            {ready.length === 1 ? 'Attach 1 file' : 'Attach ' + num(ready.length) + ' files'}
+            {ready.length === 1 ? t('be.attachOne') : t('be.attachMany', num(ready.length) ?? '')}
           </button>
         </>
       }
@@ -158,11 +163,10 @@ export function BulkEvidence({
       >
         <IconUpload size={22} />
         <span>
-          <strong>Drop every evidence file for the quarter here</strong>, or choose them.
+          <strong>{t('be.dropHead')}</strong>{t('be.dropOr')}
           <span className="small muted be-hint">
-            Start each file name with its indicator code, as in{' '}
-            <span className="mono">HER-1.1 signed attendance register.pdf</span>, and it is matched
-            for you. Words such as attendance, reconciliation or register set the test.
+            {t('be.hint1')}{' '}
+            <span className="mono">HER-1.1 signed attendance register.pdf</span>{t('be.hint2')}
           </span>
         </span>
         <input
@@ -182,11 +186,11 @@ export function BulkEvidence({
           <table className="be-table">
             <thead>
               <tr>
-                <th>File</th>
-                <th>Indicator</th>
-                <th>Test it meets</th>
+                <th>{t('be.colFile')}</th>
+                <th>{t('be.colIndicator')}</th>
+                <th>{t('be.colTest')}</th>
                 <th>
-                  <span className="visually-hidden">State</span>
+                  <span className="visually-hidden">{t('be.colState')}</span>
                 </th>
               </tr>
             </thead>
@@ -201,12 +205,12 @@ export function BulkEvidence({
                     </td>
                     <td>
                       <select
-                        aria-label={'Indicator for ' + item.file.name}
+                        aria-label={t('be.indicatorFor', item.file.name)}
                         value={item.targetId}
                         disabled={locked}
                         onChange={(e) => update(item.key, { targetId: e.target.value })}
                       >
-                        <option value="">Choose an indicator</option>
+                        <option value="">{t('be.chooseIndicator')}</option>
                         {rows.map((r) => (
                           <option key={r.targetId} value={r.targetId}>
                             {r.indicatorRef} {r.indicator}
@@ -219,16 +223,16 @@ export function BulkEvidence({
                     </td>
                     <td>
                       <select
-                        aria-label={'Test met by ' + item.file.name}
+                        aria-label={t('be.testFor', item.file.name)}
                         value={item.criterion}
                         disabled={locked}
-                        title={RELIABILITY.find((c) => c.key === item.criterion)?.text}
+                        title={item.criterion ? L.criterionText(item.criterion) : undefined}
                         onChange={(e) => update(item.key, { criterion: e.target.value as Criterion | '' })}
                       >
-                        <option value="">Choose a test</option>
+                        <option value="">{t('be.chooseTest')}</option>
                         {RELIABILITY.map((c) => (
                           <option key={c.key} value={c.key}>
-                            {c.label}
+                            {L.criterion(c.key)}
                           </option>
                         ))}
                       </select>
@@ -238,7 +242,7 @@ export function BulkEvidence({
                         <IconSpinner size={16} className="spin" />
                       ) : item.state === 'attached' ? (
                         <span className="be-ok">
-                          <IconCheck size={16} /> Attached
+                          <IconCheck size={16} /> {t('be.attached')}
                         </span>
                       ) : item.state === 'failed' ? (
                         <span className="be-fail">
@@ -253,7 +257,7 @@ export function BulkEvidence({
                           onClick={() => setItems((c) => c.filter((i) => i.key !== item.key))}
                         >
                           <IconX size={14} />
-                          <span className="visually-hidden">Remove {item.file.name}</span>
+                          <span className="visually-hidden">{t('be.remove', item.file.name)}</span>
                         </button>
                       ) : null}
                     </td>
@@ -267,8 +271,7 @@ export function BulkEvidence({
 
       {unplaced.length > 0 ? (
         <p className="small muted">
-          A file with no indicator or no test is held back rather than attached. Evidence that
-          does not say what it proves is a file in a folder, and the Department cannot use it.
+          {t('be.heldBack')}
         </p>
       ) : null}
     </Modal>

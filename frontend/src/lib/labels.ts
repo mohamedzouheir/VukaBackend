@@ -87,6 +87,12 @@ const BASIS_KEYS: Record<string, Key> = {
   DEPARTMENTAL_INSTRUCTION: 'basis.departmental',
 };
 
+const CRITERION_TEXT_KEYS: Record<string, Key> = {
+  VALIDITY: 'criterion.validityText',
+  ACCURACY: 'criterion.accuracyText',
+  COMPLETENESS: 'criterion.completenessText',
+};
+
 export interface Labels {
   band: (band: RiskBand | string | null | undefined) => string;
   signal: (type: string | null | undefined) => string;
@@ -94,6 +100,9 @@ export interface Labels {
   outcome: (outcome: string | null | undefined) => string;
   sector: (sector: string | null | undefined) => string;
   criterion: (c: string) => string;
+  /** The criterion as a sentence, already carrying its own label. Used where a reader is
+      choosing between the three rather than reading one back. */
+  criterionText: (c: string) => string;
   /** The deadline basis in plain words, and whether it is law or an instruction. */
   basis: (basis: string | null | undefined) => string;
   /** "14 days left", "due today", "3 days late". Never a bare negative number. */
@@ -113,6 +122,7 @@ export function useLabels(): Labels {
     sector: (sector) =>
       sector ? (SECTOR_KEYS[sector] ? t(SECTOR_KEYS[sector]) : sentence(sector)) : t('sector.unassigned'),
     criterion: (c) => (CRITERION_KEYS[c] ? t(CRITERION_KEYS[c]) : c.toLowerCase()),
+    criterionText: (c) => (CRITERION_TEXT_KEYS[c] ? t(CRITERION_TEXT_KEYS[c]) : c.toLowerCase()),
     basis: (basis) => (basis && BASIS_KEYS[basis] ? t(BASIS_KEYS[basis]) : t('basis.unrecorded')),
     daysRemaining: (days) => {
       if (days === null || days === undefined) return null;

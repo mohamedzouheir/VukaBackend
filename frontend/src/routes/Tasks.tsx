@@ -205,6 +205,7 @@ export function Tasks() {
  * picks the entity first, and the people list is then the Department plus that entity's reporters.
  */
 function NewTaskForm({ onCreated }: { onCreated: () => void }) {
+  const { t } = useI18n();
   const { me } = useAuth();
   const ownEntity = me?.entityId ?? null;
   const portfolio = useAsync(() => api.portfolio(), [], ownEntity === null);
@@ -240,13 +241,13 @@ function NewTaskForm({ onCreated }: { onCreated: () => void }) {
         documentId: null,
         submissionId: null,
       });
-      setMessage('Set for ' + (person?.name ?? 'them') + '. It is on their task list now.');
+      setMessage(person?.name ? t('tasks.setFor', person.name) : t('tasks.setForThem'));
       setTitle('');
       setDescription('');
       setDue('');
       onCreated();
     } catch (e) {
-      setFailure(e instanceof Error ? e.message : 'The task was not set.');
+      setFailure(e instanceof Error ? e.message : t('tasks.setFailed'));
     } finally {
       setSaving(false);
     }
@@ -256,7 +257,7 @@ function NewTaskForm({ onCreated }: { onCreated: () => void }) {
     return (
       <div className="row" style={{ marginTop: 'var(--space-4)', gap: 10 }}>
         <button type="button" onClick={() => setOpen(true)}>
-          <IconTasks size={15} /> Set a task
+          <IconTasks size={15} /> {t('tasks.setATask')}
         </button>
         {message ? <span className="small muted" role="status">{message}</span> : null}
       </div>
@@ -273,18 +274,18 @@ function NewTaskForm({ onCreated }: { onCreated: () => void }) {
       }}
     >
       <div className="section-head">
-        <h2>Set a task</h2>
+        <h2>{t('tasks.setATask')}</h2>
         <span className="spacer" />
         <button type="button" className="link" onClick={() => setOpen(false)}>
-          Close
+          {t('tasks.close')}
         </button>
       </div>
 
       {ownEntity === null ? (
         <div>
-          <label htmlFor="task-entity">Entity</label>
+          <label htmlFor="task-entity">{t('an.colEntity')}</label>
           <select id="task-entity" value={entityId} onChange={(e) => setEntityId(e.target.value)}>
-            <option value="">Choose the entity this is about</option>
+            <option value="">{t('tasks.chooseEntity')}</option>
             {(portfolio.data ?? [])
               .slice()
               .sort((a, b) => a.name.localeCompare(b.name))
@@ -298,40 +299,40 @@ function NewTaskForm({ onCreated }: { onCreated: () => void }) {
       ) : null}
 
       <div>
-        <label htmlFor="task-assignee">Assign to</label>
+        <label htmlFor="task-assignee">{t('tasks.assignTo')}</label>
         <select
           id="task-assignee"
           value={assignee}
           disabled={entityId === '' || people.loading}
           onChange={(e) => setAssignee(e.target.value)}
         >
-          <option value="">{people.loading ? 'Loading people' : 'Choose a person'}</option>
+          <option value="">{people.loading ? t('tasks.loadingPeople') : t('tasks.choosePerson')}</option>
           {choices.map((p) => (
             <option key={p.uid} value={p.uid}>
-              {p.name} ({p.dsac ? 'Department' : 'entity'})
+              {p.name} ({p.dsac ? t('tasks.department') : t('tasks.entity')})
             </option>
           ))}
         </select>
         {entityId !== '' && !people.loading && choices.length === 0 ? (
           <p className="small muted">
-            Nobody else has signed in for this entity yet, so there is nobody to assign to.
+            {t('tasks.nobodyToAssign')}
           </p>
         ) : null}
         {people.error ? <p className="field-error">{people.error}</p> : null}
       </div>
 
       <div>
-        <label htmlFor="task-title">What needs doing</label>
+        <label htmlFor="task-title">{t('tasks.whatNeedsDoing')}</label>
         <input id="task-title" type="text" value={title} maxLength={300} onChange={(e) => setTitle(e.target.value)} />
       </div>
 
       <div>
-        <label htmlFor="task-description">Detail (optional)</label>
+        <label htmlFor="task-description">{t('tasks.detail')}</label>
         <textarea id="task-description" value={description} maxLength={2000} onChange={(e) => setDescription(e.target.value)} />
       </div>
 
       <div>
-        <label htmlFor="task-due">Due (optional)</label>
+        <label htmlFor="task-due">{t('tasks.due')}</label>
         <input id="task-due" type="date" value={due} onChange={(e) => setDue(e.target.value)} />
       </div>
 
@@ -341,10 +342,10 @@ function NewTaskForm({ onCreated }: { onCreated: () => void }) {
       <div className="row" style={{ gap: 10 }}>
         <button type="submit" disabled={!ready || saving}>
           {saving ? <IconSpinner size={15} className="spin" /> : <IconCheck size={15} />}
-          Set task
+          {t('tasks.setTask')}
         </button>
         <span className="small muted">
-          Marked external automatically when it crosses between the Department and an entity.
+          {t('tasks.externalNote')}
         </span>
       </div>
     </form>

@@ -169,7 +169,7 @@ export function AppShell({
     <div className={'shell' + (railOpen ? ' rail-open' : '') + (collapsed ? ' shell-collapsed' : '')}>
       {railOpen ? <div className="rail-scrim" onClick={() => setRailOpen(false)} /> : null}
 
-      <nav className="rail" aria-label="Main">
+      <nav className="rail" aria-label={t('nav.main')}>
         <div className="rail-brand">
           <Link to="/" className="rail-brand-link">
             <span className="rail-wordmark">

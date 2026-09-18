@@ -161,11 +161,11 @@ export function EntityHome() {
             >
               {currentSub && currentSub.status !== 'DRAFT' && currentSub.status !== 'RETURNED' ? (
                 <>
-                  <IconCheckCircle size={16} /> Open this period
+                  <IconCheckCircle size={16} /> {t('home.openPeriod')}
                 </>
               ) : (
                 <>
-                  <IconList size={16} /> {currentSub ? 'Continue entering figures' : 'Enter figures'}
+                  <IconList size={16} /> {currentSub ? t('home.continueFigures') : t('home.enterFigures')}
                 </>
               )}
             </button>
@@ -177,7 +177,7 @@ export function EntityHome() {
                 void open.run(current.periodId, 'upload').finally(() => setOpening(false));
               }}
             >
-              <IconUpload size={16} /> Upload completed file
+              <IconUpload size={16} /> {t('home.uploadFile')}
             </button>
             <a
               className="btn"
@@ -300,6 +300,7 @@ export function EntityHome() {
  * figure the reviewer disputes while the reporter is looking appears here without a reload.
  */
 function ReturnedCard({ sub }: { sub: SubmissionRow }) {
+  const { t } = useI18n();
   const navigate = useNavigate();
   const live = useLiveComments(sub.submissionId);
   const disputes = (live.comments ?? []).filter(isOpenDispute);
@@ -309,22 +310,23 @@ function ReturnedCard({ sub }: { sub: SubmissionRow }) {
       <p className="row" style={{ gap: 8, margin: 0 }}>
         <IconReturn size={18} />
         <strong id={'returned-' + sub.submissionId}>
-          {sub.periodLabel} was returned to you
-          {sub.reviewedByName ? ' by ' + sub.reviewedByName : ''}
+          {sub.reviewedByName
+            ? t('home.returnedBy', sub.periodLabel, sub.reviewedByName)
+            : t('home.returnedToYou', sub.periodLabel)}
         </strong>
         <span className="spacer" />
         {sub.reviewedAt ? <span className="small muted">{dateTime(sub.reviewedAt)}</span> : null}
       </p>
 
       <p style={{ margin: 'var(--space-2) 0 0' }}>
-        {sub.returnReason ?? 'No overall reason was recorded. The disputed figures are listed below.'}
+        {sub.returnReason ?? t('home.noOverallReason')}
       </p>
 
       {live.comments === null ? (
-        <p className="small muted">Reading the reviewer's comments...</p>
+        <p className="small muted">{t('home.readingComments')}</p>
       ) : disputes.length === 0 ? (
         <p className="small muted">
-          No figure is marked as disputed, so the reason above is the whole of what was asked.
+          {t('home.noDisputes')}
         </p>
       ) : (
         <ul className="returned-disputes">
@@ -332,7 +334,7 @@ function ReturnedCard({ sub }: { sub: SubmissionRow }) {
             <li key={c.commentId}>
               <IconComment size={16} className="muted" />
               <span>
-                <strong className="mono">{c.indicatorRef ?? 'A figure'}</strong>{' '}
+                <strong className="mono">{c.indicatorRef ?? t('home.aFigure')}</strong>{' '}
                 <span>{c.body}</span>
                 <em className="small muted">
                   {' '}
@@ -346,9 +348,7 @@ function ReturnedCard({ sub }: { sub: SubmissionRow }) {
       )}
 
       <p className="small muted">
-        Only these figures were reopened. Everything else stays as filed, with the original
-        confirmation and its author on the record. Reply against a figure on the next screen and the
-        reviewer sees it within seconds.
+        {t('home.onlyTheseReopened')}
       </p>
 
       <button
@@ -357,10 +357,10 @@ function ReturnedCard({ sub }: { sub: SubmissionRow }) {
         onClick={() => navigate('/entity/submission/' + sub.submissionId + '/review')}
       >
         {disputes.length === 0
-          ? 'Open the returned period'
+          ? t('home.openReturned')
           : disputes.length === 1
-            ? 'Answer the disputed figure'
-            : 'Answer the ' + num(disputes.length) + ' disputed figures'}{' '}
+            ? t('home.answerOne')
+            : t('home.answerMany', num(disputes.length) ?? '')}{' '}
         <IconChevronRight size={16} />
       </button>
       <span className="visually-hidden" role="status">{live.announcement}</span>

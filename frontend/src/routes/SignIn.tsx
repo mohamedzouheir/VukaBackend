@@ -39,7 +39,7 @@ import './SignIn.css';
 
 const DEMO_ACCOUNTS: {
   role: Role;
-  label: string;
+  label: Key;
   email: string;
   password: string;
   name: string;
@@ -47,7 +47,7 @@ const DEMO_ACCOUNTS: {
 }[] = [
   {
     role: 'DSAC_REVIEWER',
-    label: 'DSAC reviewer',
+    label: 'signin.roleReviewer',
     email: 'reviewer@dsac.gov.za',
     password: 'Vuka2026!',
     name: 'L. Dlamini',
@@ -55,7 +55,7 @@ const DEMO_ACCOUNTS: {
   },
   {
     role: 'DSAC_EXECUTIVE',
-    label: 'DSAC executive',
+    label: 'signin.roleExecutive',
     email: 'dg@dsac.gov.za',
     password: 'Vuka2026!',
     name: 'Director-General',
@@ -63,7 +63,7 @@ const DEMO_ACCOUNTS: {
   },
   {
     role: 'ADMIN',
-    label: 'Administrator',
+    label: 'signin.roleAdmin',
     email: 'admin@dsac.gov.za',
     password: 'Vuka2026!',
     name: 'System administrator',
@@ -71,7 +71,7 @@ const DEMO_ACCOUNTS: {
   },
   {
     role: 'ENTITY_REPORTER',
-    label: 'Entity reporter',
+    label: 'signin.roleReporter',
     email: 'nomsa@iziko.org.za',
     password: 'Vuka2026!',
     name: 'N. Mabaso',
@@ -316,7 +316,7 @@ export function SignIn() {
                 >
                   <span className="si-demo-role">
                     {pending === a.role ? <IconSpinner size={13} className="spin" /> : <IconUser size={13} />}
-                    {a.label}
+                    {t(a.label)}
                   </span>
                   <span className="si-demo-what">{t(a.what)}</span>
                 </button>

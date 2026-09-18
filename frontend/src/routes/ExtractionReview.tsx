@@ -26,7 +26,6 @@ import { RELIABILITY } from '../lib/evidenceMatch';
 import { readPaste } from '../lib/pasteFigures';
 import { num } from '../lib/format';
 import { useI18n } from '../lib/i18n';
-import type { Key } from '../lib/i18n';
 import { useLabels } from '../lib/labels';
 import type { IndicatorRowView } from '../lib/types';
 import { IndicatorRowReview, IndicatorRowSkeleton, needsExplanation } from '../components/IndicatorRow';
@@ -220,30 +219,35 @@ export function ExtractionReview() {
       setDrafts((current) => ({ ...current, ...patch }));
 
       if (filled.length === 0 && notNumbers === 0 && skippedConfirmed === 0) {
-        setPasteNote({ text: 'Nothing in the paste could be read as a figure.', refused: true });
+        setPasteNote({ text: t('er.pasteNothing'), refused: true });
         return true;
       }
+      /* Whole sentences per case rather than fragments glued together, because the order a
+         count, a noun and a range fall in is not the same in every language. */
+      const one = filled.length === 1;
+      const first = filled[0]?.indicatorRef ?? '';
+      const last = filled[filled.length - 1]?.indicatorRef ?? '';
       const parts = [
-        'Filled ' + filled.length + (filled.length === 1 ? ' figure' : ' figures')
-          + (pasted.kind === 'byCode'
-            ? ' by indicator code'
-            : filled.length > 0
-            ? ', ' + filled[0].indicatorRef
-              + (filled.length > 1 ? ' to ' + filled[filled.length - 1].indicatorRef : '')
-            : '')
-          + '. Check them, then confirm.',
+        (filled.length === 0
+          ? t('er.pasteFilledNone')
+          : pasted.kind === 'byCode'
+            ? t(one ? 'er.pasteByCodeOne' : 'er.pasteByCodeMany', filled.length)
+            : one
+              ? t('er.pasteRangeOne', filled.length, first)
+              : t('er.pasteRangeMany', filled.length, first, last))
+          + ' ' + t('er.pasteCheck'),
       ];
-      if (skippedConfirmed) parts.push(skippedConfirmed + ' already confirmed and left as filed.');
-      if (notNumbers) parts.push(notNumbers + (notNumbers === 1 ? ' cell was' : ' cells were') + ' not a number and left alone.');
+      if (skippedConfirmed) parts.push(t('er.pasteSkipped', skippedConfirmed));
+      if (notNumbers) parts.push(t(notNumbers === 1 ? 'er.pasteNotNumberOne' : 'er.pasteNotNumberMany', notNumbers));
       if (unmatched) {
         parts.push(pasted.kind === 'byCode'
-          ? unmatched + (unmatched === 1 ? ' line names' : ' lines name') + ' no indicator on this report.'
-          : unmatched + (unmatched === 1 ? ' figure ran' : ' figures ran') + ' past the last indicator.');
+          ? t(unmatched === 1 ? 'er.pasteNoIndicatorOne' : 'er.pasteNoIndicatorMany', unmatched)
+          : t(unmatched === 1 ? 'er.pastePastLastOne' : 'er.pastePastLastMany', unmatched));
       }
       setPasteNote({ text: parts.join(' '), refused: false });
       return true;
     },
-    [rows, visibleRows, isReopened, draftFor],
+    [rows, visibleRows, isReopened, draftFor, t],
   );
   const confirmedCount = rows.length - outstanding.length;
 
@@ -484,7 +488,7 @@ export function ExtractionReview() {
           >
             {pasteNote
               ? pasteNote.text
-              : 'Figures in a spreadsheet? Copy the column and paste it into the first box: it fills the rows below in order. Or copy two columns, code and figure, to match by code.'}
+              : t('er.pasteHint')}
           </p>
 
           {outstanding.length > 0 ? (
@@ -710,14 +714,6 @@ function EvidenceDrawer({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  /* RELIABILITY carries the Auditor-General's English in evidenceMatch, where the bulk
-     matcher reads it too. The screen shows it in the reader's language. */
-  const CRITERION_TEXT: Record<string, Key> = {
-    VALIDITY: 'er.validity',
-    ACCURACY: 'er.accuracy',
-    COMPLETENESS: 'er.completeness',
-  };
-
   function toggle(key: string) {
     setCriteria((c) => (c.includes(key) ? c.filter((x) => x !== key) : [...c, key]));
   }
@@ -782,7 +778,7 @@ function EvidenceDrawer({
         {RELIABILITY.map((c) => (
           <label key={c.key} className="ind-check">
             <input type="checkbox" checked={criteria.includes(c.key)} onChange={() => toggle(c.key)} />
-            <span>{L.criterion(c.key)}. {t(CRITERION_TEXT[c.key])}</span>
+            <span>{L.criterionText(c.key)}</span>
           </label>
         ))}
       </fieldset>

@@ -109,7 +109,7 @@ export function Documents() {
                   <thead>
                     <tr>
                       <th>{t('docs.colFile')}</th>
-                      <th className="num">Version</th>
+                      <th className="num">{t('docs.colVersion')}</th>
                       <th>{t('docs.colReceipt')}</th>
                       <th>{t('docs.colDecision')}</th>
                       <th>{t('docs.colSatisfies')}</th>

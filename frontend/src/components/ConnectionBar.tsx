@@ -6,9 +6,14 @@
  * otherwise, and a reviewer who believes an approval went through when it did not is worse off
  * than one who was told it failed. So every kept change is listed here by name, with the time it
  * was kept, until it is sent or discarded, and a refused one says why in the server's words.
+ *
+ * Counts read as one sentence or another rather than through a plural rule, because the five
+ * languages do not agree on where the break falls and a rule that is right in English is wrong
+ * somewhere else. Two keys per count is duller and correct.
  */
 import { useState } from 'react';
 import { discard, replay, useOffline } from '../lib/offline';
+import { useI18n } from '../lib/i18n';
 import './components.css';
 
 function time(iso: string) {
@@ -17,31 +22,35 @@ function time(iso: string) {
 
 export function ConnectionBar() {
   const { online, copyFrom, outbox, sending, signin } = useOffline();
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
 
   const failed = outbox.find((i) => i.state === 'failed') ?? null;
   const waiting = outbox.length;
+  const one = waiting === 1;
 
   if (online && waiting === 0 && !copyFrom) return null;
 
   let line: string;
   if (failed) {
-    line = 'A change kept on this device was not accepted: ' + (failed.note ?? 'refused by the server.') +
-      ' Nothing after it has been sent. Discard it to send the rest.';
+    /* The server's own words, which are not ours to translate. */
+    line = t('conn.failed', failed.note ?? t('conn.refused'));
   } else if (signin) {
-    line = waiting + (waiting === 1 ? ' change is' : ' changes are') + ' kept on this device. Your session has run out: sign out and in again to send them.';
+    line = t(one ? 'conn.sessionOne' : 'conn.sessionMany', waiting);
   } else if (!online) {
-    line = 'You are offline. ' +
-      (copyFrom ? 'Screens show the copy saved on this device at ' + time(copyFrom) + '. ' : '') +
+    line =
+      t('conn.offline') +
+      ' ' +
+      (copyFrom ? t('conn.offlineCopy', time(copyFrom)) + ' ' : '') +
       (waiting > 0
-        ? waiting + (waiting === 1 ? ' change is' : ' changes are') + ' kept here and will be sent when the connection returns.'
-        : 'Comments, reviews, confirmed figures and task updates you make are kept here and sent when the connection returns.');
+        ? t(one ? 'conn.offlineWaitingOne' : 'conn.offlineWaitingMany', waiting)
+        : t('conn.offlineNone'));
   } else if (sending) {
-    line = 'Sending ' + waiting + (waiting === 1 ? ' kept change.' : ' kept changes.');
+    line = t(one ? 'conn.sendingOne' : 'conn.sendingMany', waiting);
   } else if (waiting > 0) {
-    line = waiting + (waiting === 1 ? ' change is' : ' changes are') + ' kept on this device and not sent yet.';
+    line = t(one ? 'conn.waitingOne' : 'conn.waitingMany', waiting);
   } else {
-    line = 'Some figures on screen are the copy saved at ' + time(copyFrom!) + '. They refresh as the connection allows.';
+    line = t('conn.stale', time(copyFrom!));
   }
 
   return (
@@ -50,10 +59,10 @@ export function ConnectionBar() {
       {waiting > 0 ? (
         <div className="conn-actions">
           <button type="button" className="btn" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
-            {open ? 'Hide' : 'Show'} kept changes
+            {open ? t('conn.hide') : t('conn.show')}
           </button>
           {online && !sending && !failed ? (
-            <button type="button" className="btn btn-primary" onClick={() => void replay()}>Send now</button>
+            <button type="button" className="btn btn-primary" onClick={() => void replay()}>{t('conn.sendNow')}</button>
           ) : null}
         </div>
       ) : null}
@@ -62,11 +71,14 @@ export function ConnectionBar() {
           {outbox.map((i) => (
             <li key={i.id}>
               <span>
+                {/* The description is written when the change is queued and kept as it was
+                    written, so a change made in one language still reads the same after a
+                    switch. Translating it would mean storing a key and its arguments. */}
                 <strong>{i.description}</strong>
-                <span className="small muted"> kept {time(i.savedAt)}</span>
-                {i.state === 'failed' ? <span className="small conn-note"> Not accepted: {i.note}</span> : null}
+                <span className="small muted"> {t('conn.keptAt', time(i.savedAt))}</span>
+                {i.state === 'failed' ? <span className="small conn-note"> {t('conn.notAccepted', i.note ?? '')}</span> : null}
               </span>
-              <button type="button" className="btn" onClick={() => void discard(i.id)}>Discard</button>
+              <button type="button" className="btn" onClick={() => void discard(i.id)}>{t('conn.discard')}</button>
             </li>
           ))}
         </ul>
