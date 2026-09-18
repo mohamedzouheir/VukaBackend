@@ -240,7 +240,7 @@ button.link:hover:not(:disabled) { background: none; text-decoration: underline;
 
 label { display: block; font-size: 0.8125rem; font-weight: 600; margin-bottom: 6px; color: var(--ink); }
 
-input[type="text"], input[type="number"], input[type="email"], input[type="password"],
+input[type="text"], input[type="number"], input[type="email"], input[type="password"], input[type="date"],
 input[type="file"], input[type="search"], select, textarea {
   font: inherit;
   font-size: 0.9375rem;

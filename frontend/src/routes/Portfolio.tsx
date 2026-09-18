@@ -14,7 +14,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useAsync } from '../lib/useAsync';
 import type { PortfolioRow, Sector } from '../lib/types';
-import { BAND_ORDER, bandColour, bandWord, num, randsShort, sectorLabel } from '../lib/format';
+import { BAND_ORDER, bandColour, bandWord, num, randsShort, reviewPeriod, sectorLabel } from '../lib/format';
 import { RiskPanel } from '../components/RiskPanel';
 import { EmptyState, ErrorState, Loading, Tile } from '../components/Shell';
 import { IconFilter, IconInfo } from '../icons';
@@ -30,7 +30,7 @@ export function Portfolio() {
   const [sector, setSector] = useState<Sector | null>(null);
   const [explain, setExplain] = useState<PortfolioRow | null>(null);
 
-  const period = useMemo(() => (periods.data ?? []).filter((p) => p.open).at(-1) ?? null, [periods.data]);
+  const period = useMemo(() => reviewPeriod(periods.data), [periods.data]);
 
   const rows = useMemo(
     () => (portfolio.data ?? []).filter((r) => (sector ? r.sector === sector : true)),

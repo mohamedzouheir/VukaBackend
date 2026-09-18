@@ -72,6 +72,25 @@ vuka:
     # Loads realistic DSAC entities and three years of history on first start.
     enabled: ${SEED_ENABLED:true}
 
+  demo:
+    # Workflow data on top of the reference seed, so every screen has something to act on: Q1
+    # submissions in every review state, evidence, a document version history, comment threads,
+    # tasks and a completed Q2 template to upload. Every row it writes is ILLUSTRATIVE; see
+    # DemoDataService. It runs once, on a database that has the reference seed and no comments
+    # or tasks yet, and never on anything else. Turn it off for any real department data.
+    enabled: ${VUKA_DEMO_DATA:true}
+    # The entity the demo reporter account reports for, by short name from dsac-entities.csv.
+    reporter-entity: ${VUKA_DEMO_REPORTER_ENTITY:Iziko}
+    # Firebase uids of the demo accounts, so "my tasks" finds their work. Not credentials: a uid
+    # identifies an account and grants nothing. With the development sign in instead of Firebase,
+    # set these to dev-entity_reporter, dev-dsac_reviewer, dev-dsac_executive and dev-admin.
+    reporter-uid: ${VUKA_DEMO_REPORTER_UID:ltqo1Bx0KHe6F8f9D0rgNFFDWzm2}
+    reviewer-uid: ${VUKA_DEMO_REVIEWER_UID:Q5DNyQ3TDYc3CwSzG24ZJQpgLlR2}
+    executive-uid: ${VUKA_DEMO_EXECUTIVE_UID:NHNPeeVy4FPZuysWOicH0YGU8CD3}
+    admin-uid: ${VUKA_DEMO_ADMIN_UID:GU3tiUG3bsQtwMSlmJIBT2k4B8s2}
+    # Where the completed Q2 template for the reporter to upload is written.
+    output-dir: ${VUKA_DEMO_OUTPUT_DIR:./var/demo}
+
   documents:
     # Where uploaded evidence is stored, content-addressed by SHA-256. On a multi-instance
     # deployment this must be a shared volume: two instances with two local directories means

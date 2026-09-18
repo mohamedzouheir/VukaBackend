@@ -180,6 +180,10 @@ VUKA_DEV_AUTH=true mvn spring-boot:run     # backend
 VITE_DEV_AUTH=true                          # in frontend/.env
 ```
 
+On a Mac with no Docker, `./run-local.sh --dev-auth` starts a portable Postgres from `~/.vuka` on
+port 5433 and then the backend; see the script's header. `PORT=8081 ./run-local.sh` runs the
+backend on another port, and `VUKA_API=http://localhost:8081 npm run dev` points the frontend at it.
+
 It must never be true in a deployed environment. `DevAuthFilter` is a `@ConditionalOnProperty`
 bean, so with the property off the filter is not in the chain and there is no code path to bypass.
 It runs after the real verifier and only fills a context the real verifier left empty, so a signed
@@ -249,6 +253,19 @@ the code. Say so if asked, because someone will ask.
 
 Data lives in `src/main/resources/data/` as CSV with its citations in the file header, not buried
 in Java. Set `vuka.seed.enabled=false` to turn it off.
+
+**Demo workflow data is invented, all of it.** `DemoDataService` runs once after the seed, on a
+database with no comments or tasks yet, and adds what the workflow screens need to show something:
+Q1 2026/27 submissions in every review state (six approved, five awaiting review, the National
+Library returned with two open disputes, Robben Island with nothing filed), evidence tagged to the
+Auditor-General's tests, a three version document history with a rejection, comment threads, tasks
+for each demo account in both directions across the departmental boundary, two Q2 drafts, and a
+completed Q2 template for the demo reporter at `var/demo/Iziko_Q2-2026-27_completed.xlsx`. That
+template carries one row for each case the confirmation screen catches. Every document it stores
+says on its first line that it is a demonstration file. It finds entities by short name, so it
+works on an existing database without breaking a reporter's `entityId` claim. The demo account uids
+are in `application.yml` under `vuka.demo`; with the development sign in, set them to the `dev-*`
+uids. Set `VUKA_DEMO_DATA=false` for any real department data.
 
 ---
 
@@ -537,29 +554,28 @@ State these before someone finds them.
   `LazyInitializationException` reading `RiskScore.signals`, so the review queue and the executive
   portfolio had no working data source at all. Both are fixed. Section 8 of `SESSION-LOG.md` has
   the detail.
-- **No screen has been opened by a person.** The API returns correct data for every endpoint the
-  dashboard calls, against a seeded Postgres with Firebase configured. That is not the same as the
-  screens being right, and the empty and error states in particular have never been seen.
-- **The mobile reporter flow has never been exercised against a running server.** The 401 and 405
-  faults that made it unusable are fixed, and the reasoning is in *Signing in on the reporter
-  surface* above, but no request has been made against it. The specific thing to check first is
-  that the CSRF hidden field is actually rendered into the forms. Thymeleaf injects it through
-  Spring Security's `RequestDataValueProcessor` into any form with a `th:action`, which is the
-  standard mechanism and the only one available since Thymeleaf 3.1 removed request-attribute
-  access from templates. If that processor is not registered for any reason, every POST under `/m`
-  answers 403 and the fix is to add the field explicitly. View the page source once and look for
-  `name="_csrf"` before trusting the flow.
+- **Every journey has now been walked in a browser, on development sign in.** Reporter on the web
+  and on a phone, reviewer, executive, administrator and citizen, against a freshly seeded
+  Postgres, driven by a script that clicks what a person would click. That pass found and fixed:
+  the template download, the source cell links and the evidence links all opening without the
+  token; submission detail, submit, review, export, the drilldown, the phone home and the phone
+  receipt answering 500 on lazy loads; every phone form bouncing to sign in because each request
+  deleted the CSRF cookie; a returned figure that could not be corrected; and no state checks on
+  confirm, submit or review, so a figure could be changed after submission and a draft approved.
+  `SubmissionStateTest` holds the last of those. What has not been walked is a real Firebase
+  sign in, on either surface.
 - **`docker compose up -d` assumes you have Docker.** If you do not, native Postgres works
   unchanged: the credentials in `docker-compose.yml` are the defaults in `application.yml`, so a
   `vuka` role owning a `vuka` database on 5432 needs no configuration. `run-local.ps1` starts the
   application that way on Windows.
-- **The seed scores Q1 and the system thinks it is Q2.** `currentPeriodId()` resolves to the last
-  period whose window has opened. `SeedService` writes risk scores against Q1 2026/27. So a fresh
-  database shows every band as `NOT_SCORED` until somebody presses Recompute, and recomputing
-  against Q2 puts Robben Island at 45 and medium where the frontend design has it at 74 and
-  critical, because the seed carries one prior period of history where those wireframes assume
-  three. The engine is right and the data is thin. Decide which quarter the demo is in before
-  presenting it.
+- **Reporters and the Department open on different quarters, on purpose.** A reporter's screens
+  default to the open period, the last one whose window has started. The Department's screens
+  default to the last period whose due date has passed (`reviewPeriodId()`), because until then
+  there is nothing to review. In September that is Q2 for the reporter and Q1 for the reviewer.
+  `RiskSchedule` scores both. Robben Island still scores 45 and medium where the frontend design
+  has it at 74 and critical, because the seed carries one prior period of history where those
+  wireframes assume three. The engine is right and the data is thin. A quarterly report that fell
+  due and was never filed counts as late until it is filed, where the entity has targets registered.
 - **Quarterly submission timing in the seed is illustrative**, as described above.
 - **The eQPRS export shape is our reading of a published reporting format, not a certified
   integration.** Confirm the columns against DPME's current template before anyone relies on it.

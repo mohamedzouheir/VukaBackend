@@ -20,7 +20,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useAsync } from '../lib/useAsync';
 import type { PortfolioRow, SubmissionRow } from '../lib/types';
-import { BAND_ORDER, num, signalLabel, statusLabel } from '../lib/format';
+import { BAND_ORDER, num, reviewPeriod, signalLabel, statusLabel } from '../lib/format';
 import { RiskBadge, RiskBadgeSkeleton } from '../components/RiskBadge';
 import { RiskPanel } from '../components/RiskPanel';
 import { EmptyState, ErrorState, Loading } from '../components/Shell';
@@ -39,7 +39,7 @@ export function ReviewQueue() {
   const [recomputing, setRecomputing] = useState(false);
   const [limit, setLimit] = useState(5);
 
-  const period = useMemo(() => (periods.data ?? []).filter((p) => p.open).at(-1) ?? null, [periods.data]);
+  const period = useMemo(() => reviewPeriod(periods.data), [periods.data]);
 
   /* One row per entity, carrying whichever submission exists for the current period. An
      entity with no submission still gets a row, which is the point of the screen. */

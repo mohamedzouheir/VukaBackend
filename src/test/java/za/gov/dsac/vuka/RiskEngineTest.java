@@ -21,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.*;
  *   administrativeDaysLate, periodsObserved, statutoryDaysLate,
  *   targetsTotal, targetsWithNoResult, yearElapsedFraction,
  *   allocationDrawnFraction, deliveryFraction,
- *   auditFindings, repeatAuditFindings, auditOutstanding, revisionCount
+ *   auditFindings, repeatAuditFindings, auditOutstanding, revisionCount[, periodsUnfiled]
  * </pre>
  */
 class RiskEngineTest {
@@ -239,5 +239,20 @@ class RiskEngineTest {
         assertEquals(Enums.RiskBand.LOW, r.band());
         assertTrue(r.score().compareTo(bd("10")) < 0,
                 "a clean, on time, well evidenced entity must land near the floor");
+    }
+
+    @Test
+    @DisplayName("A report never filed says so, rather than reading as on time")
+    void unfiledReportIsNamed() {
+        // One quarterly report fifty days past its due date and not filed, counted by the
+        // service as fifty days late across one observed period.
+        Result r = RiskEngine.score(new Inputs(
+                bd("50"), 1, 0, 20, 20, bd("0.46"), bd("0.00"), bd("0.00"), 0, 0, false, 0, 1));
+        Signal lateness = r.signals().stream()
+                .filter(s -> s.type() == Enums.RiskSignalType.SUBMISSION_LATENESS)
+                .findFirst().orElseThrow();
+        assertTrue(lateness.description().contains("not been filed"), lateness.description());
+        assertEquals(0, lateness.contribution().compareTo(bd("18.0000")),
+                "capped at the administrative ceiling: an instruction missed is not the Act missed");
     }
 }

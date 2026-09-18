@@ -10,7 +10,7 @@
 import type {
   ChainView, CommentView, EntityDetail, ExtractionView, IndicatorRowView, MeView,
   ParseReport, PeerComparison, PeriodView, PortfolioRow, SubmissionDetail, SubmissionRow,
-  UnitCostView, WorkspaceDocument, WorkspaceTask,
+  UnitCostView, WorkspaceDocument, WorkspaceTask, TaskPerson, NewTask,
 } from './types';
 
 export class ApiError extends Error {
@@ -318,11 +318,21 @@ export const api = {
       body: JSON.stringify({ approve, note }),
     }),
 
-  /** The caller's own open work. What the rail badge counts. */
+  /** Work assigned to the caller, open first. The rail badge counts the ones not done. */
   myTasks: () => request<WorkspaceTask[]>('/api/workspace/tasks/mine'),
 
   entityTasks: (entityId: string) =>
     request<WorkspaceTask[]>('/api/workspace/entity/' + entityId + '/tasks'),
+
+  /** Who a task on this entity can go to: the Department, and this entity's own reporters. */
+  taskPeople: (entityId: string) =>
+    request<TaskPerson[]>('/api/workspace/entity/' + entityId + '/people'),
+
+  createTask: (entityId: string, task: NewTask) =>
+    request<WorkspaceTask>('/api/workspace/entity/' + entityId + '/tasks', {
+      method: 'POST',
+      body: JSON.stringify(task),
+    }),
 
   setTaskStatus: (taskId: string, status: string) =>
     request<unknown>('/api/workspace/task/' + taskId + '/status', {
