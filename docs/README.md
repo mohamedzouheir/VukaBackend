@@ -17,6 +17,7 @@ way.** If it is ever opened up, the two GovTech documents come out first.
 | [Vuka-DSAC-PRD.pdf](Vuka-DSAC-PRD.pdf) | Product concept, users, scope, the six differentiating features, the data model, the architecture, the stress test | Why the product is shaped the way it is |
 | [Vuka-Frontend-Design.pdf](Vuka-Frontend-Design.pdf) | Journeys J1 to J5, use cases UC-1 to UC-22, the screen inventory, wireframes W1 to W13, nine components, the page weight budget | What a person sees, in what order |
 | [Vuka-48-Hour-Build-Guide.pdf](Vuka-48-Hour-Build-Guide.pdf) | The build plan | Sequencing. Not yet reconciled against the current code |
+| [user-manual/](user-manual/README.md) | Step by step, with screenshots, for the administrator and journeys J1 to J5 | How each person uses the screens as built. Captured from the running application, not from the design |
 | [DSAC-Quarterly-Reporting-Template-v1.xlsx](DSAC-Quarterly-Reporting-Template-v1.xlsx) | The reporting standard itself. Three sheets, 51 formulas | The parser contract. `TemplateParser` reads exactly this |
 
 ---

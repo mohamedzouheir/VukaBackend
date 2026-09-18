@@ -27,6 +27,7 @@ import {
   IconTasks, IconWorkspaces,
 } from '../icons';
 import { SearchField } from './SearchField';
+import { ConnectionBar } from './ConnectionBar';
 import './AppShell.css';
 
 interface NavItem {
@@ -297,7 +298,11 @@ export function AppShell({
           </p>
         ) : null}
 
-        <main className="shell-content">{children}</main>
+        <main className="shell-content">
+          {/* Offline, copies on screen, and changes kept on this device. Absent when none apply. */}
+          <ConnectionBar />
+          {children}
+        </main>
       </div>
     </div>
   );
