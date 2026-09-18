@@ -555,10 +555,11 @@ So the look was taken and the invented figures were not:
 | Predicted impact, recommended actions | The five stored signals with their contributions |
 | Province, acronym, registration number | Absent, and the footnote says so |
 | Document views and downloads | Absent. Nothing counts either |
-| Analytics and Insights, whole screen | A screen saying what is missing and what it would take |
+| Analytics and Insights, whole screen | At first a screen saying what was missing; since 10.6, the trends the data can carry |
 
 The Analytics screen is the one to defend out loud. Built as designed it would have been the most
-persuasive thing in the product and the only part that could not survive being clicked into.
+persuasive thing in the product and the only part that could not survive being clicked into. It
+was later built from the series that do exist; see 10.6.
 
 **Tasks and Documents turned out to be real.** They were going to be honest empty states until
 reading the branch showed `/api/workspace/tasks/mine` and
@@ -641,7 +642,7 @@ Now `/` renders a different home per role and each role has its own rail, writte
   risk screen.
 
 The risk band bars on the old shared dashboard are gone; the same distribution is the executive's
-heatmap. Analytics & Insights is in no rail. The recompute buttons on the queue and on Risk &
+heatmap. Analytics & Insights was in no rail then; 10.6 put it in the reviewer's and executive's. The recompute buttons on the queue and on Risk &
 Alerts are now shown only to a role holding `REVIEW_SUBMISSIONS`, where before an executive
 reaching Risk & Alerts was offered one the API refused.
 
@@ -693,6 +694,33 @@ This departs from the PRD, which cut entity creation and user administration (se
 and 3). The brief's emphasis on who may report and by when made them the demonstration rather than
 admin screens nobody watches. Targets are still not entered by form: they are versioned against a
 tabled plan.
+
+### 10.6 Analytics built from what is actually stored
+
+The placeholder said what a real Analytics screen would need, and most of it was already in the
+database: allocations for 2023/24 to 2026/27, published audit outcomes with targets achieved for
+2023/24 and 2024/25, and confirmed quarterly results with their stored risk scores. The screen is
+now built on those, through `GET /api/dashboard/analytics` (`AnalyticsService`), and sits in the
+reviewer's and the executive's rails. It is the only screen that answers "is it getting better"
+rather than "where does it stand this quarter", so it does not repeat the portfolio or the risk
+screen.
+
+Four sections: year on year, who moved (the same entities in both audited years, largest fall
+first), quarter by quarter, and by sector. Three decisions worth defending:
+
+- **Like for like.** The portfolio rate covers six entities in 2023/24 and twelve in 2024/25, so the
+  screen says the rows are different populations and computes movement only over the four entities
+  with counts in both years.
+- **Every funded entity is expected to file**, the same population the register and the queue
+  count, so "not filed" on this screen agrees with "nothing filed" on the Entities screen. The
+  sixteen with no registered targets are named as such rather than dropped.
+- **Met is computed, not read.** A figure meets its quarter target when the latest confirmed actual
+  is at least the quarter value, so the rate can be reproduced from the two numbers on the review
+  screen, and a figure corrected after a return counts once.
+
+Still absent, on purpose: any monthly series, document views and downloads, and cost per outcome
+across sectors. The in-year quarterly figures in the demonstration are the illustrative seed, and
+the footnote says so.
 
 ---
 

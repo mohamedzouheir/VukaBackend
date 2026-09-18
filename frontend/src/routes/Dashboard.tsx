@@ -9,9 +9,9 @@
  * the substance, and a right rail of quick actions and tasks.
  *
  * What it does not copy from those screens is the charting. The designs carry a "Progress Over
- * Time" line from January to December and a "Performance by Sector" bar row, and nothing in the
- * schema records a figure per month or a sector rate. Drawing either would mean inventing the
- * numbers, in a product whose entire argument is that a figure carries the cell it came from.
+ * Time" line from January to December and a "Performance by Sector" bar row. Nothing records a
+ * figure per month, so that line would be invented. The sector rate is real, computed from
+ * confirmed figures, and lives on Analytics with the other trends rather than being repeated here.
  */
 import { useMemo, useState } from 'react';
 import type { ReactNode } from 'react';

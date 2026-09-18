@@ -235,8 +235,8 @@ only.
 | Role | Lands on | Rail |
 |---|---|---|
 | Reporter | My reporting (W1). On sign in, a warning when a quarter is late or due within 30 days. Anything the Department returned sits at the top: who, why, and each disputed figure in the reviewer's words, live | My reporting, Documents, Workspaces, Tasks, Citizen View |
-| Reviewer | Today: what awaits their decision, and the top three of the risk-ranked queue | Today, Review queue, Risk & Alerts, Documents, Workspaces, Tasks |
-| Executive | The portfolio (W9): counts, bands, rands in the critical band | Portfolio, Entities, Citizen View |
+| Reviewer | Today: what awaits their decision, and the top three of the risk-ranked queue | Today, Review queue, Risk & Alerts, Analytics, Documents, Workspaces, Tasks |
+| Executive | The portfolio (W9): counts, bands, rands in the critical band | Portfolio, Entities, Analytics, Citizen View |
 | Admin | Administration: quarter deadlines, register an entity, issue its reporter account, publish | Administration, Workspaces, Tasks, Citizen View |
 
 **Deadlines are the Department's to set, and a passed one is fixed.** For a Schedule 3A entity
@@ -251,8 +251,20 @@ the administrator's name.
 The admin does not review, in the table or on screen. Whoever decides what the public sees is not
 the person who approves the figures it will see, so publication and approval always take two
 people; an admin approval is refused by the API with a 403. This narrows the PRD's "nothing is
-fully barred" for the administrator, deliberately. Analytics & Insights is in no rail, because it has no
-data behind it; the route still explains why to anyone who reaches it by address.
+fully barred" for the administrator, deliberately.
+
+**Analytics & Insights answers whether things are getting better** (`/analytics`, one call to
+`GET /api/dashboard/analytics`, `AnalyticsService`). Every other oversight screen describes one
+quarter; this one carries the four series the data can actually support. Year on year: ENE
+allocation per financial year beside the Auditor-General's published outcomes and targets-achieved
+counts. Who moved: the same entities in the two latest audited years, because a portfolio rate
+over six audited entities one year and twelve the next measures who got audited, not who improved.
+Quarter by quarter: filing against the due date, figures against each target's own quarter value,
+and the stored risk bands. By sector: rands and delivery side by side for the quarter under review,
+never divided into a cost per outcome. A year not audited shows no rate, and a quarter not yet due
+shows no "not filed" count. There is no monthly series and no document view count, because nothing
+records either. `AnalyticsServiceTest` holds the matched-cohort arithmetic and the latest-row rule
+for corrected figures.
 
 A refusal is told apart from a missing sign in, and says why:
 
