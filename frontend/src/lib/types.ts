@@ -127,7 +127,19 @@ export interface MeView {
   role: Role;
   entityId: string | null;
   entityName: string | null;
+  /** What this person may do. The server's Capability enum, which every endpoint checks. */
+  capabilities: Capability[];
 }
+
+/** config.Capability. The one list of what a role may do; see its Javadoc for the table. */
+export type Capability =
+  | 'READ_OWN_REPORTING'
+  | 'SUBMIT_REPORTING'
+  | 'PARTICIPATE'
+  | 'DOWNLOAD_TEMPLATE'
+  | 'VIEW_PORTFOLIO'
+  | 'REVIEW_SUBMISSIONS'
+  | 'ADMINISTER';
 
 /** ReportingController.PeriodView */
 export interface PeriodView {
@@ -240,6 +252,10 @@ export interface CommentView {
   anchorType: string | null;
   anchorId: string | null;
   indicatorRef: string | null;
+  /** The comment this answers. Null where it opened a thread. */
+  parentId: string | null;
+  /** Closed. A closed dispute is history and no longer marks the figure as disputed. */
+  resolved: boolean;
 }
 
 /** ReportingController.AllocationView */

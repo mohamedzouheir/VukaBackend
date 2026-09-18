@@ -27,3 +27,6 @@ src/main/resources/static/
 app.log
 frontend/dev.log
 *.log
+
+# Uploaded documents on a local run (vuka.documents.root)
+var/

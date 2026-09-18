@@ -1,6 +1,7 @@
 package za.gov.dsac.vuka.service;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import za.gov.dsac.vuka.domain.*;
 import za.gov.dsac.vuka.repository.*;
 
@@ -149,6 +150,9 @@ public class ExportService {
      * line with a null actual instead of vanishing. A report that silently omits what was not
      * done is the exact failure this whole system exists to stop.
      */
+    // Transactional because the export walks evidence, targets and periods lazily, and outside a
+    // session the first of those threw: Export with provenance answered every reviewer with a 500.
+    @Transactional(readOnly = true)
     public QuarterlyExport build(Submission submission) {
         PublicEntity entity = submission.getEntity();
         ReportingPeriod period = submission.getReportingPeriod();

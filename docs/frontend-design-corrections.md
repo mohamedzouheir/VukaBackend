@@ -118,11 +118,22 @@ is what is actually served, and gzip is on in `application.yml` with a 512 byte 
 | `public-index.html` | 5KB | **3 224 B** | 1 380 B | every published entity, plus the language switcher |
 | `public-entity.html` | 5KB | **4 810 B** | 1 877 B | the full accountability chain, plus the language switcher |
 | `mobile-step.html` | 5KB | **4 942 B** | 1 888 B | one indicator, input, note |
+| `mobile-workspace.html` | 5KB | **4 870 B** | 1 591 B | upload form, five documents, three tasks, the receipt. New |
+| `mobile-document.html` | 5KB | **4 912 B** | 1 762 B | receipt, hash, decision, Microsoft state, three versions. New |
+| `mobile-comments.html` | 5KB | **3 391 B** | 1 273 B | every comment thread for the entity, open ones first. New |
+| `mobile-thread.html` | 5KB | **4 908 B** | 2 092 B | one thread of three comments, reply form, inline poller. New |
 | React dashboard | 250KB gzipped | to build | | office users only, never on the reporter path |
 
 Eight surfaces now, not six. Figures include the hidden CSRF field injected into every form, which
 costs about 96 bytes. `mobile-step.html` has 178 bytes of headroom left against the budget, so the
 next thing added to it needs measuring rather than assuming.
+
+The two workspace pages were measured with the data in the row, rendered through the same
+Spring Thymeleaf engine, and the workspace figure includes the 96 byte CSRF field for its one form.
+Both sit within about 130 bytes of the budget with that data, and both grow with the number of
+documents or versions listed, so a long history is the case to watch. `mobile-home.html` gained
+the Documents and Comments cards after the figure above was taken; rendered against the same model
+before and after, they add 442 bytes, which leaves it near 3.4KB.
 
 No web fonts, no icon fonts, no framework, no images on any low-bandwidth surface. Inline CSS,
 because a separate stylesheet is a second request and on a bad connection the second request is
@@ -263,3 +274,33 @@ which is the same rule §10 already applies to risk bands.
    sentence in the room.
 6. **The reporter and reviewer surfaces are not translated**, and the document should say so
    rather than leaving the language claim to be read as covering the whole product.
+
+---
+
+## Live comments, and where they depart from the document
+
+**UC-14 said "a thread per entity per period". It is a thread per figure.** Every comment is
+anchored to a target, a confirmed result or a document version, and the workspace view is those
+threads grouped. That is FR-4.2 of the build guide, and it is the J3 point made in the schema:
+a comment on the whole filing makes the entity guess which number is disputed.
+
+**§12, cut 5 ("Entity workspace comments, real requirement, weak demo") is built rather than
+cut.** On the phone at `/m/comments`, and on the office dashboard as a tenth component,
+`CommentPanel`, on the reporter's extraction review and the reviewer's submission review. The
+panel adds about 1.5KB gzipped to the dashboard bundle.
+
+**"Visible in real time" is a five second poll, as the PRD said.** Every read carries an ETag, and an
+unchanged poll is a 304 with no body that reads no comment rows. The thread page is the only page
+on the low-bandwidth surfaces that carries script, and it is correct without it.
+
+**`mobile-thread.html` is the one page whose weight depends on the conversation.** The row above
+is three comments of realistic length. Empty, it is 4 007 B and 1 811 B gzipped. Each comment adds
+about 300 B rendered, so a thread passes the 5KB budget at about four comments, and gzipped it sits
+just over 2KB from three. The `/live` poll it makes is a bodiless 304 while nothing changes and
+about 380 B gzipped when something does.
+
+**A dispute is no longer "any comment on the target".** Once comments could be answered and closed
+that rule became wrong: a reporter's "corrected" would have been shown back to them as the
+Department disputing the figure. A dispute is now an open comment, written by a DSAC role, that
+opened a thread on a target.
+

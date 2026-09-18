@@ -37,6 +37,7 @@ export function EntityHome() {
   );
 
   const [opening, setOpening] = useState(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
   const open = useAction(async (periodId: string, then: 'upload' | 'review') => {
     const res = await api.openSubmission(entityId!, periodId, 'WEB');
     navigate('/entity/submission/' + res.submissionId + '/' + then);
@@ -104,6 +105,17 @@ export function EntityHome() {
               className="btn"
               href={api.templateUrl(entityId, current.periodId)}
               title="An .xlsx carrying your registered targets, their indicator codes and their annual targets, with the actuals column empty"
+              onClick={(e) => {
+                // Through fetch, so the token travels with it. A plain navigation carries no
+                // Authorization header and landed the reporter on a JSON 401.
+                e.preventDefault();
+                setDownloadError(null);
+                api
+                  .download(api.templateUrl(entityId, current.periodId), 'vuka-template.xlsx')
+                  .catch((err: unknown) =>
+                    setDownloadError(err instanceof Error ? err.message : 'The template could not be downloaded.'),
+                  );
+              }}
             >
               <IconDownload size={16} /> Download template
             </a>
@@ -134,6 +146,7 @@ export function EntityHome() {
       </PeriodCard>
 
       {open.error ? <ErrorState message={open.error} /> : null}
+      {downloadError ? <ErrorState message={downloadError} /> : null}
 
       <StateLine
         status={currentSub?.status ?? null}

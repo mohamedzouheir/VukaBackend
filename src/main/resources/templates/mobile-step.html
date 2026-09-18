@@ -41,6 +41,9 @@
     /* Ring in --ink: a green ring on a green button is invisible. */
     button:focus-visible, .btn:focus-visible { outline:3px solid var(--ink); outline-offset:3px; }
     .saved { font-size:13px; color:var(--muted); margin-top:14px; }
+    .error { border-left:4px solid #b3261e; background:var(--panel); padding:10px 12px; margin:0 0 16px; font-size:15px; }
+    label.check { display:flex; gap:10px; align-items:center; font-weight:400; min-height:44px; margin:4px 0 8px; }
+    label.check input { width:22px; height:22px; margin:0; }
     .skip { position:absolute; left:-9999px; }
     .skip:focus { position:fixed; left:8px; top:8px; z-index:10; padding:10px 14px;
                   background:var(--ink); color:var(--bg); border-radius:6px; }
@@ -68,23 +71,32 @@
       </div>
     </div>
 
+    <p class="error" id="step-error" role="alert" th:if="${error != null}" th:text="${error}">Say why.</p>
+
     <form th:action="@{'/m/submission/' + ${submission.getId()} + '/step/' + ${index}}" method="post">
       <label for="actual">How many did you actually deliver?</label>
       <p class="hint" id="actual-hint">Enter a number only.</p>
       <input id="actual" name="actualValue" type="number" inputmode="decimal" step="any"
              aria-describedby="actual-hint"
-             th:value="${existing != null} ? ${existing.getActualValue()} : ''" required>
+             th:value="${error != null} ? ${enteredValue} : (${existing != null} ? ${existing.getActualValue()} : '')">
+
+      <label class="check">
+        <input type="checkbox" name="noResult" value="true"
+               th:checked="${error != null ? enteredNoResult : (existing != null and existing.getActualValue() == null)}">
+        There is no result this quarter
+      </label>
 
       <label for="spend">How much has been spent on this so far?</label>
       <p class="hint" id="spend-hint">In rand. A best estimate is fine.</p>
       <input id="spend" name="spendToDate" type="number" inputmode="decimal" step="any"
              aria-describedby="spend-hint"
-             th:value="${existing != null} ? ${existing.getSpendToDate()} : ''">
+             th:value="${error != null} ? ${enteredSpend} : (${existing != null} ? ${existing.getSpendToDate()} : '')">
 
-      <label for="why">If you did not reach the target, why not?</label>
-      <p class="hint" id="why-hint">One or two sentences. Leave blank if the target was met.</p>
-      <textarea id="why" name="varianceExplanation" aria-describedby="why-hint"
-                th:text="${existing != null} ? ${existing.getVarianceExplanation()} : ''"></textarea>
+      <label for="why">If you did not reach the target, or have no result, why not?</label>
+      <p class="hint" id="why-hint">One or two sentences. Needed when you are more than 20 percent under the target. Leave blank if the target was met.</p>
+      <textarea id="why" name="varianceExplanation"
+                th:attr="aria-describedby=${error != null} ? 'why-hint step-error' : 'why-hint'"
+                th:text="${error != null} ? ${enteredReason} : (${existing != null} ? ${existing.getVarianceExplanation()} : '')"></textarea>
 
       <div class="actions">
         <a class="btn ghost" th:if="${index > 0}"

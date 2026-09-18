@@ -145,7 +145,7 @@ export function TemplateUpload() {
             </p>
             {report.unmatched > 0 ? (
               <p className="small" style={{ margin: 0 }}>
-                {num(report.unmatched)} rows carried an indicator code that matches no registered
+                {report.unmatched === 1 ? 'One row' : num(report.unmatched) + ' rows'} carried an indicator code that matches no registered
                 target for this year. They are held aside and shown on the next screen rather than
                 dropped, because a silently discarded row is how a target goes unreported.
               </p>

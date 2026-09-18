@@ -4,6 +4,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import za.gov.dsac.vuka.config.Capability;
 import za.gov.dsac.vuka.config.VukaPrincipal;
 import za.gov.dsac.vuka.domain.PublicEntity;
 import za.gov.dsac.vuka.repository.PublicEntityRepository;
@@ -39,8 +40,13 @@ public class MeController {
         this.views = views;
     }
 
+    /**
+     * @param capabilities what this person may do, from {@link Capability}. The dashboard shows
+     *                     an action only when its capability is here, so the screen and the API
+     *                     cannot disagree about what a role is allowed to do.
+     */
     public record MeView(String uid, String email, String name, String role,
-                         String entityId, String entityName) {}
+                         String entityId, String entityName, List<String> capabilities) {}
 
     @GetMapping("/me")
     public MeView me(@AuthenticationPrincipal VukaPrincipal who) {
@@ -54,7 +60,8 @@ public class MeController {
                 // attack. The name stays absent and the reporter screens say what is wrong.
             }
         }
-        return new MeView(who.uid(), who.email(), who.name(), who.role(), who.entityId(), entityName);
+        return new MeView(who.uid(), who.email(), who.name(), who.role(), who.entityId(), entityName,
+                Capability.of(who.role()).stream().map(Enum::name).toList());
     }
 
     /**

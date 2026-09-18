@@ -10,7 +10,7 @@
 import { useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { Link, NavLink } from 'react-router-dom';
-import { useAuth, canReview, isDsac } from '../lib/auth';
+import { useAuth, can, isDsac } from '../lib/auth';
 import { sectorLabel } from '../lib/format';
 import {
   IconAlert, IconChart, IconGauge, IconInfo, IconLandmark, IconList, IconLock,
@@ -50,22 +50,22 @@ export function Shell({ children }: { children: ReactNode }) {
         {me ? (
           <>
             <nav className="nav" aria-label="Main">
-              {role === 'ENTITY_REPORTER' ? (
+              {can(me, 'SUBMIT_REPORTING') ? (
                 <NavLink to="/entity">
                   <IconLandmark size={16} /> My entity
                 </NavLink>
               ) : null}
-              {canReview(role) ? (
+              {can(me, 'REVIEW_SUBMISSIONS') ? (
                 <NavLink to="/review">
                   <IconList size={16} /> Review queue
                 </NavLink>
               ) : null}
-              {isDsac(role) ? (
+              {can(me, 'VIEW_PORTFOLIO') ? (
                 <NavLink to="/portfolio">
                   <IconChart size={16} /> Portfolio
                 </NavLink>
               ) : null}
-              {role === 'ADMIN' ? (
+              {can(me, 'ADMINISTER') ? (
                 <NavLink to="/admin/entities">
                   <IconGauge size={16} /> Administration
                 </NavLink>
@@ -94,7 +94,8 @@ export function Shell({ children }: { children: ReactNode }) {
           arithmetic rather than a prediction.
         </p>
         <p className="small muted">
-          <Link to="/public">The citizen view</Link> is open to anyone and shows only the entities
+          {/* A plain link: /public is server rendered, so a router Link lands on the not found route. */}
+          <a href="/public">The citizen view</a> is open to anyone and shows only the entities
           the Department has chosen to publish.
         </p>
       </footer>

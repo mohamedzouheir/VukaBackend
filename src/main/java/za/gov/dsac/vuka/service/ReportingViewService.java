@@ -114,9 +114,15 @@ public class ReportingViewService {
                                    Object risk, List<IndicatorRowView> rows,
                                    List<ExtractionView> unmatched, SourceDocumentBlock sourceDocument) {}
 
+    /**
+     * One comment as the office surface reads it.
+     *
+     * @param parentId the comment this answers, or null where it opened a thread
+     * @param resolved whether the point has been closed. A closed dispute is history, not a dispute
+     */
     public record CommentView(UUID commentId, String body, String authorName, String authorRole,
                               String createdAt, String anchorType, UUID anchorId,
-                              String indicatorRef) {}
+                              String indicatorRef, UUID parentId, boolean resolved) {}
 
     public record AllocationView(String financialYear, BigDecimal amount, String basis, String source) {}
 
@@ -226,7 +232,13 @@ public class ReportingViewService {
                 : (int) targets.countByEntityIdAndFinancialYearId(e.getId(), fyId);
 
         List<TargetResult> rows = results.findBySubmissionId(s.getId());
-        int confirmed = (int) rows.stream().filter(r -> r.getConfirmedAt() != null).count();
+        // Distinct targets, not rows. Results are append-only, so a figure corrected after a return
+        // has two rows, and counting rows reported 41 of 40 targets.
+        int confirmed = (int) rows.stream()
+                .filter(r -> r.getConfirmedAt() != null && r.getTarget() != null)
+                .map(r -> r.getTarget().getId())
+                .distinct()
+                .count();
 
         int evidence = (int) documents.findBySubmissionId(s.getId()).stream()
                 .filter(d -> d.getDocumentType() != Enums.DocumentType.REPORTING_TEMPLATE)
@@ -266,7 +278,10 @@ public class ReportingViewService {
      * is what stops the two screens disagreeing about what was filed.
      */
     @Transactional(readOnly = true)
-    public SubmissionDetail submissionDetail(Submission s, Object risk) {
+    public SubmissionDetail submissionDetail(Submission detached, Object risk) {
+        // Re-read inside this transaction. The caller loaded it in its own, now closed, session,
+        // so its lazy period and entity proxies throw on first touch with open-in-view off.
+        Submission s = submissions.findById(detached.getId()).orElseThrow();
         PublicEntity e = s.getEntity();
         ReportingPeriod p = s.getReportingPeriod();
         FinancialYear fy = p.getFinancialYear();
@@ -284,12 +299,10 @@ public class ReportingViewService {
                 .orElse(null);
 
         // Per target dispute comments, anchored on the target rather than on the submission, so a
-        // returned figure says which figure it was.
+        // returned figure says which figure it was. Newest open dispute wins where there are two.
         Map<UUID, String> disputes = new HashMap<>();
         for (Comment c : comments.findByEntityIdOrderByCreatedAtDesc(e.getId())) {
-            if (c.getAnchorType() == Enums.AnchorType.TARGET && c.getAnchorId() != null) {
-                disputes.putIfAbsent(c.getAnchorId(), c.getBody());
-            }
+            if (isOpenDispute(c)) disputes.putIfAbsent(c.getAnchorId(), c.getBody());
         }
 
         List<IndicatorRowView> rows = new ArrayList<>();
@@ -330,9 +343,12 @@ public class ReportingViewService {
                 .reduce((a, b) -> b)
                 .orElse(null);
 
+        // The latest confirmation wins. Chosen by time rather than by list position, because the
+        // query behind the list carries no ORDER BY and Postgres promises no order without one.
         TargetResult result = filed.stream()
                 .filter(r -> r.getTarget() != null && r.getTarget().getId().equals(t.getId()))
-                .reduce((a, b) -> b)
+                .max(Comparator.comparing(TargetResult::getConfirmedAt,
+                        Comparator.nullsFirst(Comparator.naturalOrder())))
                 .orElse(null);
 
         BigDecimal quarterTarget = quarterTarget(t, p.getQuarter());
@@ -419,7 +435,9 @@ public class ReportingViewService {
     /* ================================================================== */
 
     @Transactional(readOnly = true)
-    public List<CommentView> commentsFor(Submission s) {
+    public List<CommentView> commentsFor(Submission detached) {
+        // Re-read inside this transaction, for the same reason as submissionDetail.
+        Submission s = submissions.findById(detached.getId()).orElseThrow();
         UUID entityId = s.getEntity().getId();
         Map<UUID, String> refByTarget = new HashMap<>();
         FinancialYear fy = s.getReportingPeriod().getFinancialYear();
@@ -435,8 +453,30 @@ public class ReportingViewService {
                         str(c.getCreatedAt()),
                         c.getAnchorType() == null ? null : c.getAnchorType().name(),
                         c.getAnchorId(),
-                        c.getAnchorId() == null ? null : refByTarget.get(c.getAnchorId())))
+                        c.getAnchorId() == null ? null : refByTarget.get(c.getAnchorId()),
+                        c.getParentId(), c.isResolved()))
                 .toList();
+    }
+
+    /**
+     * Whether a comment disputes the figure it is anchored to.
+     *
+     * <p>Not every comment on a target is a dispute, and before comments could be answered and
+     * closed the difference did not matter. Now it does. A reporter's reply saying "corrected"
+     * would otherwise be shown to them as "the Department disputed this figure", and a dispute
+     * DSAC has since closed would stay on the row forever. A dispute is a comment that opened a
+     * thread on a target, was written by a DSAC role, and is still open.
+     *
+     * <p>The office surface recomputes this from the live comment list between reloads, so the
+     * same rule is written out again in {@code frontend/src/lib/useLiveComments.ts}. Change both.
+     */
+    public static boolean isOpenDispute(Comment c) {
+        return c.getAnchorType() == Enums.AnchorType.TARGET
+                && c.getAnchorId() != null
+                && c.getParentId() == null
+                && !c.isResolved()
+                && c.getAuthorRole() != null
+                && c.getAuthorRole() != Enums.Role.ENTITY_REPORTER;
     }
 
     /* ================================================================== */

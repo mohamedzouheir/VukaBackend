@@ -4,7 +4,7 @@ A record of what was decided, what was checked, what changed and what is still o
 somebody who was not in the session can pick the project up, and so we can defend any of it in the
 judging room.
 
-Last updated: 17 September 2026, after the first successful run.
+Last updated: 18 September 2026, after the workspace, Microsoft 365, capability and live comment work.
 
 ---
 
@@ -269,7 +269,7 @@ is a claim the frontend makes that the backend could not previously support.
 | `GET /api/dashboard/entity/{id}/unit-cost` | W11 had planned and actual unit cost nowhere to read them from |
 | `GET /api/submissions/template` | UC-1. A pre filled .xlsx, written by a new `TemplateWriter` against `TemplateParser`'s own constants |
 | `POST /api/submissions/{id}/evidence` | UC-4. There was no way to attach evidence at all, which is the whole product |
-| Comments on a submission | UC-12 and UC-14. `review` took one free text reason for a whole submission, so the entity could not be told which figure was disputed |
+| Comments on a submission | UC-12 and UC-14. `review` took one free text reason for a whole submission, so the entity could not be told which figure was disputed. *Later:* this endpoint now writes through `CommentService`, requires a target, and answers polls with an ETag |
 | `GET /api/documents/{id}` | Every source cell and evidence chip links somewhere |
 | `POST /api/admin/entities/{id}/publication` | UC-21. Every seeded entity ships with `publiclyVisible` false, so with no switch the citizen view is permanently empty |
 | `totalAllocation` on `PortfolioRow` | "R358.6 million sits with entities in the critical band" is the line a Director-General takes into a committee. Fetching it per entity would be 28 requests to render one tile |
@@ -428,11 +428,69 @@ scenario, and the largest factor it reports for Robben Island on real data is th
 instruction". The inputs are simply thinner, because the seed has one prior period of history where
 the wireframes assume three.
 
-This has to be decided before the demo, and it is first in section 9.
+This has to be decided before the demo, and it is first in section 10.
 
 ---
 
-## 9. Still open
+## 9. Workspaces, Microsoft 365, capabilities and live comments
+
+Requirement (d) of the challenge: workspaces that integrate with Microsoft, version documents on
+save or upload, show comments in real time, set tasks internally and externally, and acknowledge
+an upload on receipt. The README carries the full account under "Workspaces and Microsoft 365";
+this is the record of what was decided.
+
+### 9.1 What was added
+
+| Piece | What it does |
+|---|---|
+| `V5__workspaces_and_microsoft.sql` | `entity_workspace`, a version chain on `document_record` keyed by path, receipt and decision columns, Graph provenance columns, task creation and completion times |
+| `V6__live_comments.sql` | `updated_at` on comments so a poll can be answered from an aggregate, and who closed a point |
+| `DocumentVersionService`, `DocumentStore` | The one write path for documents. Bytes stored on the local filesystem, content-addressed by SHA-256 |
+| `WorkspaceService` | Tasks across the departmental boundary. Whether a task is external is derived from who set it and who must do it |
+| `service/microsoft/` | Graph client, SharePoint mirror, delta poller, Teams countdown card via a workflow webhook |
+| `Capability`, `Can`, `AccessResponses` | One table of what each role may do. Endpoints check `@can.has(...)`; `/api/me` returns the caller's capabilities |
+| `CommentService` and controllers | Every comment anchored to a figure, a result or a document version. ETag on every read |
+| Phone pages | `/m/workspace`, `/m/document`, `/m/comments`, `/m/comments/{type}/{id}` and its `/live` fragment, `access-denied.html` |
+| Dashboard | `CommentPanel` and `useLiveComments` on extraction review and submission review; screens gated on capabilities |
+
+### 9.2 Decisions worth defending
+
+- **A document is its path, and every arrival of that path is a version.** Nothing is updated in
+  place or deleted. A partial unique index on `lower(document_key)` makes "one current version" a
+  database fact, and ignores case because SharePoint does.
+- **Identical bytes are not a version.** This is what stops the Vuka to SharePoint to Vuka loop.
+- **Receipt and approval are separate events.** A receipt is automatic; an approval is a named
+  DSAC officer. Collapsing them would let an acknowledgement read as a departmental decision.
+- **Only the entity uploads, only DSAC decides.** A reviewer who could upload could put evidence
+  on the record under the entity's name.
+- **The executive reads everything and changes nothing.** Before `Capability`, two endpoints let an
+  executive comment or approve a document while the dashboard showed the role as read only.
+- **"Real time" is a five second poll, not a websocket**, as the PRD said. An unchanged poll is a
+  bodiless 304 that reads no comment rows, which is sound only because comments are append-only.
+- **A dispute is an open DSAC comment that opened a thread on a target.** "Any comment on the
+  target" became wrong once reporters could reply, because their "corrected" would have shown
+  back to them as a dispute.
+- **Teams via a workflow webhook**, not Graph `ChannelMessage.Send`, which is a protected
+  permission far larger than a reminder needs.
+
+### 9.3 Verified, 18 September 2026
+
+`./mvnw test` passes 55 tests with no failures, and `tsc -b` on the frontend is clean. The README
+records an earlier run after the workspace work, before live comments: 49 tests, five migrations,
+the app started against embedded PostgreSQL, and the document flow exercised over HTTP. The
+Microsoft calls have never run against a real tenant, and the Teams card has never been posted to
+a live channel. Both are tested for shape only.
+
+### 9.4 Page weight
+
+`mobile-step.html` has 178 bytes of headroom. The two workspace pages sit within about 130 bytes
+of the 5KB budget and grow with history. `mobile-thread.html` passes 5KB at about four comments
+and is the one page whose weight depends on the conversation. Figures are in
+`docs/frontend-design-corrections.md`.
+
+---
+
+## 10. Still open
 
 Ordered by how much it costs us if it is not done.
 
@@ -462,17 +520,21 @@ Ordered by how much it costs us if it is not done.
    travel with the repository, so a fresh database still needs it doing. Note that Luthuli Museum,
    which W13 uses as its worked example, has no targets registered, so its public page would show
    a promise of nothing.
-8. **Decide where uploaded bytes live.** Metadata, hashes and the target link are all stored. The
-   files are not. That is stated on the endpoint rather than hidden, but it is a real gap and
-   somebody will ask.
-9. **Decide the demo narrative.** The Robben Island story is the strongest available: a named
+8. **Decide where uploaded bytes live in production.** They are now stored, on the local
+   filesystem under `DOCUMENT_ROOT`. On more than one instance that must be a shared volume or
+   object storage, and the object store implementation has not been written.
+9. **Bind one test SharePoint library before showing Microsoft 365.** No tenant has been
+   available, so the Graph path and the Teams card are unit tested against response shapes only.
+   Run `POST /api/workspace/entity/{id}/microsoft/sync` against a real library first, or present
+   the integration as built and untested.
+10. **Decide the demo narrative.** The Robben Island story is the strongest available: a named
    entity, a real missed statutory deadline, a documented cause, a committee that had flagged it,
    and an audit excluded from portfolio outcomes. Our system surfaces exactly that pattern, and
    the risk engine reproduces it from published facts.
 
 ---
 
-## 10. Standing preferences and constraints
+## 11. Standing preferences and constraints
 
 - **No em dashes or dashes in written output.** Natural flowing prose. This applies to every
   message and document produced for this project.

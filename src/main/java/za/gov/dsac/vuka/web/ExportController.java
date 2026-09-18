@@ -54,7 +54,7 @@ public class ExportController {
 
     /** The full record, provenance included. This is the one an auditor would want. */
     @GetMapping("/submission/{submissionId}/json")
-    @PreAuthorize("hasAnyRole('ENTITY_REPORTER','DSAC_REVIEWER','DSAC_EXECUTIVE','ADMIN')")
+    @PreAuthorize("@can.has('READ_OWN_REPORTING')")
     public ExportService.QuarterlyExport json(@PathVariable("submissionId") UUID submissionId,
                                               @AuthenticationPrincipal VukaPrincipal principal) {
         return exportService.build(authorised(submissionId, principal));
@@ -68,7 +68,7 @@ public class ExportController {
      * treat eQPRS as a destination.
      */
     @GetMapping("/submission/{submissionId}/eqprs.csv")
-    @PreAuthorize("hasAnyRole('ENTITY_REPORTER','DSAC_REVIEWER','DSAC_EXECUTIVE','ADMIN')")
+    @PreAuthorize("@can.has('READ_OWN_REPORTING')")
     public ResponseEntity<byte[]> eqprs(@PathVariable("submissionId") UUID submissionId,
                                         @AuthenticationPrincipal VukaPrincipal principal) {
         Submission s = authorised(submissionId, principal);
@@ -95,7 +95,7 @@ public class ExportController {
      * in a parser. Carries the provenance columns the eQPRS shape has to drop.
      */
     @GetMapping("/submission/{submissionId}/full.csv")
-    @PreAuthorize("hasAnyRole('ENTITY_REPORTER','DSAC_REVIEWER','DSAC_EXECUTIVE','ADMIN')")
+    @PreAuthorize("@can.has('READ_OWN_REPORTING')")
     public ResponseEntity<byte[]> full(@PathVariable("submissionId") UUID submissionId,
                                        @AuthenticationPrincipal VukaPrincipal principal) {
         ExportService.QuarterlyExport e = exportService.build(authorised(submissionId, principal));
@@ -148,7 +148,8 @@ public class ExportController {
      * format cannot accidentally ship without it.
      */
     private Submission authorised(UUID submissionId, VukaPrincipal principal) {
-        Submission s = submissions.findById(submissionId)
+        // With entity and period loaded: the export reads the period's year after this session closes.
+        Submission s = submissions.findWithEntityAndPeriodById(submissionId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No such submission"));
 
         // canRead is the same check every other controller uses, and entityId on the token is a

@@ -316,3 +316,23 @@
   border-radius: var(--radius);
 }
 .ind-dispute .row { margin-top: var(--space-2); }
+
+/* ---------- CommentPanel ---------- */
+
+.cp h2 { display: flex; align-items: center; gap: var(--space-2); }
+.cp-live { min-height: 1.25em; margin: 0 0 var(--space-2); }
+.cp-target { margin-top: var(--space-3); }
+.cp-target h3 { font-size: 0.9375rem; margin: 0 0 var(--space-2); }
+.cp-thread {
+  border-left: 3px solid var(--brand-light);
+  padding-left: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+.cp-thread.cp-closed { border-left-color: var(--rule); }
+.cp-thread ul { list-style: none; margin: 0; padding: 0; }
+.cp-line { margin: 0 0 var(--space-2); }
+.cp-reply { margin-left: var(--space-3); padding-left: var(--space-2); border-left: 1px solid var(--rule); }
+.cp-who { margin: 0; }
+.cp-body { margin: 2px 0 0; white-space: pre-wrap; }
+.cp-form { display: grid; gap: var(--space-1); max-width: 40rem; }
+.cp-form button { justify-self: start; }

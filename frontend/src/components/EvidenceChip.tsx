@@ -14,6 +14,7 @@ import { IconAlert, IconExternal, IconPaperclip, IconShield } from '../icons';
 import { criterionLabel, fileSize } from '../lib/format';
 import type { EvidenceView } from '../lib/types';
 import './components.css';
+import { openFile } from '../lib/api';
 
 interface Props {
   evidence: EvidenceView[];
@@ -92,8 +93,7 @@ export function EvidenceChip({
               key={d.documentId}
               className="ev-file"
               href={documentUrl(d.documentId)}
-              target="_blank"
-              rel="noreferrer"
+              onClick={(e) => openFile(e, documentUrl(d.documentId), d.fileName ?? 'evidence')}
               title={[d.uploadedByName, fileSize(d.sizeBytes)].filter(Boolean).join(', ')}
             >
               {d.fileName ?? 'Unnamed file'}

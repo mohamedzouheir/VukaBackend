@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Comments</title>
+  <style>
+    :root { --ink:#1a1a1a; --green:#0f3d2e; --muted:#5a6b64; --line:#dfe6e3; --bg:#fff; --panel:#f4f8f6; }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) { --ink:#e8edeb; --green:#7fd1b0; --muted:#9bb0a7; --line:#2b3a34; --bg:#121714; --panel:#1a221e; }
+    }
+    :root[data-theme="dark"] { --ink:#e8edeb; --green:#7fd1b0; --muted:#9bb0a7; --line:#2b3a34; --bg:#121714; --panel:#1a221e; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink);
+           font:17px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+    .wrap { max-width:520px; margin:0 auto; padding:20px 16px 40px; }
+    .back { font-size:14px; color:var(--green); }
+    h1 { font-size:20px; margin:14px 0 4px; color:var(--green); }
+    p.lede { font-size:14px; color:var(--muted); margin:0 0 22px; }
+    ul.list { list-style:none; margin:0; padding:0; }
+    a.card { display:block; background:var(--panel); border-radius:10px; padding:16px;
+             margin:0 0 12px; text-decoration:none; color:var(--ink); }
+    a.card .t { font-weight:700; color:var(--green); font-size:17px; text-decoration:underline; }
+    a.card .m { display:block; font-size:14px; color:var(--muted); margin-top:2px; }
+    .open { font-weight:700; color:var(--ink); }
+    .none { color:var(--muted); font-size:15px; }
+    a:focus-visible { outline:3px solid var(--green); outline-offset:3px; border-radius:3px; }
+    .skip { position:absolute; left:-9999px; }
+    .skip:focus { position:fixed; left:8px; top:8px; z-index:10; padding:10px 14px;
+                  background:var(--ink); color:var(--bg); border-radius:6px; }
+  </style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to the main content</a>
+<div class="wrap">
+  <main id="main">
+    <a class="back" th:href="@{/m}">Your reporting</a>
+    <h1>Comments</h1>
+    <p class="lede">Questions and disputes about your figures and documents. Open ones first.</p>
+
+    <p th:if="${#lists.isEmpty(threads)}" class="none">
+      Nothing yet. When DSAC queries one of your figures it appears here, against the figure.
+    </p>
+
+    <ul class="list" th:unless="${#lists.isEmpty(threads)}">
+      <li th:each="t : ${threads}">
+        <a class="card" th:href="@{'/m/comments/' + ${t.anchorType()} + '/' + ${t.anchorId()}}">
+          <span class="t" th:text="${t.label()}">1.1.1 Number of programmes delivered</span>
+          <span class="m">
+            <span th:if="${t.open()}" class="open">Open.</span>
+            <span th:unless="${t.open()}">Closed.</span>
+            <span th:text="${t.count()} + (${t.count()} == 1 ? ' comment' : ' comments')">2 comments</span>,
+            <span th:text="'last ' + ${t.lastActivity()}">last 3 Sep, 14:02</span>
+          </span>
+        </a>
+      </li>
+    </ul>
+  </main>
+</div>
+</body>
+</html>

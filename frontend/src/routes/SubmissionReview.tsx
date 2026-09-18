@@ -17,6 +17,8 @@ import { useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useAsync } from '../lib/useAsync';
+import { useLiveComments } from '../lib/useLiveComments';
+import { CommentPanel } from '../components/CommentPanel';
 import { date, dateTime, num } from '../lib/format';
 import { IndicatorRowSkeleton, IndicatorRowVerify } from '../components/IndicatorRow';
 import { RiskBadge } from '../components/RiskBadge';
@@ -33,6 +35,9 @@ export function SubmissionReview() {
   const navigate = useNavigate();
 
   const detail = useAsync(() => api.submission(submissionId!), [submissionId]);
+
+  // The entity's answers to a dispute, arriving while the reviewer has the submission open.
+  const live = useLiveComments(submissionId);
 
   /* Disputes are held here until the reviewer returns the submission, so she can mark
      three figures and send them in one action rather than three. */
@@ -105,7 +110,9 @@ export function SubmissionReview() {
   }
 
   const d = detail.data!;
-  const closed = d.submission.status === 'APPROVED' || d.submission.status === 'RETURNED';
+  // Only a submitted period can be approved or returned. A draft is still the entity's, and
+  // approving one filed an approval against figures nobody had handed over.
+  const closed = d.submission.status !== 'SUBMITTED';
   // DocumentController takes either a document id or an extraction id, so one function serves
   // both the evidence chips and the source cell beside each figure.
   const docUrl = api.documentUrl;
@@ -237,12 +244,30 @@ export function SubmissionReview() {
           </div>
 
           <p className="small muted" style={{ marginTop: 'var(--space-2)' }}>
-            {disputedIds.length > 0
+            {d.submission.status === 'DRAFT'
+              ? 'The entity has not submitted this period yet. Approve and return open once they do.'
+              : disputedIds.length > 0
               ? 'Returning sends only the disputed targets back. The rest stays as filed, with the original confirmation and its author on the record.'
               : 'There is no control on this screen that changes a reported figure, and no endpoint behind one. A figure you do not believe is disputed and returned, not edited.'}
           </p>
         </div>
       ) : null}
+
+      <CommentPanel
+        comments={live.comments}
+        targets={rows}
+        announcement={live.announcement}
+        onReply={async (targetId, parentId, body) => {
+          try {
+            await api.addComment(submissionId!, body, targetId, parentId);
+            live.refresh();
+            return true;
+          } catch (e) {
+            setError(e instanceof Error ? e.message : 'The reply was not sent.');
+            return false;
+          }
+        }}
+      />
 
       <StateLine
         status={d.submission.status}

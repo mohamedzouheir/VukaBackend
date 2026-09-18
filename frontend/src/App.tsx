@@ -11,8 +11,8 @@
  */
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
-import { canReview, homeFor, isDsac, useAuth } from './lib/auth';
-import type { Role } from './lib/types';
+import { can, homeFor, useAuth } from './lib/auth';
+import type { Capability } from './lib/types';
 import { Loading, NotFoundState, Shell } from './components/Shell';
 import { SignIn } from './routes/SignIn';
 import { EntityHome } from './routes/EntityHome';
@@ -48,7 +48,7 @@ export function App() {
         <Route
           path="/entity"
           element={
-            <Gate allow={['ENTITY_REPORTER']}>
+            <Gate need="SUBMIT_REPORTING">
               <EntityHome />
             </Gate>
           }
@@ -56,7 +56,7 @@ export function App() {
         <Route
           path="/entity/submission/:submissionId/upload"
           element={
-            <Gate allow={['ENTITY_REPORTER']}>
+            <Gate need="SUBMIT_REPORTING">
               <TemplateUpload />
             </Gate>
           }
@@ -64,7 +64,7 @@ export function App() {
         <Route
           path="/entity/submission/:submissionId/review"
           element={
-            <Gate allow={['ENTITY_REPORTER']}>
+            <Gate need="SUBMIT_REPORTING">
               <ExtractionReview />
             </Gate>
           }
@@ -74,7 +74,7 @@ export function App() {
         <Route
           path="/review"
           element={
-            <Gate test={(r) => canReview(r)}>
+            <Gate need="REVIEW_SUBMISSIONS">
               <ReviewQueue />
             </Gate>
           }
@@ -82,7 +82,7 @@ export function App() {
         <Route
           path="/review/:submissionId"
           element={
-            <Gate test={(r) => canReview(r)}>
+            <Gate need="REVIEW_SUBMISSIONS">
               <SubmissionReview />
             </Gate>
           }
@@ -92,7 +92,7 @@ export function App() {
         <Route
           path="/portfolio"
           element={
-            <Gate test={isDsac}>
+            <Gate need="VIEW_PORTFOLIO">
               <Portfolio />
             </Gate>
           }
@@ -100,7 +100,7 @@ export function App() {
         <Route
           path="/portfolio/entity/:entityId"
           element={
-            <Gate test={isDsac}>
+            <Gate need="VIEW_PORTFOLIO">
               <EntityDrilldown />
             </Gate>
           }
@@ -108,7 +108,7 @@ export function App() {
         <Route
           path="/portfolio/entity/:entityId/unit-cost"
           element={
-            <Gate test={isDsac}>
+            <Gate need="VIEW_PORTFOLIO">
               <UnitCost />
             </Gate>
           }
@@ -117,7 +117,7 @@ export function App() {
         <Route
           path="/admin/entities"
           element={
-            <Gate allow={['ADMIN']}>
+            <Gate need="ADMINISTER">
               <EntityAdmin />
             </Gate>
           }
@@ -133,22 +133,15 @@ export function App() {
  * A route a role may not reach reads as a not found rather than as a refusal, for the
  * same reason the API client collapses 403 into 404.
  */
-function Gate({
-  allow,
-  test,
-  children,
-}: {
-  allow?: Role[];
-  test?: (role: Role) => boolean;
-  children: ReactNode;
-}) {
+function Gate({ need, children }: { need: Capability; children: ReactNode }) {
   const { me } = useAuth();
   const location = useLocation();
 
   if (!me) return <Navigate to="/signin" replace state={{ from: location.pathname }} />;
 
-  const permitted = allow ? allow.includes(me.role) : test ? test(me.role) : false;
-  if (!permitted) return <NotFoundState what="page" />;
+  // The capability list comes from the server, so a route is open exactly when the API
+  // behind it would answer.
+  if (!can(me, need)) return <NotFoundState what="page" />;
 
   return <>{children}</>;
 }

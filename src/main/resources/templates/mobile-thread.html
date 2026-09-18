@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Comments</title>
+  <style>
+    :root{--ink:#1a1a1a;--green:#0f3d2e;--on-green:#fff;--muted:#5a6b64;--line:#dfe6e3;--bg:#fff;--panel:#f4f8f6;--yellow:#fff8c4}
+    @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--ink:#e8edeb;--green:#7fd1b0;--on-green:#121714;--muted:#9bb0a7;--line:#2b3a34;--bg:#121714;--panel:#1a221e;--yellow:#3a3520}}
+    :root[data-theme="dark"]{--ink:#e8edeb;--green:#7fd1b0;--on-green:#121714;--muted:#9bb0a7;--line:#2b3a34;--bg:#121714;--panel:#1a221e;--yellow:#3a3520}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+    .wrap{max-width:520px;margin:0 auto;padding:16px 16px 40px}
+    .back{font-size:14px;color:var(--green)}
+    .ref,.live,.who,.done{font-size:13px;color:var(--muted)}
+    .ref{letter-spacing:.06em;text-transform:uppercase;margin:14px 0 4px}
+    h1{font-size:19px;line-height:1.35;margin:0 0 6px;color:var(--green)}
+    .live{margin:0 0 16px;min-height:20px}
+    .thread{list-style:none;margin:0;padding:0}
+    .thread li{background:var(--panel);border-radius:10px;padding:12px 14px;margin:0 0 10px}
+    .thread .reply{margin-left:22px;border-left:3px solid var(--line)}
+    .thread .none{background:none;padding:0}
+    .who{margin:0 0 4px}
+    .name{font-weight:700;color:var(--ink)}
+    .role:before,.at:before{content:" · "}
+    .body{margin:0;white-space:pre-wrap}
+    .done{margin:6px 0 0}
+    label{display:block;font-size:14px;font-weight:600;margin:22px 0 6px}
+    textarea{width:100%;min-height:90px;padding:14px;font:inherit;border:2px solid var(--line);border-radius:8px;background:var(--yellow);color:var(--ink)}
+    textarea:focus{border-color:var(--green);outline:3px solid var(--green);outline-offset:1px}
+    button{width:100%;margin-top:14px;padding:16px;font:inherit;font-weight:600;border:none;border-radius:8px;cursor:pointer;background:var(--green);color:var(--on-green)}
+    button:focus-visible,a:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+    .skip{position:absolute;left:-9999px}
+    .skip:focus{position:fixed;left:8px;top:8px;z-index:10;padding:10px 14px;background:var(--ink);color:var(--bg);border-radius:6px}
+  </style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to the main content</a>
+<div class="wrap">
+  <main id="main">
+    <a class="back" th:href="@{/m/comments}">All comments</a>
+
+    <p class="ref">About</p>
+    <h1 th:text="${label}">1.1.1 Number of programmes delivered</h1>
+
+    <!--/*
+      The announcement, and not the list. A live region wrapped round the list would make a
+      screen reader read every comment in it again each time one arrived.
+    */-->
+    <p class="live" id="live" role="status"></p>
+
+    <div id="thread" th:attr="data-etag=${etag}">
+      <th:block th:replace="~{mobile-thread-live :: list}"></th:block>
+    </div>
+
+    <form th:action="@{'/m/comments/' + ${anchorType} + '/' + ${anchorId}}" method="post">
+      <label for="body">Add to this</label>
+      <textarea id="body" name="body" required maxlength="4000"></textarea>
+      <button type="submit">Send</button>
+    </form>
+  </main>
+</div>
+<!--/*
+  Progressive enhancement, and nothing more. The thread above is already correct; this asks the
+  server every five seconds whether it has moved, sending back the validator the page was served
+  with, and swaps the list only when the answer is 200. Without script, or on a browser without
+  fetch, the page is exactly what it was on arrival. A failed poll is swallowed on purpose: offline,
+  the thread on screen is still the thread the reporter was served, and the next poll tries again.
+*/-->
+<script>
+(function(){
+  var b=document.getElementById('thread'),s=document.getElementById('live');
+  if(!b||!window.fetch)return;
+  var t=b.getAttribute('data-etag'),n=b.querySelectorAll('.thread>li:not(.none)').length;
+  setInterval(function(){
+    fetch(location.pathname+'/live',{headers:{'If-None-Match':t}}).then(function(r){
+      if(r.status!==200)return;
+      t=r.headers.get('ETag')||t;
+      var c=parseInt(r.headers.get('X-Vuka-Comments'),10);
+      return r.text().then(function(h){
+        b.innerHTML=h;
+        var a=c-n;if(!isNaN(c))n=c;
+        s.textContent=a>1?a+' new comments.':a===1?'One new comment.':'Updated.';
+      });
+    }).catch(function(){});
+  },5000);
+})();
+</script>
+</body>
+</html>

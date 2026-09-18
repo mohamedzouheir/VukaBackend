@@ -7,6 +7,7 @@ import za.gov.dsac.vuka.config.VukaPrincipal;
 import za.gov.dsac.vuka.domain.*;
 import za.gov.dsac.vuka.repository.*;
 
+import java.io.ByteArrayInputStream;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
@@ -36,22 +37,24 @@ public class SubmissionService {
     private final TargetRepository targets;
     private final TargetResultRepository results;
     private final ExtractionResultRepository extractions;
-    private final DocumentRecordRepository documents;
+    private final DocumentVersionService documentVersions;
     private final PublicEntityRepository entities;
     private final ReportingPeriodRepository periods;
+    private final CommentRepository comments;
 
     public SubmissionService(TemplateParser parser, UnitCostService unitCost,
                              SubmissionRepository submissions, TargetRepository targets,
                              TargetResultRepository results, ExtractionResultRepository extractions,
-                             DocumentRecordRepository documents, PublicEntityRepository entities,
-                             ReportingPeriodRepository periods) {
+                             DocumentVersionService documentVersions, PublicEntityRepository entities,
+                             ReportingPeriodRepository periods, CommentRepository comments) {
+        this.comments = comments;
         this.parser = parser;
         this.unitCost = unitCost;
         this.submissions = submissions;
         this.targets = targets;
         this.results = results;
         this.extractions = extractions;
-        this.documents = documents;
+        this.documentVersions = documentVersions;
         this.entities = entities;
         this.periods = periods;
     }
@@ -86,23 +89,27 @@ public class SubmissionService {
             throws Exception {
 
         Submission submission = submissions.findById(submissionId).orElseThrow();
+        writableTargets(submission); // refuses a submitted or approved period
         UUID entityId = submission.getEntity().getId();
         UUID fyId = submission.getReportingPeriod().getFinancialYear().getId();
 
-        DocumentRecord doc = new DocumentRecord();
-        doc.setEntity(submission.getEntity());
-        doc.setSubmission(submission);
-        doc.setDocumentType(Enums.DocumentType.REPORTING_TEMPLATE);
-        doc.setFileName(file.getOriginalFilename());
-        doc.setStoragePath("uploads/" + entityId + "/" + UUID.randomUUID());
-        doc.setSizeBytes(file.getSize());
-        doc.setVersion(nextVersion(entityId, Enums.DocumentType.REPORTING_TEMPLATE));
-        doc.setUploadedByUid(who.uid());
-        doc.setUploadedAt(Instant.now());
-        doc.setApprovalStatus(Enums.ApprovalStatus.PENDING);
-        documents.save(doc);
+        // The bytes are read once and handed to the document service, which stores them, opens a
+        // version and issues a receipt. This used to build a DocumentRecord by hand with a
+        // storage path that pointed at nothing, so the extraction rows cited a source document
+        // that could not be opened. There is one write path for documents now, the same way
+        // there is one for performance data, and the template arrives on it like everything else.
+        byte[] content = file.getBytes();
+        DocumentRecord doc = documentVersions.store(DocumentVersionService.Incoming.upload(
+                entityId,
+                Enums.DocumentType.REPORTING_TEMPLATE,
+                file.getOriginalFilename(),
+                file.getContentType(),
+                content,
+                who,
+                submissionId,
+                null)).record();
 
-        TemplateParser.ParseOutcome outcome = parser.parse(file.getInputStream());
+        TemplateParser.ParseOutcome outcome = parser.parse(new ByteArrayInputStream(content));
 
         int matched = 0;
         int unmatched = 0;
@@ -145,6 +152,13 @@ public class SubmissionService {
     @Transactional
     public int confirm(UUID submissionId, List<ConfirmedRow> rows, VukaPrincipal who) {
         Submission submission = submissions.findById(submissionId).orElseThrow();
+        Set<UUID> reopened = writableTargets(submission);
+        for (ConfirmedRow row : rows) {
+            if (reopened != null && !reopened.contains(row.targetId())) {
+                throw new StateException("This figure is not open for correction. Once a period is"
+                        + " returned, only the figures the Department disputed can be confirmed again.");
+            }
+        }
         int written = 0;
 
         for (ConfirmedRow row : rows) {
@@ -152,6 +166,7 @@ public class SubmissionService {
             if (target == null) continue;
 
             BigDecimal quarterTarget = quarterTargetFor(target, submission.getReportingPeriod().getQuarter());
+            requireReasons(target, row, quarterTarget);
 
             TargetResult tr = new TargetResult();
             tr.setTarget(target);
@@ -196,6 +211,25 @@ public class SubmissionService {
     @Transactional
     public Submission submit(UUID submissionId, VukaPrincipal who) {
         Submission s = submissions.findById(submissionId).orElseThrow();
+        if (s.getStatus() != Enums.SubmissionStatus.DRAFT
+                && s.getStatus() != Enums.SubmissionStatus.RETURNED) {
+            throw new StateException("This period has already been submitted to the Department.");
+        }
+        UUID fyId = s.getReportingPeriod().getFinancialYear() == null
+                ? null : s.getReportingPeriod().getFinancialYear().getId();
+        if (fyId != null) {
+            Set<UUID> answered = results.findBySubmissionId(submissionId).stream()
+                    .filter(r -> r.getConfirmedAt() != null && r.getTarget() != null)
+                    .map(r -> r.getTarget().getId())
+                    .collect(Collectors.toSet());
+            long missing = targets.findByEntityIdAndFinancialYearId(s.getEntity().getId(), fyId).stream()
+                    .filter(t -> !answered.contains(t.getId()))
+                    .count();
+            if (missing > 0) {
+                throw new StateException(missing + (missing == 1 ? " target has" : " targets have")
+                        + " no confirmed result or recorded reason yet.");
+            }
+        }
         s.setStatus(Enums.SubmissionStatus.SUBMITTED);
         s.setSubmittedAt(Instant.now());
         s.setSubmittedByUid(who.uid());
@@ -207,6 +241,12 @@ public class SubmissionService {
     @Transactional
     public Submission review(UUID submissionId, boolean approve, String returnReason, VukaPrincipal who) {
         Submission s = submissions.findById(submissionId).orElseThrow();
+        if (s.getStatus() != Enums.SubmissionStatus.SUBMITTED) {
+            throw new StateException(s.getStatus() == Enums.SubmissionStatus.DRAFT
+                    ? "The entity has not submitted this period yet, so there is nothing to approve or return."
+                    : "This submission has already been " + s.getStatus().name().toLowerCase()
+                      + ". It can be reviewed again once the entity resubmits it.");
+        }
         s.setStatus(approve ? Enums.SubmissionStatus.APPROVED : Enums.SubmissionStatus.RETURNED);
         s.setReturnReason(approve ? null : returnReason);
         s.setReviewedByUid(who.uid());
@@ -216,9 +256,70 @@ public class SubmissionService {
 
     // ------------------------------------------------------------------
 
-    private int nextVersion(UUID entityId, Enums.DocumentType type) {
-        return documents.findByEntityIdAndDocumentType(entityId, type).stream()
-                .mapToInt(DocumentRecord::getVersion).max().orElse(0) + 1;
+    /**
+     * Which targets may be written to now. Null means any: a draft is still the reporter's.
+     *
+     * <p>Once submitted or approved nothing may be written, which is what makes "cannot be edited
+     * afterwards" true on the server rather than only on the screen. A returned period reopens
+     * exactly the figures under an open dispute, plus any target that was never answered.
+     */
+    public Set<UUID> writableTargets(Submission s) {
+        if (s.getStatus() == Enums.SubmissionStatus.DRAFT) return null;
+        if (s.getStatus() != Enums.SubmissionStatus.RETURNED) {
+            throw new StateException("This period has been submitted, so its figures can no longer be"
+                    + " changed. The Department returns it if a figure needs correcting.");
+        }
+        Set<UUID> open = new HashSet<>();
+        for (Comment c : comments.findByEntityIdOrderByCreatedAtDesc(s.getEntity().getId())) {
+            if (ReportingViewService.isOpenDispute(c)) open.add(c.getAnchorId());
+        }
+        Set<UUID> answered = results.findBySubmissionId(s.getId()).stream()
+                .filter(r -> r.getConfirmedAt() != null && r.getTarget() != null)
+                .map(r -> r.getTarget().getId())
+                .collect(Collectors.toSet());
+        UUID fyId = s.getReportingPeriod().getFinancialYear() == null
+                ? null : s.getReportingPeriod().getFinancialYear().getId();
+        if (fyId != null) {
+            targets.findByEntityIdAndFinancialYearId(s.getEntity().getId(), fyId).stream()
+                    .map(Target::getId)
+                    .filter(id -> !answered.contains(id))
+                    .forEach(open::add);
+        }
+        return open;
+    }
+
+    /**
+     * The two reasons a figure cannot be filed without, on every surface. The office screen checked
+     * both before it sent anything, but the phone did not, and a rule that one of two screens
+     * enforces is a suggestion. A figure more than twenty percent under its quarter target needs a
+     * reason, and so does having no figure at all, which is recorded as an absence and never as 0.
+     */
+    private static void requireReasons(Target target, ConfirmedRow row, BigDecimal quarterTarget) {
+        boolean noReason = row.varianceExplanation() == null || row.varianceExplanation().isBlank();
+        if (!noReason) return;
+        if (row.actualValue() == null) {
+            throw new ReasonRequired(target.getIndicatorRef()
+                    + " has no figure. Say why there is no result this quarter.");
+        }
+        if (quarterTarget != null && quarterTarget.signum() > 0) {
+            BigDecimal shortfall = quarterTarget.subtract(row.actualValue())
+                    .divide(quarterTarget, 4, RoundingMode.HALF_UP);
+            if (shortfall.compareTo(new BigDecimal("0.20")) > 0) {
+                throw new ReasonRequired(target.getIndicatorRef() + " is more than 20 percent under its"
+                        + " quarter target of " + quarterTarget.stripTrailingZeros().toPlainString()
+                        + ". Say why, so the Department does not have to send it back to ask.");
+            }
+        }
+    }
+
+    /** A figure refused for want of a reason. The phone shows it on the same step, beside the field. */
+    public static class ReasonRequired extends StateException {
+        public ReasonRequired(String message) { super(message); }
+    }
+
+    /** An action the submission's current state does not allow. Answered as 409 with the message. */
+    public static class StateException extends RuntimeException {
+        public StateException(String message) { super(message); }
     }
 
     private BigDecimal quarterTargetFor(Target t, Integer quarter) {

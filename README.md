@@ -80,6 +80,10 @@ First start runs the Flyway migrations and loads the real data described below. 
 | Office dashboard | http://localhost:5173 in development, http://localhost:8080 once built | Everyone who signs in |
 | Dashboard API | http://localhost:8080/api/dashboard/portfolio | DSAC roles |
 | Export | http://localhost:8080/api/export/submission/{id}/full.csv | Reporter (own) or DSAC |
+| Documents on a phone | http://localhost:8080/m/workspace | Entity reporters |
+| Comments on a phone | http://localhost:8080/m/comments | Entity reporters |
+| Comments API | http://localhost:8080/api/comments/workspace?entityId={id} | Reporter (own) or DSAC |
+| Workspace API | http://localhost:8080/api/workspace/entity/{id}/documents | Reporter (own) or DSAC |
 
 The citizen view needs no authentication, so it is the fastest way to confirm the application is
 alive.
@@ -184,6 +188,35 @@ authorisation check applies unchanged: what is switched off is signature verific
 authorisation. The backend logs a warning on every start and the interface carries a banner on
 every page while it is on.
 
+### What each role can do
+
+Written down once, in `config/Capability.java`, and read by both sides. Every endpoint checks
+`@can.has('...')` rather than naming roles, and `/api/me` returns the caller's capabilities so the
+dashboard shows a page or a button only when the API behind it would accept the request.
+
+| | Reporter | Reviewer | Executive | Admin |
+|---|:-:|:-:|:-:|:-:|
+| Read reporting (own entity for a reporter) | yes | yes | yes | yes |
+| Submit figures, evidence and documents | yes | | | |
+| Comment, set and move tasks | yes | yes | | yes |
+| Download the pre-filled template | yes | yes | | yes |
+| See across entities | | yes | yes | yes |
+| Approve, return, decide on documents | | yes | | yes |
+| Publication, Microsoft binding | | | | yes |
+
+The executive column reads everything and changes nothing. The reporter column is the only one
+that puts figures or evidence on the record. Before this table existed, two endpoints let an
+executive post a comment or approve a document while the dashboard presented the role as read
+only.
+
+A refusal is told apart from a missing sign in, and says why:
+
+- `/api/**`: 401 JSON when not signed in, 403 JSON naming the caller's role and listing what it
+  can do when the role is wrong. It used to answer both with a redirect to the phone sign-in page.
+- `/m/**`: not signed in redirects to sign in and back. Signed in as a DSAC role, it shows a page
+  saying whose screens these are, with a link to the dashboard and a sign-out that works for any
+  role. It used to send a reviewer back to sign in, where they succeeded and were refused again.
+
 ---
 
 ## The data is real
@@ -236,6 +269,10 @@ service/
   SeedService         real published data, plus labelled illustrative quarterlies
   ReportingViewService assembles the rows the dashboard reads, provenance attached
   TemplateWriter      writes the pre-filled template, against TemplateParser's own constants
+  DocumentVersionService the one write path for documents: store, version, receipt, decision
+  DocumentStore       the bytes, content-addressed by SHA-256
+  WorkspaceService    tasks set across the departmental boundary, direction derived not declared
+  microsoft/          Graph client, SharePoint mirror and delta poller, Teams countdown
 web/          REST controllers plus two server-rendered surfaces
 config/       Firebase token verification, Spring Security, the development sign in
 frontend/     the React office dashboard. Builds into src/main/resources/static
@@ -298,7 +335,7 @@ Every score is stored with its signals, each carrying its raw value, its weight,
 and a plain-language description. The interface never shows the number alone.
 
 ```bash
-./mvnw test    # 17 tests, each encoding a claim the pitch makes
+./mvnw test    # each test encodes a claim the pitch makes
 ```
 
 Two of them are the ones that matter: `RiskEngineTest` reproduces **Robben Island Museum as
@@ -316,11 +353,106 @@ and the absence is the design decision.
 
 ---
 
+## Workspaces and Microsoft 365
+
+Requirement (d) asks for workspaces that "seamlessly integrate with Microsoft Technologies, have
+version control of documents triggered at save/upload", comments visible in real time, tasks set
+"internally and externally", "approval on receipt of upload", and full use on a phone. Comments
+are covered under `/m/comments` and `/api/comments`. The rest is here.
+
+**A document is its path, and every arrival of that path is a version.** The key is the file's
+place in the workspace, `ANNUAL_REPORT/Annual report.pdf`, and it is the same path in the bound
+SharePoint library. A new upload writes version n+1, points it at version n, and stamps version n
+superseded. Nothing is updated in place and nothing is deleted, which is the target versioning
+rule applied to evidence. A partial unique index on `lower(document_key)` makes "one current
+version" a fact the database enforces, and ignores case because SharePoint does.
+
+**Identical bytes are not a version.** Uploading the same file twice returns the version already
+held and says so. This is what makes sync in both directions terminate: Vuka mirrors an upload
+into SharePoint, Graph reports that file as changed, the poller downloads it, the SHA-256 matches,
+and nothing is versioned.
+
+**Save in Microsoft, version in Vuka.** Where an entity's workspace is bound to a SharePoint
+library, uploads are copied into it (SharePoint keeps its own version label, recorded beside ours)
+and a delta poll every five minutes picks up files saved there from Word, Excel or Teams. Those
+arrive as versions with source `MICROSOFT_365` and the name of the person who saved them. Only the
+bound folder is read; the rest of the entity's site is none of the department's business. A file
+deleted in SharePoint is not deleted here, because a record you can remove by deleting it in
+OneDrive is not a record.
+
+**Receipt and approval are different events.** Every version gets a receipt on arrival, such as
+`VK-20260918-2BD6E5E6`, with its SHA-256, so the reporter can prove what they sent and when. A
+DSAC officer then approves or rejects that version by name; a rejection needs a reason. The phone
+page says "a receipt is not an approval" in those words.
+
+**Only the entity uploads, only DSAC decides, both set tasks.** A reviewer who could upload into an
+entity's repository could put evidence there under the entity's name. Whether a task is external
+is read from who set it and who has to do it, not from a flag the caller chooses.
+
+**The countdown lands in Teams.** Where an administrator sets a channel workflow URL on an
+entity's workspace, the 30 day, 15 day and hourly reminders post there as an Adaptive Card naming
+the targets with no evidence. A workflow webhook rather than Graph's `ChannelMessage.Send`,
+because that permission is protected by Microsoft and far larger than a reminder needs.
+
+To bind a tenant, register an app with `Files.ReadWrite.All` or `Sites.ReadWrite.All` as an
+application permission (`Sites.Selected` with a per-library grant is the smaller, better
+configuration for a real department), then:
+
+```bash
+export MS_TENANT_ID=...  MS_CLIENT_ID=...
+export MS_CLIENT_SECRET_FILE=/path/to/file/containing/the/secret
+# then, as ADMIN:
+POST /api/workspace/entity/{id}/microsoft/bind   {"siteHostname":"x.sharepoint.com","sitePath":"sites/Reporting","folderPath":"Vuka"}
+POST /api/workspace/entity/{id}/microsoft/teams-webhook   {"webhookUrl":"..."}
+GET  /api/workspace/microsoft/status
+```
+
+With none of it set, everything above except the mirror and the Teams post works, and the status
+endpoint and every document say `NOT_CONFIGURED` rather than pretending to be queued.
+
+### Comments, live
+
+**Every comment lands on a figure, a reported result or a document version.** There is no comment
+on "the entity" or "the filing". The anchor is required and the entity is read off it rather than
+passed in, so a comment cannot be filed against one entity while pointing at another's target.
+`POST /api/submissions/{id}/comments` refuses a comment with no target for the same reason: a note
+on the whole filing makes the entity guess which number is wrong.
+
+**"In real time" is a five second poll, deliberately.** The PRD takes this position and the code
+keeps it: no websocket. Every comment read carries an ETag computed from two aggregates, the row
+count and the latest change, and a client that sends it back gets `304` with no body until
+something is said. An unchanged poll reads no comment rows at all. That validator is sound only
+because comments are append-only: a count can only rise, and closing a point moves the latest
+change. The office dashboard polls `/api/submissions/{id}/comments`; the phone thread at
+`/m/comments/{type}/{id}` polls its own `/live` fragment with a few hundred bytes of inline script,
+and is complete and correct with script switched off. When a poll fails, both keep what they last
+showed and try again five seconds later. The dashboard also skips polls while its tab is hidden.
+
+**Nothing is edited and nothing is deleted.** A comment can be closed and reopened, and who closed
+it is recorded. The author or any DSAC role may close one; an entity cannot close an objection the
+Department raised against its own figures.
+
+**A dispute is an open DSAC comment that opened a thread on a target.** A reporter's reply is not
+one, so answering "corrected" does not mark the figure as disputed again, and a closed dispute
+drops off the row. The rule is `ReportingViewService.isOpenDispute`, repeated in
+`frontend/src/lib/useLiveComments.ts` because the dashboard recomputes it between reloads.
+
+**Not built:** mentions, notifications when a comment arrives, and a reply box on the one-indicator
+step page, whose page budget is nearly spent. Replies on a phone happen on the thread page.
+
+---
+
 ## The low-bandwidth surfaces
 
 Server-rendered Thymeleaf, no JavaScript framework, every page under 5KB before compression and
 under 2KB once gzip is on. Response compression is configured in `application.yml`; do not turn it
 off.
+
+One page qualifies that. The comment thread, `mobile-thread.html`, carries the only script on these
+surfaces, an inline poller of about 600 bytes, and it grows with the conversation. Empty it is
+4.0KB, 1.8KB gzipped. With three comments of realistic length it is 4.9KB, 2.1KB gzipped, and at
+about four comments it passes 5KB. The poll that keeps it live is a 304 with no body while nothing
+changes, and roughly 380 bytes gzipped when something does.
 
 **Two different arguments, and they should not be confused.** The citizen page is a genuine
 bandwidth case: no login, no training, a low-end phone, prepaid data, and a reader who may never
@@ -390,6 +522,12 @@ creation and cannot be changed afterwards.
 
 State these before someone finds them.
 
+- **Latest run, 18 September 2026.** After the workspace and Microsoft work: `./mvnw test` passes
+  49 tests, and against an embedded PostgreSQL 14 Flyway applies all five migrations,
+  `ddl-auto: validate` passes and the application starts. Upload, identical re-upload, a changed
+  version, history, download, the receipt, DSAC approval, per-criterion evidence, a cross-boundary
+  task and the tenancy refusals were exercised over HTTP with the development sign in. The
+  Microsoft calls were not, for want of a tenant; see below.
 - **It runs, and starting it found two bugs that reading did not.** `./mvnw clean test` passes, 60
   source files and 17 tests, Flyway applies all three migrations, the seed loads and
   `Started VukaApplication` appears. Getting there took three attempts. `ddl-auto: validate`
@@ -425,12 +563,17 @@ State these before someone finds them.
 - **Quarterly submission timing in the seed is illustrative**, as described above.
 - **The eQPRS export shape is our reading of a published reporting format, not a certified
   integration.** Confirm the columns against DPME's current template before anyone relies on it.
-- **Uploaded document bytes are not stored.** `DocumentRecord.storagePath` names where they belong
-  in an object store and wiring that store is a deployment decision. What is stored is everything
-  the evidence chain rests on: the file name, the size, the content hash, the uploader, the time,
-  the target it is attached to and the Auditor-General's test it was offered against.
-  `GET /api/documents/{id}` returns exactly that and says so in its own response rather than
-  implying the file is there.
+- **Document bytes are stored on the local filesystem.** `DocumentStore` writes them under
+  `DOCUMENT_ROOT`, content-addressed. On more than one instance that must be a shared volume, or
+  half the downloads 404; object storage is one class away and has not been written.
+- **The Microsoft 365 integration has not run against a real tenant.** The Graph calls are the
+  documented v1.0 endpoints (token, site drive, simple and session upload, delta, versions) and the
+  mapping is unit tested against Graph's response shapes, but no tenant was available. Bind one
+  test library and run `POST .../microsoft/sync` before showing it. The Teams card is likewise
+  tested for shape, not posted to a live channel.
+- **Delta polling, not change notifications.** Five minutes between a save in SharePoint and the
+  version in Vuka by default (`MS_POLL_INTERVAL_MS`). Graph subscriptions would make it seconds
+  but need a public HTTPS endpoint Microsoft can reach.
 - **Display names are missing in two places.** The schema stores a uid for the reviewer on a
   submission and for the uploader on a document, not a name. Both come back null rather than as a
   uid, because showing a uid to a reviewer is noise and inventing a name is worse.

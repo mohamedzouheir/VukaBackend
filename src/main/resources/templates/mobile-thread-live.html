@@ -1,0 +1,21 @@
+<!--/*
+  The thread, on its own.
+
+  Served whole on first load and again to the poller, which is why it is a fragment rather than
+  markup inside the page: one template, so the list a reporter sees five seconds in is the same
+  list they were served, not a JavaScript approximation of it.
+*/-->
+<ul class="thread" th:fragment="list" xmlns:th="http://www.thymeleaf.org">
+  <li th:each="c : ${comments}" th:classappend="${c.reply()} ? 'reply' : ''">
+    <p class="who">
+      <span class="name" th:text="${c.authorName()}">Name</span>
+      <span class="role" th:unless="${#strings.isEmpty(c.authorRole())}" th:text="${c.authorRole()}">DSAC review</span>
+      <span class="at" th:text="${c.when()}">3 Sep, 14:02</span>
+    </p>
+    <p class="body" th:text="${c.body()}">Comment.</p>
+    <p class="done" th:if="${c.resolved()}">
+      Closed<span th:if="${c.resolvedByName() != null}" th:text="' by ' + ${c.resolvedByName()}"></span>
+    </p>
+  </li>
+  <li class="none" th:if="${#lists.isEmpty(comments)}">Nothing said about this yet.</li>
+</ul>
