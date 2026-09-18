@@ -25,6 +25,8 @@ import { CommentPanel } from '../components/CommentPanel';
 import { RELIABILITY } from '../lib/evidenceMatch';
 import { readPaste } from '../lib/pasteFigures';
 import { num } from '../lib/format';
+import { useI18n } from '../lib/i18n';
+import { useLabels } from '../lib/labels';
 import type { IndicatorRowView } from '../lib/types';
 import { IndicatorRowReview, IndicatorRowSkeleton, needsExplanation } from '../components/IndicatorRow';
 import { StateLine } from '../components/StateLine';
@@ -45,6 +47,7 @@ interface Draft {
 const EMPTY: Draft = { value: '', explanation: '', noResult: false, noResultReason: '' };
 
 export function ExtractionReview() {
+  const { t } = useI18n();
   const { submissionId } = useParams<{ submissionId: string }>();
   const navigate = useNavigate();
 
@@ -216,30 +219,35 @@ export function ExtractionReview() {
       setDrafts((current) => ({ ...current, ...patch }));
 
       if (filled.length === 0 && notNumbers === 0 && skippedConfirmed === 0) {
-        setPasteNote({ text: 'Nothing in the paste could be read as a figure.', refused: true });
+        setPasteNote({ text: t('er.pasteNothing'), refused: true });
         return true;
       }
+      /* Whole sentences per case rather than fragments glued together, because the order a
+         count, a noun and a range fall in is not the same in every language. */
+      const one = filled.length === 1;
+      const first = filled[0]?.indicatorRef ?? '';
+      const last = filled[filled.length - 1]?.indicatorRef ?? '';
       const parts = [
-        'Filled ' + filled.length + (filled.length === 1 ? ' figure' : ' figures')
-          + (pasted.kind === 'byCode'
-            ? ' by indicator code'
-            : filled.length > 0
-            ? ', ' + filled[0].indicatorRef
-              + (filled.length > 1 ? ' to ' + filled[filled.length - 1].indicatorRef : '')
-            : '')
-          + '. Check them, then confirm.',
+        (filled.length === 0
+          ? t('er.pasteFilledNone')
+          : pasted.kind === 'byCode'
+            ? t(one ? 'er.pasteByCodeOne' : 'er.pasteByCodeMany', filled.length)
+            : one
+              ? t('er.pasteRangeOne', filled.length, first)
+              : t('er.pasteRangeMany', filled.length, first, last))
+          + ' ' + t('er.pasteCheck'),
       ];
-      if (skippedConfirmed) parts.push(skippedConfirmed + ' already confirmed and left as filed.');
-      if (notNumbers) parts.push(notNumbers + (notNumbers === 1 ? ' cell was' : ' cells were') + ' not a number and left alone.');
+      if (skippedConfirmed) parts.push(t('er.pasteSkipped', skippedConfirmed));
+      if (notNumbers) parts.push(t(notNumbers === 1 ? 'er.pasteNotNumberOne' : 'er.pasteNotNumberMany', notNumbers));
       if (unmatched) {
         parts.push(pasted.kind === 'byCode'
-          ? unmatched + (unmatched === 1 ? ' line names' : ' lines name') + ' no indicator on this report.'
-          : unmatched + (unmatched === 1 ? ' figure ran' : ' figures ran') + ' past the last indicator.');
+          ? t(unmatched === 1 ? 'er.pasteNoIndicatorOne' : 'er.pasteNoIndicatorMany', unmatched)
+          : t(unmatched === 1 ? 'er.pastePastLastOne' : 'er.pastePastLastMany', unmatched));
       }
       setPasteNote({ text: parts.join(' '), refused: false });
       return true;
     },
-    [rows, visibleRows, isReopened, draftFor],
+    [rows, visibleRows, isReopened, draftFor, t],
   );
   const confirmedCount = rows.length - outstanding.length;
 
@@ -277,7 +285,7 @@ export function ExtractionReview() {
             // the reason as the variance explanation and leaves the actual absent.
             actualValue: d.noResult ? null : Number(d.value),
             varianceExplanation: d.noResult
-              ? 'No result this quarter. ' + d.noResultReason.trim()
+              ? t('ind.noResultThisQuarter') + ' ' + d.noResultReason.trim()
               : d.explanation.trim() || null,
           };
         }),
@@ -290,7 +298,7 @@ export function ExtractionReview() {
       setDrafts({});
       detail.reload();
     } catch (e) {
-      setActionError(e instanceof Error ? e.message : 'The figures were not written.');
+      setActionError(e instanceof Error ? e.message : t('er.notWritten'));
     } finally {
       setBusy(false);
       setPendingRow(null);
@@ -305,19 +313,19 @@ export function ExtractionReview() {
       setSubmitModal(false);
       navigate('/entity');
     } catch (e) {
-      setActionError(e instanceof Error ? e.message : 'The period was not submitted.');
+      setActionError(e instanceof Error ? e.message : t('er.notSubmitted'));
     } finally {
       setBusy(false);
     }
   }
 
-  if (detail.notFound) return <NotFoundState what="submission" />;
+  if (detail.notFound) return <NotFoundState what={t('common.submission')} />;
   if (detail.error) return <ErrorState message={detail.error} onRetry={detail.reload} />;
 
   if (detail.loading) {
     return (
       <div className="stack">
-        <h1>Reviewing parsed figures</h1>
+        <h1>{t('er.title')}</h1>
         <IndicatorRowSkeleton />
         <IndicatorRowSkeleton />
         <IndicatorRowSkeleton />
@@ -343,15 +351,15 @@ export function ExtractionReview() {
           <h1>{d.period.label}</h1>
           <p className="muted">
             {d.sourceDocument
-              ? 'Reviewing parsed file: ' + (d.sourceDocument.fileName ?? 'unnamed upload')
-              : 'No file has been parsed for this period. Figures entered here are marked as entered by hand.'}
+              ? t('er.reviewingFile', d.sourceDocument.fileName ?? t('er.unnamedUpload'))
+              : t('er.noFileParsed')}
           </p>
         </div>
         <span className="spacer" />
         <p className="muted small nowrap">
-          {num(confirmedCount)} of {num(rows.length)} confirmed
+          {t('er.confirmedOf', num(confirmedCount) ?? '', num(rows.length) ?? '')}
           {', '}
-          {num(withEvidence)} with evidence
+          {t('er.withEvidence', num(withEvidence) ?? '')}
         </p>
         {/* Not hidden once submitted: evidence may be attached late, and withholding it is worse. */}
         {rows.length > 0 ? (
@@ -366,9 +374,7 @@ export function ExtractionReview() {
         <p className="er-warning">
           <IconAlert size={18} />
           <span>
-            Nothing here is saved as a reported result yet. Confirming writes these figures in your
-            name, and they cannot be edited afterwards. A correction happens by the Department
-            returning the submission.
+            {t('er.warning')}
           </span>
         </p>
       ) : null}
@@ -380,25 +386,22 @@ export function ExtractionReview() {
         <div className="er-scope">
           <span>
             <strong>
-              {num(reopenedCount)} {reopenedCount === 1 ? 'figure was' : 'figures were'} returned
-              for correction.
+              {reopenedCount === 1
+                ? t('er.oneReturnedForCorrection')
+                : t('er.returnedForCorrection', num(reopenedCount) ?? '')}
             </strong>{' '}
-            {disputedOnly
-              ? 'Everything else stays as filed.'
-              : 'Showing the whole filing.'}
+            {disputedOnly ? t('er.restStaysFiled') : t('er.showingWhole')}
           </span>
           <span className="spacer" />
           <button type="button" className="link" onClick={() => setDisputedOnly((v) => !v)}>
-            {disputedOnly ? 'Show all ' + num(rows.length) + ' figures' : 'Show only what was returned'}
+            {disputedOnly ? t('er.showAll', num(rows.length) ?? '') : t('er.showReturned')}
           </button>
         </div>
       ) : null}
 
       {visibleRows.length === 0 ? (
         <EmptyState>
-          No targets are registered for this entity for the current financial year, so there is
-          nothing to report against. An administrator loads targets from the tabled Annual
-          Performance Plan. This is an empty register rather than an empty result set.
+          {t('er.noTargets')}
         </EmptyState>
       ) : null}
 
@@ -437,19 +440,16 @@ export function ExtractionReview() {
       {/* Rows the parser read that match no registered target. Shown, never dropped. */}
       {d.unmatched.length > 0 ? (
         <div className="card">
-          <h2>Held aside</h2>
+          <h2>{t('er.heldAside')}</h2>
           <p className="small muted">
-            {d.unmatched.length} rows in the uploaded file carry an indicator code that matches no
-            target registered for this year. They are not reportable against anything, and they are
-            shown here rather than discarded because a silently dropped row is how a target goes
-            unreported.
+            {t('er.heldAsideBody', d.unmatched.length)}
           </p>
           <ul className="er-unmatched">
             {d.unmatched.map((x) => (
               <li key={x.id}>
-                <span className="mono">{x.indicatorRef ?? 'no code'}</span>
-                <span>{x.extractedValue ?? 'no value'}</span>
-                <span className="muted small">{x.sourceLocation ?? 'no source cell'}</span>
+                <span className="mono">{x.indicatorRef ?? t('er.noCode')}</span>
+                <span>{x.extractedValue ?? t('er.noValue')}</span>
+                <span className="muted small">{x.sourceLocation ?? t('er.noSourceCell')}</span>
               </li>
             ))}
           </ul>
@@ -460,16 +460,16 @@ export function ExtractionReview() {
         <div className="card er-foot">
           <div className="row">
             <strong>
-              {num(confirmedCount)} of {num(rows.length)} confirmed
+              {t('er.confirmedOf', num(confirmedCount) ?? '', num(rows.length) ?? '')}
             </strong>
             <span className="spacer" />
             <button
               type="button"
               disabled={busy || readyForBulk.length === 0}
               onClick={() => setConfirmModal({ rows: readyForBulk })}
-              title="Writes every row that has a figure and, where the variance is large, a reason"
+              title={t('er.bulkTitle')}
             >
-              <IconCheck size={16} /> Confirm {num(readyForBulk.length)} remaining
+              <IconCheck size={16} /> {t('er.confirmRemaining', num(readyForBulk.length) ?? '')}
             </button>
             <button
               type="button"
@@ -477,7 +477,7 @@ export function ExtractionReview() {
               disabled={busy || outstanding.length > 0}
               onClick={() => setSubmitModal(true)}
             >
-              <IconSend size={16} /> Submit to the Department
+              <IconSend size={16} /> {t('er.submitToDept')}
             </button>
           </div>
 
@@ -488,19 +488,18 @@ export function ExtractionReview() {
           >
             {pasteNote
               ? pasteNote.text
-              : 'Figures in a spreadsheet? Copy the column and paste it into the first box: it fills the rows below in order. Or copy two columns, code and figure, to match by code.'}
+              : t('er.pasteHint')}
           </p>
 
           {outstanding.length > 0 ? (
             <p className="small muted" style={{ marginTop: 'var(--space-2)' }}>
-              Every target needs either a confirmed result or a recorded reason for having none
-              before the period can be submitted.
+              {t('er.everyTargetNeeds')}
               {readyForBulk.length < outstanding.length
                 ? ' ' +
                   (outstanding.length - readyForBulk.length === 1
-                    ? 'One row still needs'
-                    : num(outstanding.length - readyForBulk.length) + ' rows still need') +
-                  ' a figure, a reason for a shortfall past twenty percent, or a reason for having no result.'
+                    ? t('er.oneRowNeeds')
+                    : t('er.nRowsNeed', num(outstanding.length - readyForBulk.length) ?? '')) +
+                  t('er.needsWhat')
                 : null}
               {readyForBulk.length < outstanding.length ? (
                 <>
@@ -515,7 +514,7 @@ export function ExtractionReview() {
                       el?.querySelector<HTMLElement>('input, textarea')?.focus({ preventScroll: true });
                     }}
                   >
-                    Go to the first one
+                    {t('er.goToFirst')}
                   </button>
                 </>
               ) : null}
@@ -534,7 +533,7 @@ export function ExtractionReview() {
             live.refresh();
             return true;
           } catch (e) {
-            setActionError(e instanceof Error ? e.message : 'The reply was not sent.');
+            setActionError(e instanceof Error ? e.message : t('sr.replyNotSent'));
             return false;
           }
         }}
@@ -553,8 +552,8 @@ export function ExtractionReview() {
         <Modal
           title={
             confirmModal.rows.length === 1
-              ? 'Confirm this figure'
-              : 'Confirm ' + confirmModal.rows.length + ' figures'
+              ? t('er.confirmOne')
+              : t('er.confirmN', confirmModal.rows.length)
           }
           onClose={() => {
             setConfirmModal(null);
@@ -570,7 +569,7 @@ export function ExtractionReview() {
                 }}
                 disabled={busy}
               >
-                Not yet
+                {t('er.notYet')}
               </button>
               <button
                 type="button"
@@ -579,17 +578,19 @@ export function ExtractionReview() {
                 onClick={() => void writeRows(confirmModal.rows)}
               >
                 {busy ? <IconSpinner size={16} className="spin" /> : <IconCheck size={16} />}
-                Confirm
+                {t('reporter.confirm')}
               </button>
             </>
           }
         >
           <p>
-            Confirming writes{' '}
-            {confirmModal.rows.length === 1 ? 'this figure' : 'these figures'} as this entity's
-            reported results, <strong>in your name</strong>, and{' '}
-            <strong>they cannot be edited afterwards</strong>. Corrections happen by a reviewer
-            returning the submission, and the original row and its author stay on the record.
+            {t('er.confirmBodyA')}
+            {confirmModal.rows.length === 1 ? t('er.thisFigure') : t('er.theseFigures')}
+            {t('er.confirmBodyB')}
+            <strong>{t('er.inYourName')}</strong>
+            {t('er.confirmBodyC')}
+            <strong>{t('er.cannotBeEdited')}</strong>
+            {t('er.confirmBodyD')}
           </p>
           <ul className="er-confirm-list">
             {confirmModal.rows.map((r) => {
@@ -597,69 +598,65 @@ export function ExtractionReview() {
               return (
                 <li key={r.targetId}>
                   <span className="mono">{r.indicatorRef}</span>
-                  <strong>{dr.noResult ? 'no result' : num(Number(dr.value))}</strong>
+                  <strong>{dr.noResult ? t('er.noResultShort') : num(Number(dr.value))}</strong>
                   <span className="muted small">
-                    {r.sourceLocation ? 'from ' + r.sourceLocation : 'entered by hand'}
+                    {r.sourceLocation ? t('er.fromCell', r.sourceLocation) : t('er.enteredByHand')}
                   </span>
                   {needsExplanation(r, dr.noResult ? null : Number(dr.value)) ? (
-                    <span className="small">reason given</span>
+                    <span className="small">{t('er.reasonGiven')}</span>
                   ) : null}
                 </li>
               );
             })}
           </ul>
           <p className="small muted">
-            Figures with no evidence attached will show to the Department as unverifiable, which is
-            different from unverified. Evidence may still be attached after confirming.
+            {t('er.unverifiableNote')}
           </p>
         </Modal>
       ) : null}
 
       {submitModal ? (
         <Modal
-          title={'Submit ' + d.period.label + ' to the Department'}
+          title={t('er.submitTitle', d.period.label)}
           onClose={() => setSubmitModal(false)}
           footer={
             <>
               <button type="button" onClick={() => setSubmitModal(false)} disabled={busy}>
-                Not yet
+                {t('er.notYet')}
               </button>
               <button type="button" className="primary" disabled={busy} onClick={() => void submitPeriod()}>
                 {busy ? <IconSpinner size={16} className="spin" /> : <IconSend size={16} />}
-                Submit
+                {t('common.submit')}
               </button>
             </>
           }
         >
           <ul className="er-summary">
             <li>
-              <strong>{num(rows.length)}</strong> targets
+              <strong>{num(rows.length)}</strong> {t('er.summaryTargets')}
             </li>
             <li>
-              <strong>{num(confirmedCount - noResultRows)}</strong> with a confirmed result
+              <strong>{num(confirmedCount - noResultRows)}</strong> {t('er.summaryConfirmed')}
             </li>
             <li>
-              <strong>{num(noResultRows)}</strong> recorded as having no result, with reasons
+              <strong>{num(noResultRows)}</strong> {t('er.summaryNoResult')}
             </li>
             <li>
-              <strong>{num(withEvidence)}</strong> with evidence attached
+              <strong>{num(withEvidence)}</strong> {t('er.summaryEvidence')}
             </li>
             <li>
-              <strong>{num(rows.length - withEvidence)}</strong> with no evidence, which the
-              Department will see as unverifiable
+              <strong>{num(rows.length - withEvidence)}</strong> {t('er.summaryNoEvidence')}
             </li>
           </ul>
           <p>
             {d.period.daysRemaining !== null && d.period.daysRemaining >= 0
-              ? 'Submitting today, ' +
-                d.period.daysRemaining +
-                (d.period.daysRemaining === 1 ? ' day' : ' days') +
-                ' before the due date.'
-              : 'Submitting after the due date. The lateness is recorded rather than blocked, because a system that refuses late submissions produces no data at all.'}
+              ? d.period.daysRemaining === 1
+                ? t('er.submittingTodayOne')
+                : t('er.submittingToday', d.period.daysRemaining)
+              : t('er.submittingLate')}
           </p>
           <p>
-            After this the Department holds it. You will be notified if any figure is returned to
-            you.
+            {t('er.afterThis')}
           </p>
         </Modal>
       ) : null}
@@ -710,6 +707,8 @@ function EvidenceDrawer({
   onClose: () => void;
   onDone: () => void;
 }) {
+  const { t } = useI18n();
+  const L = useLabels();
   const [file, setFile] = useState<File | null>(null);
   const [criteria, setCriteria] = useState<string[]>(['COMPLETENESS']);
   const [busy, setBusy] = useState(false);
@@ -727,7 +726,7 @@ function EvidenceDrawer({
       await api.attachEvidence(submissionId, row.targetId, file, criteria);
       onDone();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'The document was not stored.');
+      setError(e instanceof Error ? e.message : t('er.docNotStored'));
     } finally {
       setBusy(false);
     }
@@ -735,12 +734,12 @@ function EvidenceDrawer({
 
   return (
     <Modal
-      title="Attach evidence"
+      title={t('er.attachTitle')}
       onClose={onClose}
       footer={
         <>
           <button type="button" onClick={onClose} disabled={busy}>
-            Cancel
+            {t('common.cancel')}
           </button>
           <button
             type="button"
@@ -749,7 +748,7 @@ function EvidenceDrawer({
             onClick={() => void upload()}
           >
             {busy ? <IconSpinner size={16} className="spin" /> : <IconPaperclip size={16} />}
-            Attach
+            {t('er.attach')}
           </button>
         </>
       }
@@ -761,15 +760,12 @@ function EvidenceDrawer({
       <p className="ind-note ind-note-plain">
         <IconInfo size={16} />
         <span>
-          The test being satisfied is the Auditor-General's reliability test: can this reported
-          figure be traced back to a source document. An attendance register, a signed report, a
-          photograph or an invoice all satisfy it. A figure with nothing attached is unverifiable,
-          which is worse than unverified.
+          {t('er.reliabilityNote')}
         </span>
       </p>
 
       <div>
-        <label htmlFor="evidence-file">The document</label>
+        <label htmlFor="evidence-file">{t('er.theDocument')}</label>
         <input
           id="evidence-file"
           type="file"
@@ -778,11 +774,11 @@ function EvidenceDrawer({
       </div>
 
       <fieldset className="er-criteria">
-        <legend>Which part of the reliability test it satisfies</legend>
+        <legend>{t('er.whichPart')}</legend>
         {RELIABILITY.map((c) => (
           <label key={c.key} className="ind-check">
             <input type="checkbox" checked={criteria.includes(c.key)} onChange={() => toggle(c.key)} />
-            <span>{c.label}. {c.text}</span>
+            <span>{L.criterionText(c.key)}</span>
           </label>
         ))}
       </fieldset>
@@ -790,7 +786,7 @@ function EvidenceDrawer({
       {error ? <ErrorState message={error} /> : null}
 
       <p className="small muted">
-        Evidence may be attached after submission. Withholding it is worse than attaching it late.
+        {t('er.afterSubmission')}
       </p>
     </Modal>
   );

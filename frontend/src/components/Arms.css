@@ -1,0 +1,15 @@
+/*
+ * The coat of arms sits in three lockups that were built around a square icon slot. The drawing is
+ * taller than it is wide, so the width has to follow the height rather than fill the slot, or the
+ * secretary bird comes out squashed.
+ */
+.arms {
+  display: block;
+  width: auto;
+  aspect-ratio: 315 / 404;
+  flex: none;
+  /* It is a full colour heraldic drawing on a dark green rail and on two cream headers. It carries
+     its own colours in every case, so nothing here tints it. */
+  object-fit: contain;
+  user-select: none;
+}

@@ -21,7 +21,9 @@ import { api } from '../lib/api';
 import { useAsync } from '../lib/useAsync';
 import { can, useAuth } from '../lib/auth';
 import type { PortfolioRow, SubmissionRow } from '../lib/types';
-import { BAND_ORDER, num, reviewPeriod, signalLabel, statusLabel } from '../lib/format';
+import { BAND_ORDER, num, reviewPeriod } from '../lib/format';
+import { useI18n } from '../lib/i18n';
+import { useLabels } from '../lib/labels';
 import { RiskBadge, RiskBadgeSkeleton } from '../components/RiskBadge';
 import { RiskPanel } from '../components/RiskPanel';
 import { EmptyState, ErrorState, Loading } from '../components/Shell';
@@ -32,6 +34,7 @@ type Sort = 'risk' | 'entity' | 'received';
 
 export function ReviewQueue() {
   const { me } = useAuth();
+  const { t } = useI18n();
   const portfolio = useAsync(() => api.portfolio(), []);
   const subs = useAsync(() => api.submissions(), []);
   const periods = useAsync(() => api.periods(), []);
@@ -95,8 +98,8 @@ export function ReviewQueue() {
     <div className="stack">
       <div className="section-head">
         <div>
-          <h1>Review queue</h1>
-          <p className="muted">{period ? period.label : 'No open reporting period'}</p>
+          <h1>{t('review.queue')}</h1>
+          <p className="muted">{period ? period.label : t('review.noOpenPeriod')}</p>
         </div>
         <span className="spacer" />
         {/* Offered only where the API accepts it. An executive reaching this screen by address
@@ -104,29 +107,33 @@ export function ReviewQueue() {
         {can(me, 'REVIEW_SUBMISSIONS') ? (
           <button type="button" onClick={() => void recompute()} disabled={recomputing}>
             {recomputing ? <IconSpinner size={16} className="spin" /> : <IconGauge size={16} />}
-            Recompute scores
+            {t('risk.recompute')}
           </button>
         ) : null}
       </div>
 
       {portfolio.loading ? (
-        <Loading what="the queue" />
+        <Loading what={t('review.what')} />
       ) : (
         <>
           <p className="queue-counts">
-            <strong>{num(counts.total)}</strong> entities, <strong>{num(counts.submitted)}</strong>{' '}
-            submitted, <strong>{num(counts.outstanding)}</strong> outstanding,{' '}
-            <strong>{num(counts.returned)}</strong> returned
+            {t(
+              'review.counts',
+              num(counts.total) ?? '',
+              num(counts.submitted) ?? '',
+              num(counts.outstanding) ?? '',
+              num(counts.returned) ?? '',
+            )}
           </p>
 
           <div className="queue-sort">
             <IconFilter size={16} />
-            <span className="small muted">Sorted by</span>
+            <span className="small muted">{t('review.sortedBy')}</span>
             {(
               [
-                ['risk', 'risk'],
-                ['entity', 'entity'],
-                ['received', 'date received'],
+                ['risk', t('review.byRisk')],
+                ['entity', t('review.byEntity')],
+                ['received', t('review.byDate')],
               ] as [Sort, string][]
             ).map(([key, label]) => (
               <button
@@ -141,14 +148,14 @@ export function ReviewQueue() {
             ))}
             {sort !== 'risk' ? (
               <span className="small muted">
-                Available, and not the default. Risk order is what makes the queue readable.
+                {t('review.sortNote')}
               </span>
             ) : null}
           </div>
 
           {rows.length === 0 ? (
             <EmptyState>
-              No entities are registered. This is an empty register rather than a clean portfolio.
+              {t('review.noEntities')}
             </EmptyState>
           ) : null}
 
@@ -160,9 +167,9 @@ export function ReviewQueue() {
 
           {rows.length > limit ? (
             <p className="queue-more">
-              <span className="muted small">{num(rows.length - limit)} more</span>
+              <span className="muted small">{t('review.more', num(rows.length - limit) ?? '')}</span>
               <button type="button" className="link" onClick={() => setLimit(rows.length)}>
-                show all
+                {t('review.showAll')}
               </button>
             </p>
           ) : null}
@@ -170,7 +177,7 @@ export function ReviewQueue() {
           {subs.error ? (
             <ErrorState
               message={
-                'The queue is ranked, but the submission states could not be read. ' + subs.error
+                t('review.subsUnreadable') + subs.error
               }
               onRetry={subs.reload}
             />
@@ -194,6 +201,9 @@ export function QueueRow({
   sub: SubmissionRow | null;
   onExplain: () => void;
 }) {
+  const { t } = useI18n();
+  const L = useLabels();
+
   // The single highest contributing signal, in the words the risk panel will repeat.
   const top = entity.signals[0] ?? null;
   const bandIndex = BAND_ORDER.indexOf(entity.band);
@@ -205,48 +215,50 @@ export function QueueRow({
         <h2>{entity.name}</h2>
         <span className="spacer" />
         <span className={'chip' + (sub ? '' : ' chip-warn')}>
-          {sub ? statusLabel(sub.status) : 'not submitted'}
+          {sub ? L.status(sub.status) : t('riskScreen.notSubmitted')}
         </span>
       </div>
 
       <p className="queue-factor">
         {top ? (
           <>
-            <strong>Largest factor:</strong> {top.description ?? signalLabel(top.type)}
+            <strong>{t('review.largestFactor')}</strong> {top.description ?? L.signal(top.type)}
           </>
         ) : entity.band === 'NOT_SCORED' ? (
-          'Not yet scored for this period. Recompute to score it.'
+          t('review.notScoredRecompute')
         ) : (
-          'Largest factor: none material.'
+          t('review.factorNoneMaterial')
         )}
       </p>
 
       <p className="queue-meta">
         {sub ? (
           <>
-            {num(sub.confirmedCount)} of {num(sub.targetCount)} targets reported
+            {t('review.metaReported', num(sub.confirmedCount) ?? '', num(sub.targetCount) ?? '')}
             {sub.evidenceCount > 0
-              ? ', ' + num(sub.evidenceCount) + ' evidence documents'
-              : ', no evidence attached'}
+              ? t('review.metaEvidence', num(sub.evidenceCount) ?? '')
+              : t('review.metaNoEvidence')}
             {sub.daysLate !== null && sub.daysLate > 0
-              ? ', submitted ' + sub.daysLate + (sub.daysLate === 1 ? ' day late' : ' days late')
+              ? sub.daysLate === 1
+                ? t('review.metaOneDayLate')
+                : t('review.metaDaysLate', sub.daysLate)
               : null}
           </>
         ) : (
-          'Nothing has been opened for this period.'
+          t('review.nothingOpened')
         )}
       </p>
 
       {sub ? (
         <p className="queue-open">
           <Link className="btn" to={'/review/' + sub.submissionId}>
-            open <IconChevronRight size={16} />
+            {t('review.open')} <IconChevronRight size={16} />
           </Link>
         </p>
       ) : (
         <p className="queue-open">
           <Link className="btn" to={'/portfolio/entity/' + entity.entityId}>
-            see the entity <IconChevronRight size={16} />
+            {t('review.seeEntity')} <IconChevronRight size={16} />
           </Link>
         </p>
       )}

@@ -16,6 +16,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { PeriodView, SubmissionRow } from '../lib/types';
 import { date, num } from '../lib/format';
+import { useI18n } from '../lib/i18n';
 import { Modal } from './Shell';
 import { IconAlert, IconClock, IconUpload } from '../icons';
 import './components.css';
@@ -57,6 +58,7 @@ export function DeadlineAlert({
   subs: SubmissionRow[] | null;
   onReport: (periodId: string) => void;
 }) {
+  const { t } = useI18n();
   const warnings = useMemo(
     () => (periods && subs ? deadlineWarnings(periods, subs) : []),
     [periods, subs],
@@ -87,10 +89,10 @@ export function DeadlineAlert({
   const first = warnings[0];
   const late = first.kind === 'late';
   const title = late
-    ? first.period.label + ' is ' + num(first.days) + (first.days === 1 ? ' day' : ' days') + ' late'
+    ? t(first.days === 1 ? 'dl.titleLateOne' : 'dl.titleLateMany', first.period.label, num(first.days) ?? '')
     : first.days === 0
-      ? first.period.label + ' is due today'
-      : first.period.label + ' is due in ' + num(first.days) + (first.days === 1 ? ' day' : ' days');
+      ? t('dl.titleToday', first.period.label)
+      : t(first.days === 1 ? 'dl.titleDueOne' : 'dl.titleDueMany', first.period.label, num(first.days) ?? '');
 
   return (
     <Modal
@@ -106,10 +108,10 @@ export function DeadlineAlert({
               onReport(first.period.periodId);
             }}
           >
-            <IconUpload size={16} /> Report {first.period.label} now
+            <IconUpload size={16} /> {t('dl.reportNow', first.period.label)}
           </button>
           <button type="button" onClick={() => setOpen(false)}>
-            Later
+            {t('dl.later')}
           </button>
         </div>
       }
@@ -126,24 +128,22 @@ export function DeadlineAlert({
               <strong>
                 {w.period.label}:{' '}
                 {w.kind === 'late'
-                  ? 'due ' + date(w.period.dueDate) + ', ' + num(w.days) + (w.days === 1 ? ' day' : ' days') + ' ago'
-                  : 'due ' + date(w.period.dueDate)}
+                  ? t(w.days === 1 ? 'dl.dueAgoOne' : 'dl.dueAgoMany', date(w.period.dueDate) ?? '', num(w.days) ?? '')
+                  : t('dl.due', date(w.period.dueDate) ?? '')}
               </strong>
               <p className="small" style={{ margin: '4px 0 0' }}>
                 {w.sub
-                  ? num(w.sub.confirmedCount) + ' of ' + num(w.sub.targetCount) + ' figures confirmed, not yet submitted.'
-                  : 'Nothing has been filed for this quarter.'}{' '}
-                {w.kind === 'late'
-                  ? 'The Department sees this in its review queue, and lateness counts towards your risk score.'
-                  : 'Reminders go to your inbox at thirty days, fifteen days and on the last day.'}
+                  ? t('dl.confirmed', num(w.sub.confirmedCount) ?? '', num(w.sub.targetCount) ?? '')
+                  : t('dl.nothingFiled')}{' '}
+                {w.kind === 'late' ? t('dl.lateNote') : t('dl.soonNote')}
               </p>
             </div>
           </div>
         ))}
         <p className="small muted" style={{ margin: 0 }}>
-          {first.period.statutory
-            ? 'This is a statutory deadline under the PFMA.'
-            : 'The date is set by the Department. For a Schedule 3A entity the regulation names no day count, so this instruction is the deadline.'}
+          {/* statutory against departmental. One is law and the other is an instruction, and a
+              translation that renders both as "the rules say" loses the distinction. */}
+          {first.period.statutory ? t('dl.statutory') : t('dl.departmental')}
         </p>
       </div>
     </Modal>

@@ -23,12 +23,16 @@ import type { Capability } from './lib/types';
 import { AppShell } from './components/AppShell';
 import { Loading, NotFoundState } from './components/Shell';
 import { SignIn } from './routes/SignIn';
+import { Landing } from './routes/Landing';
+import { Register } from './routes/Register';
+import { ForgotPassword } from './routes/ForgotPassword';
 import { Dashboard } from './routes/Dashboard';
 import { Entities } from './routes/Entities';
 import { RiskAlerts } from './routes/RiskAlerts';
 import { Workspaces } from './routes/Workspaces';
 import { Documents } from './routes/Documents';
 import { Tasks } from './routes/Tasks';
+import { Logs } from './routes/Logs';
 import { Analytics } from './routes/Analytics';
 import { EntityHome } from './routes/EntityHome';
 import { TemplateUpload } from './routes/TemplateUpload';
@@ -54,7 +58,27 @@ export function App() {
   const tasks = useAsync(() => api.myTasks(), [signedIn, tasksInRail], signedIn && tasksInRail);
 
   if (!ready) return <Loading what="your account" />;
-  if (!me) return <SignIn />;
+
+  /*
+   * Signed out has its own routes now. A visitor arrives on the landing screen rather than on a
+   * form, which is what the design does, and sign in, register and password reset are reachable
+   * addresses rather than states of one component. Anything else redirects to the landing page,
+   * so a deep link into the dashboard while signed out lands somewhere that explains itself.
+   */
+  if (!me) {
+    return (
+      <Routes>
+        <Route path="/" element={<Landing />} />
+        <Route path="/signin" element={<SignIn />} />
+        {/* Reachable so the design can be opened, but not linked from sign in: accounts are
+            issued by the Department, because the entity a reporter may report for is a claim on
+            their token. Registering here applies to be onboarded rather than creating an account. */}
+        <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    );
+  }
 
   const criticalCount = portfolio.data
     ? portfolio.data.filter((r) => r.band === 'CRITICAL').length
@@ -68,6 +92,7 @@ export function App() {
             land in four different places, which is block 2 of the build order. */}
         <Route path="/" element={<Home />} />
         <Route path="/signin" element={<Navigate to="/" replace />} />
+        <Route path="/forgot-password" element={<Navigate to="/" replace />} />
 
         {/* Oversight. */}
         <Route path="/entities" element={<Gate need="VIEW_PORTFOLIO"><Entities /></Gate>} />
@@ -81,6 +106,9 @@ export function App() {
         <Route path="/workspaces" element={<Workspaces />} />
         <Route path="/documents" element={<Documents />} />
         <Route path="/tasks" element={<Tasks />} />
+        {/* The trail is readable by anyone who can read reporting, and a reporter is scoped to
+            their own entity by the API rather than by this gate. */}
+        <Route path="/logs" element={<Gate need="READ_OWN_REPORTING"><Logs /></Gate>} />
 
         {/* The reporter path. No entity selector anywhere: the entity is on the token. */}
         <Route path="/entity" element={<Gate need="SUBMIT_REPORTING"><EntityHome /></Gate>} />

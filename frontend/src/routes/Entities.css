@@ -10,6 +10,7 @@
 .ent-search { flex: 1 1 18rem; }
 
 .filter-pill {
+  --btn-hover-bg: var(--surface-sunk);
   min-height: 34px;
   padding: 6px 13px;
   font-size: 0.8125rem;
@@ -18,6 +19,7 @@
   color: var(--ink-muted);
 }
 .filter-on {
+  --btn-hover-bg: var(--brand-dark);
   background: var(--brand);
   border-color: var(--brand);
   color: #fff;

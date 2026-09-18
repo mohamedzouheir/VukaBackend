@@ -1,0 +1,239 @@
+/* The registration wizard, inside AuthShell. Matches the screenshot. */
+
+.rg { width: 100%; }
+
+/* ---------------------------------------------------------------- stepper */
+
+.rg-steps {
+  list-style: none;
+  display: flex;
+  align-items: flex-start;
+  margin: 0 0 var(--space-6);
+  padding: 0;
+}
+.rg-steps li {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  text-align: center;
+}
+/* The connector runs between marks rather than under the labels. */
+.rg-steps li::before {
+  content: "";
+  position: absolute;
+  top: 17px;
+  right: 50%;
+  width: 100%;
+  height: 1px;
+  background: var(--au-field-line);
+}
+.rg-steps li:first-child::before { display: none; }
+
+.rg-step-mark {
+  position: relative;
+  z-index: 1;
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--au-cream);
+  border: 1px solid var(--au-field-line);
+  color: var(--au-ink-soft);
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+.rg-step-label {
+  font-size: 0.75rem;
+  line-height: 1.3;
+  color: var(--au-ink-soft);
+  max-width: 7rem;
+}
+
+.rg-step-on .rg-step-mark { background: var(--au-green); border-color: var(--au-green); color: #fff; }
+.rg-step-on .rg-step-label { color: var(--au-ink); font-weight: 650; }
+.rg-step-done .rg-step-mark { background: var(--au-gold); border-color: var(--au-gold); color: #241C0E; }
+
+/* ---------------------------------------------------------------- heading */
+
+.rg-title {
+  font-family: "Playfair Display", Georgia, "Times New Roman", serif;
+  font-size: clamp(1.875rem, 2.8vw, 2.5rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--au-ink);
+  margin: 0;
+}
+.rg-sub { margin: var(--space-2) 0 var(--space-4); font-size: 0.9375rem; color: var(--au-ink-soft); }
+
+.rg-notice {
+  display: flex; align-items: flex-start; gap: var(--space-3);
+  margin: 0 0 var(--space-5);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px dashed var(--au-field-line);
+  font-size: 0.75rem;
+  line-height: 1.55;
+  color: var(--au-ink-soft);
+}
+.rg-notice svg { flex: none; margin-top: 1px; color: var(--au-gold); }
+.rg-notice strong { color: var(--au-ink); }
+
+/* ---------------------------------------------------------------- sections */
+
+.rg-section { margin-bottom: var(--space-5); }
+.rg-section-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-4);
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--au-ink);
+}
+.rg-section-icon { color: var(--au-gold); flex: none; display: grid; place-items: center; }
+.rg-section-rule { flex: 1 1 auto; height: 1px; background: var(--au-field-line); }
+
+/* ---------------------------------------------------------------- fields */
+
+.rg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
+.rg-field-wide { grid-column: 1 / -1; }
+
+.rg-field label {
+  display: block;
+  margin-bottom: 7px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--au-ink);
+}
+.rg-req { color: #B3402A; }
+
+.rg-field input,
+.rg-field select {
+  width: 100%;
+  height: 46px;
+  min-height: 46px;
+  padding: 0 14px;
+  font-size: 0.875rem;
+  color: var(--au-ink);
+  background: var(--au-field);
+  border: 1px solid var(--au-field-line);
+  border-radius: var(--radius-sm);
+}
+.rg-field input::placeholder { color: #A8A192; }
+.rg-field input:focus, .rg-field select:focus { border-color: var(--au-green); outline-color: var(--au-green); }
+
+.rg-field-bad input, .rg-field-bad select { border-color: #B3402A; }
+.rg-err { margin: 6px 0 0; font-size: 0.75rem; color: #B3402A; }
+
+.rg-help {
+  margin: var(--space-3) 0 0;
+  font-size: 0.75rem;
+  line-height: 1.55;
+  color: var(--au-ink-soft);
+}
+
+/* ---------------------------------------------------------------- documents */
+
+.rg-docs { display: flex; flex-direction: column; gap: var(--space-2); }
+.rg-doc {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--au-field);
+  border: 1px solid var(--au-field-line);
+  border-radius: var(--radius-sm);
+}
+.rg-doc-icon { color: var(--au-gold); flex: none; }
+.rg-doc > div { flex: 1 1 auto; min-width: 0; }
+.rg-doc strong { display: block; font-size: 0.8125rem; color: var(--au-ink); }
+.rg-doc span { font-size: 0.6875rem; color: var(--au-ink-soft); }
+.rg-doc-btn { min-height: 36px; padding: 7px 14px; font-size: 0.75rem; }
+
+/* ---------------------------------------------------------------- review */
+
+.rg-review { margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3) var(--space-4); }
+.rg-review > div { min-width: 0; }
+.rg-review dt {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--au-ink-soft);
+  margin-bottom: 2px;
+}
+.rg-review dd { margin: 0; font-size: 0.875rem; color: var(--au-ink); overflow-wrap: anywhere; }
+.rg-review-empty { color: #A8A192; font-style: italic; }
+
+/* ---------------------------------------------------------------- actions */
+
+.rg-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--au-field-line);
+  flex-wrap: wrap;
+}
+
+.rg-back {
+  --btn-hover-bg: #fff;
+  display: inline-flex; align-items: center; gap: 8px;
+  min-height: 46px;
+  padding: 11px 20px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--au-ink);
+  background: var(--au-field);
+  border: 1px solid var(--au-field-line);
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+}
+.rg-back:hover { border-color: var(--au-gold); color: var(--au-ink); text-decoration: none; }
+
+.rg-next {
+  --btn-hover-bg: var(--au-green-deep);
+  display: inline-flex; align-items: center; gap: 8px;
+  min-height: 46px;
+  padding: 11px 22px;
+  font-size: 0.875rem;
+  font-weight: 650;
+  color: #fff;
+  background: var(--au-green);
+  border: 1px solid var(--au-green);
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+}
+.rg-next:hover { color: #fff; border-color: var(--au-green-deep); text-decoration: none; }
+.rg-next-arrow { transform: rotate(180deg); }
+
+/* ---------------------------------------------------------------- done */
+
+.rg-done { text-align: left; }
+.rg-done-icon {
+  display: grid; place-items: center;
+  width: 58px; height: 58px; border-radius: 50%;
+  background: #E7EDE8; color: var(--au-green);
+  margin-bottom: var(--space-4);
+}
+.rg-done h2 {
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: 1.75rem; font-weight: 700; color: var(--au-ink);
+  margin-bottom: var(--space-3);
+}
+.rg-done p { margin: 0 0 var(--space-3); font-size: 0.9375rem; color: var(--au-ink-soft); }
+.rg-note { font-size: 0.75rem; line-height: 1.55; }
+
+@media (max-width: 640px) {
+  .rg-grid, .rg-review { grid-template-columns: 1fr; }
+  .rg-step-label { display: none; }
+  .rg-steps li::before { top: 17px; }
+  .rg-actions { flex-direction: column-reverse; align-items: stretch; }
+  .rg-back, .rg-next { justify-content: center; }
+}

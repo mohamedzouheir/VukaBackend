@@ -15,7 +15,9 @@ import { api } from '../lib/api';
 import { can, useAuth } from '../lib/auth';
 import { useAsync } from '../lib/useAsync';
 import type { WorkspaceTask } from '../lib/types';
-import { date, num, statusLabel } from '../lib/format';
+import { num, date } from '../lib/format';
+import { useI18n } from '../lib/i18n';
+import { useLabels } from '../lib/labels';
 import { PageHead } from '../components/AppShell';
 import { EmptyState, ErrorState, Loading, Tile } from '../components/Shell';
 import { IconAlert, IconCheck, IconCheckCircle, IconClock, IconSpinner, IconTasks } from '../icons';
@@ -25,6 +27,8 @@ type Filter = 'OPEN' | 'DONE' | 'ALL';
 export function Tasks() {
   const { me } = useAuth();
   const tasks = useAsync(() => api.myTasks(), []);
+  const { t } = useI18n();
+  const L = useLabels();
   const [filter, setFilter] = useState<Filter>('OPEN');
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -53,27 +57,27 @@ export function Tasks() {
       await api.setTaskStatus(task.id, status);
       tasks.reload();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'The task was not updated.');
+      setError(e instanceof Error ? e.message : t('tasks.notUpdated'));
     } finally {
       setBusy(null);
     }
   }
 
-  if (tasks.loading) return <Loading what="your tasks" />;
+  if (tasks.loading) return <Loading what={t('tasks.what')} />;
   if (tasks.error) return <ErrorState message={tasks.error} onRetry={tasks.reload} />;
 
   return (
     <div>
       <PageHead
         icon={<IconTasks size={26} />}
-        title="Tasks"
-        subtitle="What is assigned to you, and what is waiting on somebody else."
+        title={t('tasks.title')}
+        subtitle={t('tasks.sub')}
       />
 
       <div className="tiles">
-        <Tile icon={<IconTasks size={22} />} value={num(counts.open)} label="Open" sub="Assigned to you" />
-        <Tile icon={<IconAlert size={22} />} tone="critical" value={num(counts.overdue)} label="Overdue" sub="Past the due date" />
-        <Tile icon={<IconCheckCircle size={22} />} tone="ok" value={num(counts.done)} label="Done" sub="Closed by you" />
+        <Tile icon={<IconTasks size={22} />} value={num(counts.open)} label={t('tasks.open')} sub={t('tasks.openSub')} />
+        <Tile icon={<IconAlert size={22} />} tone="critical" value={num(counts.overdue)} label={t('tasks.overdue')} sub={t('tasks.overdueSub')} />
+        <Tile icon={<IconCheckCircle size={22} />} tone="ok" value={num(counts.done)} label={t('tasks.done')} sub={t('tasks.doneSub')} />
       </div>
 
       {error ? <ErrorState message={error} /> : null}
@@ -82,7 +86,7 @@ export function Tasks() {
 
       <div className="card" style={{ marginTop: 'var(--space-4)' }}>
         <div className="section-head">
-          <h2>My tasks</h2>
+          <h2>{t('dash.myTasks')}</h2>
           <span className="spacer" />
           <div className="row" style={{ gap: 6 }}>
             {(['OPEN', 'DONE', 'ALL'] as Filter[]).map((f) => (
@@ -93,7 +97,7 @@ export function Tasks() {
                 aria-pressed={filter === f}
                 onClick={() => setFilter(f)}
               >
-                {f === 'OPEN' ? 'Open' : f === 'DONE' ? 'Done' : 'All'}
+                {f === 'OPEN' ? t('tasks.open') : f === 'DONE' ? t('tasks.done') : t('common.all')}
               </button>
             ))}
           </div>
@@ -101,84 +105,82 @@ export function Tasks() {
 
         {rows.length === 0 ? (
           <EmptyState>
-            {filter === 'OPEN'
-              ? 'Nothing is assigned to you. That is an empty queue rather than nothing to do.'
-              : 'No tasks in this view.'}
+            {filter === 'OPEN' ? t('tasks.empty') : t('tasks.noneInView')}
           </EmptyState>
         ) : (
           <div className="table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th>Task</th>
-                  <th>Assigned by</th>
-                  <th>Due</th>
-                  <th>Status</th>
+                  <th>{t('tasks.colTask')}</th>
+                  <th>{t('tasks.colAssignedBy')}</th>
+                  <th>{t('tasks.colDue')}</th>
+                  <th>{t('tasks.colStatus')}</th>
                   <th />
                 </tr>
               </thead>
               <tbody>
-                {rows.map((t) => {
+                {rows.map((row) => {
                   const overdue =
-                    t.status !== 'DONE' && t.dueDate !== null && t.dueDate < new Date().toISOString().slice(0, 10);
+                    row.status !== 'DONE' && row.dueDate !== null && row.dueDate < new Date().toISOString().slice(0, 10);
                   return (
-                    <tr key={t.id}>
+                    <tr key={row.id}>
                       <td>
                         <strong style={{ display: 'block', color: 'var(--navy-ink)' }}>
-                          {t.title ?? 'Untitled task'}
+                          {row.title ?? t('tasks.untitled')}
                         </strong>
-                        {t.description ? (
-                          <span className="small muted">{t.description}</span>
+                        {row.description ? (
+                          <span className="small muted">{row.description}</span>
                         ) : null}
-                        {t.external ? (
+                        {row.external ? (
                           <span className="chip chip-muted" style={{ marginLeft: 6 }}>
-                            external
+                            {t('tasks.external')}
                           </span>
                         ) : null}
                       </td>
-                      <td className="small muted">{t.createdByName ?? 'not recorded'}</td>
+                      <td className="small muted">{row.createdByName ?? t('common.notRecorded')}</td>
                       <td className="small">
-                        {t.dueDate ? (
+                        {row.dueDate ? (
                           <span className={overdue ? 'row' : 'row muted'} style={{ gap: 5 }}>
                             <IconClock size={14} />
-                            {date(t.dueDate)}
+                            {date(row.dueDate)}
                           </span>
                         ) : (
-                          <em className="muted">no due date</em>
+                          <em className="muted">{t('tasks.noDueDate')}</em>
                         )}
                       </td>
                       <td>
                         <span
                           className={
                             'chip ' +
-                            (t.status === 'DONE'
+                            (row.status === 'DONE'
                               ? 'chip-ok'
                               : overdue
                                 ? 'chip-danger'
                                 : 'chip-muted')
                           }
                         >
-                          {statusLabel(t.status)}
+                          {L.status(row.status)}
                         </span>
                       </td>
                       <td>
-                        {t.status !== 'DONE' ? (
+                        {row.status !== 'DONE' ? (
                           <button
                             type="button"
-                            disabled={busy === t.id}
-                            onClick={() => void setStatus(t, 'DONE')}
+                            disabled={busy === row.id}
+                            onClick={() => void setStatus(row, 'DONE')}
                           >
-                            {busy === t.id ? <IconSpinner size={15} className="spin" /> : <IconCheck size={15} />}
-                            Mark done
+                            {busy === row.id ? <IconSpinner size={15} className="spin" /> : <IconCheck size={15} />}
+                            {t('tasks.markDone')}
                           </button>
                         ) : (
                           <button
                             type="button"
                             className="link"
-                            disabled={busy === t.id}
-                            onClick={() => void setStatus(t, 'OPEN')}
+                            disabled={busy === row.id}
+                            onClick={() => void setStatus(row, 'OPEN')}
                           >
-                            Reopen
+                            {t('tasks.reopen')}
                           </button>
                         )}
                       </td>
@@ -203,6 +205,7 @@ export function Tasks() {
  * picks the entity first, and the people list is then the Department plus that entity's reporters.
  */
 function NewTaskForm({ onCreated }: { onCreated: () => void }) {
+  const { t } = useI18n();
   const { me } = useAuth();
   const ownEntity = me?.entityId ?? null;
   const portfolio = useAsync(() => api.portfolio(), [], ownEntity === null);
@@ -238,13 +241,13 @@ function NewTaskForm({ onCreated }: { onCreated: () => void }) {
         documentId: null,
         submissionId: null,
       });
-      setMessage('Set for ' + (person?.name ?? 'them') + '. It is on their task list now.');
+      setMessage(person?.name ? t('tasks.setFor', person.name) : t('tasks.setForThem'));
       setTitle('');
       setDescription('');
       setDue('');
       onCreated();
     } catch (e) {
-      setFailure(e instanceof Error ? e.message : 'The task was not set.');
+      setFailure(e instanceof Error ? e.message : t('tasks.setFailed'));
     } finally {
       setSaving(false);
     }
@@ -254,7 +257,7 @@ function NewTaskForm({ onCreated }: { onCreated: () => void }) {
     return (
       <div className="row" style={{ marginTop: 'var(--space-4)', gap: 10 }}>
         <button type="button" onClick={() => setOpen(true)}>
-          <IconTasks size={15} /> Set a task
+          <IconTasks size={15} /> {t('tasks.setATask')}
         </button>
         {message ? <span className="small muted" role="status">{message}</span> : null}
       </div>
@@ -271,18 +274,18 @@ function NewTaskForm({ onCreated }: { onCreated: () => void }) {
       }}
     >
       <div className="section-head">
-        <h2>Set a task</h2>
+        <h2>{t('tasks.setATask')}</h2>
         <span className="spacer" />
         <button type="button" className="link" onClick={() => setOpen(false)}>
-          Close
+          {t('tasks.close')}
         </button>
       </div>
 
       {ownEntity === null ? (
         <div>
-          <label htmlFor="task-entity">Entity</label>
+          <label htmlFor="task-entity">{t('an.colEntity')}</label>
           <select id="task-entity" value={entityId} onChange={(e) => setEntityId(e.target.value)}>
-            <option value="">Choose the entity this is about</option>
+            <option value="">{t('tasks.chooseEntity')}</option>
             {(portfolio.data ?? [])
               .slice()
               .sort((a, b) => a.name.localeCompare(b.name))
@@ -296,40 +299,40 @@ function NewTaskForm({ onCreated }: { onCreated: () => void }) {
       ) : null}
 
       <div>
-        <label htmlFor="task-assignee">Assign to</label>
+        <label htmlFor="task-assignee">{t('tasks.assignTo')}</label>
         <select
           id="task-assignee"
           value={assignee}
           disabled={entityId === '' || people.loading}
           onChange={(e) => setAssignee(e.target.value)}
         >
-          <option value="">{people.loading ? 'Loading people' : 'Choose a person'}</option>
+          <option value="">{people.loading ? t('tasks.loadingPeople') : t('tasks.choosePerson')}</option>
           {choices.map((p) => (
             <option key={p.uid} value={p.uid}>
-              {p.name} ({p.dsac ? 'Department' : 'entity'})
+              {p.name} ({p.dsac ? t('tasks.department') : t('tasks.entity')})
             </option>
           ))}
         </select>
         {entityId !== '' && !people.loading && choices.length === 0 ? (
           <p className="small muted">
-            Nobody else has signed in for this entity yet, so there is nobody to assign to.
+            {t('tasks.nobodyToAssign')}
           </p>
         ) : null}
         {people.error ? <p className="field-error">{people.error}</p> : null}
       </div>
 
       <div>
-        <label htmlFor="task-title">What needs doing</label>
+        <label htmlFor="task-title">{t('tasks.whatNeedsDoing')}</label>
         <input id="task-title" type="text" value={title} maxLength={300} onChange={(e) => setTitle(e.target.value)} />
       </div>
 
       <div>
-        <label htmlFor="task-description">Detail (optional)</label>
+        <label htmlFor="task-description">{t('tasks.detail')}</label>
         <textarea id="task-description" value={description} maxLength={2000} onChange={(e) => setDescription(e.target.value)} />
       </div>
 
       <div>
-        <label htmlFor="task-due">Due (optional)</label>
+        <label htmlFor="task-due">{t('tasks.due')}</label>
         <input id="task-due" type="date" value={due} onChange={(e) => setDue(e.target.value)} />
       </div>
 
@@ -339,10 +342,10 @@ function NewTaskForm({ onCreated }: { onCreated: () => void }) {
       <div className="row" style={{ gap: 10 }}>
         <button type="submit" disabled={!ready || saving}>
           {saving ? <IconSpinner size={15} className="spin" /> : <IconCheck size={15} />}
-          Set task
+          {t('tasks.setTask')}
         </button>
         <span className="small muted">
-          Marked external automatically when it crosses between the Department and an entity.
+          {t('tasks.externalNote')}
         </span>
       </div>
     </form>

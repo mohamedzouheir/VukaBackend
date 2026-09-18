@@ -14,6 +14,7 @@
  */
 import type { ChainView } from '../lib/types';
 import { num, rands } from '../lib/format';
+import { useI18n } from '../lib/i18n';
 import { CitationLine } from './CitationLine';
 import './components.css';
 
@@ -24,52 +25,54 @@ interface Props {
 }
 
 export function ChainStrip({ chain, loading, error }: Props) {
+  const { t } = useI18n();
   return (
-    <div className="chain" role="group" aria-label="The accountability chain for this entity">
+    <div className="chain" role="group" aria-label={t('chain.label')}>
       <ChainBox
-        label="Allocated"
+        label={t('chain.allocated')}
         value={rands(chain?.allocated)}
         citation={chain?.allocatedCitation}
         loading={loading}
         error={error}
-        emptyReason="No allocation row for the current financial year."
+        emptyReason={t('chain.noAllocation')}
       />
       <ChainBox
-        label="Promised"
+        label={t('chain.promised')}
         value={
           chain?.promisedTargetCount === null || chain?.promisedTargetCount === undefined
             ? null
-            : num(chain.promisedTargetCount) +
-              (chain.promisedTargetCount === 1 ? ' target' : ' targets')
+            : chain.promisedTargetCount === 1
+              ? t('chain.oneTarget')
+              : t('chain.targets', num(chain.promisedTargetCount) ?? '')
         }
         citation={chain?.promisedCitation}
         loading={loading}
         error={error}
-        emptyReason="No targets registered for the year. An administrator loads these from the tabled Annual Performance Plan."
+        emptyReason={t('chain.noTargets')}
       />
       <ChainBox
-        label="Reported"
+        label={t('chain.reported')}
         value={
           chain?.reportedCount === null || chain?.reportedCount === undefined
             ? null
-            : num(chain.reportedCount) + ' of ' + num(chain.reportedOfCount)
+            : t('chain.countOf', num(chain.reportedCount) ?? '', num(chain.reportedOfCount) ?? '')
         }
         citation={chain?.reportedCitation}
         loading={loading}
         error={error}
-        emptyReason="Nothing reported for this period yet."
+        emptyReason={t('chain.nothingReported')}
       />
       <ChainBox
-        label="Verified"
+        label={t('chain.verified')}
         value={
           chain?.verifiedCount === null || chain?.verifiedCount === undefined
             ? null
-            : num(chain.verifiedCount) + ' of ' + num(chain.verifiedOfCount)
+            : t('chain.countOf', num(chain.verifiedCount) ?? '', num(chain.verifiedOfCount) ?? '')
         }
         citation={chain?.verifiedCitation}
         loading={loading}
         error={error}
-        emptyReason="No evidence attached to any reported figure."
+        emptyReason={t('chain.noEvidence')}
       />
     </div>
   );
@@ -90,6 +93,7 @@ function ChainBox({
   error?: string | null;
   emptyReason: string;
 }) {
+  const { t } = useI18n();
   return (
     <div className="chain-box">
       <h4>{label}</h4>
@@ -99,7 +103,7 @@ function ChainBox({
       ) : error ? (
         <>
           <p className="chain-value chain-dash">&mdash;</p>
-          <p className="small muted">Could not read the document store.</p>
+          <p className="small muted">{t('chain.storeUnreadable')}</p>
         </>
       ) : value === null ? (
         <>

@@ -17,55 +17,70 @@
  *   .prov-empty is deliberately styled as prose rather than as a number.
  */
 :root {
-  /* ---------- canvas and rail ---------- */
-  --navy-900: #071A38;   /* rail, darkest */
-  --navy-800: #0A1F44;   /* rail body */
-  --navy-700: #12305F;   /* rail hover */
-  --navy-ink: #0F2D5C;   /* headings on light */
+  /* ---------- canvas and rail ----------
+   *
+   * The Department's own colours, the same ones the landing page uses. The rail is the deep
+   * green from the sign in cards, the canvas is the cream behind the pillars, and gold is the
+   * accent that marks where you are.
+   */
+  --navy-900: #0C2019;   /* rail, darkest. Names kept so nothing downstream has to change. */
+  --navy-800: #14332B;   /* rail body, the departmental green */
+  --navy-700: #1D453A;   /* rail hover */
+  --navy-ink: #14332B;   /* headings on light */
 
-  --canvas: #F4F8FD;     /* page behind the cards */
+  --canvas: #F7F3EA;     /* page behind the cards, the landing cream */
   --surface: #FFFFFF;    /* cards */
-  --surface-sunk: #F7FAFE;
-  --rule: #E4ECF7;       /* borders, dividers */
-  --rule-strong: #CFDCEC;
+  --surface-sunk: #FBF9F3;
+  --rule: #E7E0D1;       /* borders, dividers, warm rather than blue */
+  --rule-strong: #D6CCB8;
 
-  --ink: #1F2D3D;        /* body text */
-  --ink-muted: #6B7C93;  /* secondary, citations */
-  --ink-faint: #9AABC0;
+  --ink: #1C1A16;        /* body text */
+  --ink-muted: #5F5A4E;  /* secondary, citations. 5.6:1 on cream */
+  --ink-faint: #8C8574;
 
-  --rail-text: #C2D2E8;
-  --rail-text-dim: #8AA0BF;
+  --rail-text: #CFDAD2;
+  --rail-text-dim: #93A69B;
 
-  /* ---------- accent ---------- */
-  --brand: #1D6BF3;
-  --brand-dark: #1557C7;
-  --brand-wash: #E8F0FE;
+  /* ---------- accent ----------
+   *
+   * Green is the action colour and gold is the marker. Gold never carries text at body size:
+   * it is about 3:1 on white, which is a border and not a paragraph.
+   */
+  --brand: #14332B;
+  --brand-dark: #0C2019;
+  --brand-wash: #E9EFEA;
 
-  /* ---------- meaning ---------- */
-  --ok: #16A34A;
-  --ok-wash: #E7F7EE;
-  --warn: #D97706;
-  --warn-wash: #FEF3E2;
-  --danger: #DC2626;
-  --danger-wash: #FDECEC;
-  --purple: #7C5CFC;
-  --purple-wash: #F1EDFE;
+  --gold: #B08D57;
+  --gold-dark: #94733F;
+  --gold-light: #D4B587;
+  --gold-wash: #F6EFE2;
 
-  /* Borders for the washes. Every callout in the product draws from these, so a notice cannot
-     end up a different colour on one screen than on another. */
-  --ok-border: #BFE6D0;
-  --warn-border: #F5DEB8;
-  --danger-border: #F3C9C9;
-  --high-wash: #FFF1E6;
-  --teal: #0E9AA7;
-  --teal-wash: #E4F6F8;
+  /* ---------- meaning ----------
+   *
+   * Warmed slightly to sit on cream rather than on a blue white, and checked against it.
+   */
+  --ok: #15803D;
+  --ok-wash: #E8F2EA;
+  --warn: #B45309;
+  --warn-wash: #FBF0DF;
+  --danger: #B91C1C;
+  --danger-wash: #F9E9E7;
+  --purple: #6D5AA8;
+  --purple-wash: #EFEBF6;
+  --teal: #0F7A73;
+  --teal-wash: #E4F1EF;
+
+  --ok-border: #C3DCCB;
+  --warn-border: #EBD6AE;
+  --danger-border: #E9C9C4;
+  --high-wash: #FBEADB;
 
   /* ---------- risk bands, unchanged in meaning ---------- */
   --band-low: #16A34A;
-  --band-medium: #D97706;
-  --band-high: #EA580C;
-  --band-critical: #DC2626;
-  --band-none: #6B7C93;
+  --band-medium: #C2740A;
+  --band-high: #DC5A18;
+  --band-critical: #C1272D;
+  --band-none: #8C8574;
 
   /* ---------- space and shape ---------- */
   --space-1: 4px;
@@ -81,8 +96,8 @@
   --radius-lg: 16px;
   --radius-pill: 999px;
 
-  --shadow-card: 0 1px 2px rgba(15, 45, 92, 0.04), 0 1px 3px rgba(15, 45, 92, 0.06);
-  --shadow-raised: 0 4px 12px rgba(15, 45, 92, 0.08);
+  --shadow-card: 0 1px 2px rgba(28, 26, 22, 0.04), 0 1px 3px rgba(28, 26, 22, 0.06);
+  --shadow-raised: 0 4px 12px rgba(28, 26, 22, 0.09);
 
   --rail-width: 240px;
   --topbar-height: 68px;
@@ -195,6 +210,14 @@ hr.rule { border: 0; border-top: 1px solid var(--rule); margin: var(--space-4) 0
 /* ---------- buttons ---------- */
 
 button, .btn {
+  /*
+   * The hover fill, as a property rather than a rule. A variant sets this on itself and the
+   * single hover rule below picks it up, so no variant has to out-specify the base. Setting a
+   * background directly in a variant's :hover does not work: button:hover:not(:disabled) scores
+   * higher than .thing:hover and silently wins.
+   */
+  --btn-hover-bg: var(--surface-sunk);
+
   font: inherit;
   font-size: 0.875rem;
   font-weight: 600;
@@ -212,25 +235,30 @@ button, .btn {
   text-decoration: none;
   transition: background 120ms ease, border-color 120ms ease;
 }
-button:hover:not(:disabled), .btn:hover { background: var(--surface-sunk); text-decoration: none; }
+button:hover:not(:disabled), .btn:hover { background: var(--btn-hover-bg); text-decoration: none; }
 button:disabled { opacity: 0.45; cursor: not-allowed; }
 
 .btn-primary, button.primary {
+  --btn-hover-bg: var(--brand-dark);
   background: var(--brand);
   border-color: var(--brand);
   color: #fff;
-  box-shadow: 0 1px 2px rgba(29, 107, 243, 0.3);
+  box-shadow: 0 1px 2px rgba(20, 51, 43, 0.28);
 }
-.btn-primary:hover, button.primary:hover:not(:disabled) { background: var(--brand-dark); border-color: var(--brand-dark); }
+.btn-primary:hover, button.primary:hover:not(:disabled) { border-color: var(--brand-dark); }
 
-button.danger { border-color: var(--danger); color: var(--danger); }
-button.danger:hover:not(:disabled) { background: var(--danger-wash); }
+button.danger {
+  --btn-hover-bg: var(--danger-wash);
+  border-color: var(--danger);
+  color: var(--danger);
+}
 
 button.link {
+  --btn-hover-bg: transparent;
   border: 0; background: none; padding: 0; min-height: 0;
   color: var(--brand); font-weight: 600; text-decoration: none;
 }
-button.link:hover:not(:disabled) { background: none; text-decoration: underline; }
+button.link:hover:not(:disabled) { text-decoration: underline; }
 
 @media (max-width: 640px) {
   button, .btn { min-height: 44px; }
@@ -474,8 +502,8 @@ td.num, th.num { overflow-wrap: normal; }
 /* The state line and the quote keep a left rule, because they are the one sentence on the
    screen that says who holds the work. */
 .state-line { border-left: 3px solid var(--rule-strong); }
-.state-line-active { border-left-color: var(--brand); background: var(--brand-wash); border-color: #CFE0FB; }
-.portfolio-quote { border-left: 3px solid var(--brand); background: var(--brand-wash); border-color: #CFE0FB; }
+.state-line-active { border-left-color: var(--brand); background: var(--brand-wash); border-color: var(--rule-strong); }
+.portfolio-quote { border-left: 3px solid var(--brand); background: var(--brand-wash); border-color: var(--rule-strong); }
 .uc-absent { border-left: 3px solid var(--ink-faint); }
 
 /* The evidence chip is a notice only when it is warning. Otherwise it is a line of text. */

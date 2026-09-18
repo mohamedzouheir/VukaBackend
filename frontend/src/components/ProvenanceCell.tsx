@@ -14,6 +14,7 @@
 import { IconExternal, IconSheet } from '../icons';
 import { splitSourceCell } from '../lib/format';
 import { openFile } from '../lib/api';
+import { useI18n } from '../lib/i18n';
 import './components.css';
 
 interface Props {
@@ -35,15 +36,19 @@ export function ProvenanceCell({
   sourceLocation,
   documentUrl,
   linkDisabledReason,
-  emptyText = 'No result reported',
+  emptyText,
   size = 'md',
 }: Props) {
+  const { t } = useI18n();
   const source = splitSourceCell(sourceLocation);
+  /* Defaulted here rather than in the signature, because the default is now a lookup and a
+     default parameter would be evaluated before the hook has a language to look it up in. */
+  const empty = emptyText ?? t('common.noResultReported');
 
   return (
     <span className={'prov prov-' + size}>
       {value === null ? (
-        <span className="prov-empty">{emptyText}</span>
+        <span className="prov-empty">{empty}</span>
       ) : (
         <span className="prov-value">{value}</span>
       )}
@@ -54,7 +59,7 @@ export function ProvenanceCell({
             className="prov-source"
             href={documentUrl}
             onClick={(e) => openFile(e, documentUrl, 'source.xlsx')}
-            title={'Downloads the uploaded file. This value is in ' + (source.sheet ?? 'the sheet') + ', cell ' + source.cell + '.'}
+            title={t('prov.download', source.sheet ?? t('prov.theSheet'), source.cell)}
           >
             <IconSheet size={14} />
             <span>
@@ -76,7 +81,7 @@ export function ProvenanceCell({
       ) : value === null ? null : (
         <span className="prov-source prov-source-flat prov-byhand">
           <IconSheet size={14} />
-          <span>Entered by hand, no source cell</span>
+          <span>{t('prov.byHand')}</span>
         </span>
       )}
     </span>

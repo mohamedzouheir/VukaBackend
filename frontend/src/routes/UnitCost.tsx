@@ -15,12 +15,16 @@ import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useAsync } from '../lib/useAsync';
-import { num, rands, sectorLabel, signedPercent } from '../lib/format';
+import { num, rands, signedPercent } from '../lib/format';
+import { useI18n } from '../lib/i18n';
+import { useLabels } from '../lib/labels';
 import { EmptyState, ErrorState, Loading, NotFoundState } from '../components/Shell';
 import { IconArrowLeft, IconEyeOff, IconScale } from '../icons';
 import './UnitCost.css';
 
 export function UnitCost() {
+  const { t } = useI18n();
+  const L = useLabels();
   const { entityId } = useParams<{ entityId: string }>();
   const [selected, setSelected] = useState<string | null>(null);
 
@@ -28,9 +32,9 @@ export function UnitCost() {
   const costs = useAsync(() => api.unitCost(entityId!), [entityId]);
   const peers = useAsync(() => api.peers(entityId!), [entityId]);
 
-  if (entity.notFound) return <NotFoundState what="entity" />;
+  if (entity.notFound) return <NotFoundState what={t('common.entity')} />;
   if (entity.error) return <ErrorState message={entity.error} onRetry={entity.reload} />;
-  if (entity.loading) return <Loading what="this entity" />;
+  if (entity.loading) return <Loading what={t('uc.whatEntity')} />;
 
   const e = entity.data!;
   const rows = costs.data ?? [];
@@ -46,25 +50,23 @@ export function UnitCost() {
 
       <div className="section-head">
         <div>
-          <h1>Unit cost</h1>
+          <h1>{t('uc.title')}</h1>
           <p className="muted">{e.name}</p>
         </div>
       </div>
 
       {costs.loading ? (
-        <Loading what="the unit cost figures" />
+        <Loading what={t('uc.whatFigures')} />
       ) : costs.error ? (
         <ErrorState message={costs.error} onRetry={costs.reload} />
       ) : rows.length === 0 ? (
         <EmptyState>
-          No indicator for this entity carries both a planned unit cost and a reported spend, so
-          there is nothing to compare. A unit cost with only one side of the division is not a unit
-          cost, and it is left absent rather than estimated.
+          {t('uc.nothingToCompare')}
         </EmptyState>
       ) : (
         <>
           <div className="uc-picker">
-            <label htmlFor="uc-indicator">Indicator</label>
+            <label htmlFor="uc-indicator">{t('uc.indicator')}</label>
             <select
               id="uc-indicator"
               value={current?.indicatorRef ?? ''}
@@ -83,34 +85,34 @@ export function UnitCost() {
               {/* Against its own plan. The strongest of the three, because both sides come
                   from this entity's own documents. */}
               <section className="card">
-                <h2 className="uc-heading">Against its own plan</h2>
+                <h2 className="uc-heading">{t('uc.againstPlan')}</h2>
                 <dl className="uc-calc">
                   <div>
-                    <dt>Planned</dt>
+                    <dt>{t('uc.planned')}</dt>
                     <dd>
-                      {rands(current.plannedSpend) ?? 'no apportioned spend'} over{' '}
-                      {num(current.plannedVolume) ?? 'no planned volume'}{' '}
-                      {current.unitOfMeasure ?? 'units'}
+                      {rands(current.plannedSpend) ?? t('uc.noApportionedSpend')} {t('uc.over')}{' '}
+                      {num(current.plannedVolume) ?? t('uc.noPlannedVolume')}{' '}
+                      {current.unitOfMeasure ?? t('uc.units')}
                       <strong>
                         {' = '}
-                        {rands(current.plannedUnitCost) ?? 'not computable'}
+                        {rands(current.plannedUnitCost) ?? t('uc.notComputable')}
                       </strong>
                     </dd>
                   </div>
                   <div>
-                    <dt>Actual</dt>
+                    <dt>{t('uc.actual')}</dt>
                     <dd>
-                      {rands(current.actualSpend) ?? 'no reported spend'} over{' '}
-                      {num(current.actualVolume) ?? 'no reported delivery'}{' '}
-                      {current.unitOfMeasure ?? 'units'}
+                      {rands(current.actualSpend) ?? t('uc.noReportedSpend')} {t('uc.over')}{' '}
+                      {num(current.actualVolume) ?? t('uc.noReportedDelivery')}{' '}
+                      {current.unitOfMeasure ?? t('uc.units')}
                       <strong>
                         {' = '}
-                        {rands(current.actualUnitCost) ?? 'not computable'}
+                        {rands(current.actualUnitCost) ?? t('uc.notComputable')}
                       </strong>
                     </dd>
                   </div>
                   <div>
-                    <dt>Variance</dt>
+                    <dt>{t('reporter.variance')}</dt>
                     <dd
                       className={
                         current.variancePercent !== null && current.variancePercent > 0
@@ -118,26 +120,23 @@ export function UnitCost() {
                           : undefined
                       }
                     >
-                      {signedPercent(current.variancePercent, 1) ?? 'not computable'}
-                      {current.variancePercent !== null ? ' per unit' : null}
+                      {signedPercent(current.variancePercent, 1) ?? t('uc.notComputable')}
+                      {current.variancePercent !== null ? ' ' + t('uc.perUnit') : null}
                       <span className="small muted"> {current.verdict.toLowerCase().replace(/_/g, ' ')}</span>
                     </dd>
                   </div>
                 </dl>
                 <p className="small muted">
-                  The numerator and the denominator are both shown. A unit cost with its working
-                  hidden is a number nobody can check, and this product does not put those on a
-                  screen.
+                  {t('uc.workingShown')}
                 </p>
               </section>
 
               {/* Against its own history. */}
               <section className="card">
-                <h2 className="uc-heading">Against its own history</h2>
+                <h2 className="uc-heading">{t('uc.againstHistory')}</h2>
                 {current.history.length === 0 ? (
                   <EmptyState>
-                    No prior year unit cost on record for this indicator. A single year is not a
-                    trend and is not presented as one.
+                    {t('uc.noPriorYear')}
                   </EmptyState>
                 ) : (
                   <ul className="uc-history">
@@ -145,9 +144,9 @@ export function UnitCost() {
                       <li key={h.financialYear}>
                         <span className="uc-year">{h.financialYear}</span>
                         <span className="uc-figure">
-                          {rands(h.unitCost) ?? 'no figure'}
+                          {rands(h.unitCost) ?? t('uc.noFigure')}
                           {h.unitCost !== null && current.unitOfMeasure
-                            ? ' per ' + singular(current.unitOfMeasure)
+                            ? ' ' + t('uc.per', singular(current.unitOfMeasure))
                             : null}
                         </span>
                       </li>
@@ -162,33 +161,35 @@ export function UnitCost() {
 
       {/* Against sector peers. The sector bound is not a filter the user set. */}
       <section className="card">
-        <h2 className="uc-heading">Against sector peers</h2>
+        <h2 className="uc-heading">{t('uc.againstPeers')}</h2>
         {peers.loading ? (
-          <Loading what="the peer comparison" />
+          <Loading what={t('uc.whatPeers')} />
         ) : peers.notFound ? (
-          <EmptyState>No peer comparison is available for this entity.</EmptyState>
+          <EmptyState>{t('uc.noPeerComparison')}</EmptyState>
         ) : peers.error ? (
           <ErrorState message={peers.error} onRetry={peers.reload} />
         ) : peers.data && peers.data.peerCount === 0 ? (
           <EmptyState>
-            No comparable entity in the {sectorLabel(peers.data.sector)} sector carries a reported
-            unit cost, so there is no peer group. A median of one is not a median, and the
-            comparison is withheld rather than drawn from a single other body.
+            {t('uc.noPeerGroup', L.sector(peers.data.sector))}
           </EmptyState>
         ) : peers.data ? (
           <>
             <p className="small muted">
-              {sectorLabel(peers.data.sector)} sector, {num(peers.data.peerCount)} comparable{' '}
-              {peers.data.peerCount === 1 ? 'entity' : 'entities'}
+              {t(
+                'uc.peerLine',
+                L.sector(peers.data.sector),
+                num(peers.data.peerCount) ?? '',
+                peers.data.peerCount === 1 ? t('uc.entityWord') : t('uc.entitiesWord'),
+              )}
             </p>
             <ul className="uc-peers">
               <li>
-                <span>This entity</span>
-                <strong>{rands(peers.data.entityMedianUnitCost) ?? 'no reported unit cost'}</strong>
+                <span>{t('uc.thisEntity')}</span>
+                <strong>{rands(peers.data.entityMedianUnitCost) ?? t('uc.noReportedUnitCost')}</strong>
               </li>
               <li>
-                <span>Peer median</span>
-                <strong>{rands(peers.data.peerMedianUnitCost) ?? 'not computable'}</strong>
+                <span>{t('uc.peerMedian')}</span>
+                <strong>{rands(peers.data.peerMedianUnitCost) ?? t('uc.notComputable')}</strong>
               </li>
             </ul>
             <p className="small muted">{peers.data.note}</p>
@@ -200,17 +201,16 @@ export function UnitCost() {
       <section className="uc-absent">
         <p className="row">
           <IconEyeOff size={18} />
-          <strong>The comparison this system does not offer</strong>
+          <strong>{t('uc.absentHead')}</strong>
         </p>
         <p>
-          Comparison is within the {peers.data ? sectorLabel(peers.data.sector).toLowerCase() : "entity's own"}{' '}
-          sector only. There is no view that compares cost per outcome across sectors, because a
-          library item and a boxing licence are not commensurable outputs. The system does not offer
-          that comparison and there is no API parameter that produces it.
+          {t(
+            'uc.absentBody',
+            peers.data ? L.sector(peers.data.sector).toLowerCase() : t('uc.ownSector'),
+          )}
         </p>
         <p className="small muted">
-          <IconScale size={14} /> The restriction is built into the endpoint rather than into a
-          guideline. That is the difference between a decision and a warning label.
+          <IconScale size={14} /> {t('uc.absentNote')}
         </p>
       </section>
     </div>

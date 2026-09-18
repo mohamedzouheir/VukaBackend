@@ -12,7 +12,9 @@
  */
 import { useEffect, useRef } from 'react';
 import type { PortfolioRow, SignalView } from '../lib/types';
-import { bandColour, bandWord, num, signalLabel } from '../lib/format';
+import { bandColour, num } from '../lib/format';
+import { useI18n } from '../lib/i18n';
+import { useLabels } from '../lib/labels';
 import { IconAlert, IconX } from '../icons';
 import './RiskPanel.css';
 
@@ -35,6 +37,8 @@ interface Props {
 }
 
 export function RiskPanel({ risk, entityName, computedAt, loading, error, onClose }: Props) {
+  const { t } = useI18n();
+  const L = useLabels();
   const panel = useRef<HTMLDivElement>(null);
   const closeButton = useRef<HTMLButtonElement>(null);
 
@@ -70,9 +74,7 @@ export function RiskPanel({ risk, entityName, computedAt, loading, error, onClos
           <div>
             <h2 id="risk-panel-title">{entityName}</h2>
             <p className="small muted panel-asof">
-              {computedAt
-                ? 'Computed ' + computedAt
-                : 'Computed from the signals stored for this reporting period.'}
+              {computedAt ? t('risk.computedAt', computedAt) : t('risk.computedFrom')}
             </p>
           </div>
           <div className="row">
@@ -84,12 +86,12 @@ export function RiskPanel({ risk, entityName, computedAt, loading, error, onClos
                   aria-hidden="true"
                 />
                 <strong>{num(risk.score)}</strong>
-                <span className="risk-word">{bandWord(risk.band)}</span>
+                <span className="risk-word">{L.band(risk.band)}</span>
               </span>
             ) : null}
             <button type="button" className="panel-close" onClick={onClose} ref={closeButton}>
               <IconX size={18} />
-              <span className="visually-hidden">Close the risk explanation</span>
+              <span className="visually-hidden">{t('risk.closeExplain')}</span>
             </button>
           </div>
         </div>
@@ -126,13 +128,10 @@ export function RiskPanel({ risk, entityName, computedAt, loading, error, onClos
         {!loading && signals.length > 0 ? (
           <div className="panel-foot">
             <div className="panel-sum">
-              <span className="muted small">Total</span>
+              <span className="muted small">{t('risk.total')}</span>
               <strong>{num(risk?.score, { decimals: 1 })}</strong>
             </div>
-            <p className="small muted panel-method">
-              Weights are fixed and published. Bands: 25 medium, 50 high, 70 critical. This score is
-              arithmetic, not a prediction, and can be reproduced by hand from the figures above.
-            </p>
+            <p className="small muted panel-method">{t('risk.method')}</p>
           </div>
         ) : null}
       </div>
@@ -149,6 +148,9 @@ function SignalRow({
   weight: number;
   signal: SignalView | null;
 }) {
+  const { t } = useI18n();
+  const L = useLabels();
+
   const contribution = signal?.contribution ?? null;
   // The bar is scaled against the signal's own maximum contribution, which is its weight
   // times one hundred. A bar scaled against the total would make every signal look small.
@@ -158,11 +160,11 @@ function SignalRow({
   return (
     <div className="signal">
       <div className="signal-head">
-        <h3>{signalLabel(type)}</h3>
+        <h3>{L.signal(type)}</h3>
         <span className="spacer" />
-        <span className="small muted nowrap">weight {weight.toFixed(2)}</span>
+        <span className="small muted nowrap">{t('risk.weight', weight.toFixed(2))}</span>
         <span className="signal-contrib nowrap">
-          contributes {contribution === null ? 'not stored' : num(contribution, { decimals: 1 })}
+          {t('risk.contributes', contribution === null ? t('risk.notStored') : num(contribution, { decimals: 1 }) ?? '')}
         </span>
       </div>
 
@@ -172,7 +174,7 @@ function SignalRow({
 
       {signal ? (
         <>
-          <p className="signal-text">{signal.description ?? 'No description was stored for this signal.'}</p>
+          <p className="signal-text">{signal.description ?? t('risk.noDescription')}</p>
           {signal.value !== null ? (
             <p className="small muted">
               Raw {num(signal.value, { decimals: 2 })}
@@ -183,10 +185,7 @@ function SignalRow({
           ) : null}
         </>
       ) : (
-        <p className="signal-text muted">
-          Not stored for this period. The engine records a signal only where it had an input, and an
-          absent input is treated as absence of evidence rather than as a zero.
-        </p>
+        <p className="signal-text muted">{t('risk.notStoredSignal')}</p>
       )}
     </div>
   );

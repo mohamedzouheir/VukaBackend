@@ -1,47 +1,249 @@
-.signin-page {
-  min-height: 100vh;
+/* The sign in form, inside AuthShell. Matches the screenshot in docs/Front End designs/. */
+
+.si { width: 100%; }
+
+.si-rule { display: block; width: 58px; height: 3px; background: var(--au-gold-rule); margin-bottom: var(--space-4); }
+
+.si-title {
+  font-family: "Playfair Display", Georgia, "Times New Roman", serif;
+  font-size: clamp(2.25rem, 3.4vw, 3rem);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.025em;
+  color: var(--au-ink);
+  margin: 0;
+}
+.si-sub { margin: var(--space-3) 0 var(--space-6); font-size: 1rem; color: var(--au-ink-soft); }
+
+.si-alert {
+  display: flex; align-items: flex-start; gap: var(--space-3);
+  margin: 0 0 var(--space-5);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  background: #FBEDE9;
+  border: 1px solid #E8CFC6;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+.si-alert svg { flex: none; margin-top: 1px; color: #A8412B; }
+
+/* ---------------------------------------------------------------- fields */
+
+.si-field { margin-bottom: var(--space-4); }
+.si-field label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 0.9375rem;
+  font-weight: 650;
+  color: var(--au-ink);
+}
+
+.si-input {
+  --h: 52px;
+  --inset: 16px;
+  --ico: 17px;
+  position: relative;
+  display: block;
+}
+.si-input-icon {
+  position: absolute;
+  left: 0; top: 0;
+  height: var(--h);
+  width: calc(var(--inset) * 2 + var(--ico));
+  display: flex; align-items: center; justify-content: center;
+  color: #9B9483;
+  pointer-events: none;
+  z-index: 1;
+}
+.si-input-icon svg { display: block; }
+
+.si-input input[type] {
+  width: 100%;
+  height: var(--h);
+  min-height: var(--h);
+  line-height: var(--h);
+  padding: 0 var(--space-4) 0 calc(var(--inset) * 2 + var(--ico));
+  font-size: 0.9375rem;
+  color: var(--au-ink);
+  background: var(--au-field);
+  border: 1px solid var(--au-field-line);
+  border-radius: var(--radius-sm);
+}
+.si-input input[type]::placeholder { color: #A8A192; line-height: normal; }
+.si-input input[type]:focus { border-color: var(--au-green); outline-color: var(--au-green); }
+.si-input:focus-within .si-input-icon { color: var(--au-green); }
+
+/* The reveal lives inside the field, so the field keeps one outline rather than two. */
+.si-reveal {
+  --btn-hover-bg: transparent;
+  position: absolute;
+  right: 6px; top: 0;
+  height: var(--h);
+  width: 42px;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #9B9483;
+  z-index: 1;
+}
+.si-reveal:hover { color: var(--au-green); }
+.si-input:has(.si-reveal) input[type] { padding-right: 50px; }
+
+/* Never colour alone: the message underneath says what to do. */
+.si-input-bad input[type] { border-color: #B3402A; }
+.si-input-bad .si-input-icon { color: #B3402A; }
+.si-err { margin: 7px 0 0; font-size: 0.8125rem; color: #B3402A; }
+
+/* ---------------------------------------------------------------- remember and forgot */
+
+.si-row {
   display: flex;
   align-items: center;
-  justify-content: center;
-  padding: var(--space-5) var(--space-4);
-  background: var(--canvas-sunk);
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin: var(--space-4) 0 var(--space-5);
+  flex-wrap: wrap;
 }
-
-.signin {
-  width: 100%;
-  max-width: 460px;
-  background: var(--canvas);
-  border: 1px solid var(--rule);
-  border-radius: var(--radius);
-  padding: var(--space-5);
-}
-.signin > * + * { margin-top: var(--space-4); }
-
-.signin-mark {
+.si-check {
+  display: inline-flex; align-items: center; gap: 10px;
   margin: 0;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  color: var(--brand);
   font-size: 0.9375rem;
+  font-weight: 400;
+  color: var(--au-ink);
+  cursor: pointer;
 }
+.si-check input {
+  width: 19px; height: 19px;
+  min-height: 0;
+  accent-color: var(--au-green);
+  cursor: pointer;
+}
+.si-link { font-size: 0.9375rem; font-weight: 500; color: var(--au-green); text-decoration: underline; }
+.si-link:hover { color: var(--au-green-deep); }
 
-.signin h1 { font-size: 1.25rem; margin: var(--space-2) 0 0; }
-.signin-blurb { margin: var(--space-2) 0 0; font-size: 0.9375rem; }
+/* ---------------------------------------------------------------- submit */
 
-.signin-error {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-2);
-  margin: 0;
-  padding: var(--space-3);
+.si-submit {
+  --btn-hover-bg: var(--au-green-deep);
+  width: 100%;
+  min-height: 56px;
+  gap: 10px;
+  font-size: 1rem;
+  font-weight: 650;
+  color: #fff;
+  background: var(--au-green);
+  border: 1px solid var(--au-green);
+  border-radius: var(--radius-sm);
+}
+.si-submit:hover:not(:disabled) { border-color: var(--au-green-deep); }
+/* The arrow points forward. Reusing the back icon and turning it saves an export. */
+.si-submit-arrow { transform: rotate(180deg); }
+
+/* ---------------------------------------------------------------- employee sso */
+
+.si-or {
+  display: flex; align-items: center; gap: var(--space-3);
+  margin: var(--space-5) 0;
+  color: #9B9483;
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.si-or::before, .si-or::after { content: ""; flex: 1 1 auto; height: 1px; background: var(--au-field-line); }
+
+.si-sso {
+  --btn-hover-bg: #fff;
+  width: 100%;
+  min-height: 52px;
+  gap: var(--space-3);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  background: var(--au-field);
+  border: 1px solid var(--au-field-line);
+  border-radius: var(--radius-sm);
+  color: var(--au-ink);
+}
+.si-sso:hover:not(:disabled) { border-color: var(--au-green); }
+.si-sso > span { display: inline-flex; align-items: center; gap: 10px; }
+.si-sso-tag {
+  font-size: 0.625rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  padding: 3px 8px;
+  border-radius: var(--radius-pill);
+  background: #E7EDE8;
+  color: var(--au-green);
+}
+.si-sso:disabled .si-sso-tag { background: #EDEAE1; color: #9B9483; }
+.si-sso-note { margin: 10px 0 0; font-size: 0.6875rem; line-height: 1.55; color: var(--au-ink-soft); }
+
+/* ---------------------------------------------------------------- contact and popia */
+
+.si-contact {
+  margin: var(--space-6) 0 0;
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--au-field-line);
+  text-align: center;
+}
+.si-contact p { margin: 0 0 6px; font-size: 0.875rem; color: var(--au-ink-soft); }
+.si-contact a { font-size: 0.9375rem; font-weight: 600; color: var(--au-green); text-decoration: underline; }
+
+.si-popia {
+  display: flex; align-items: flex-start; gap: var(--space-3);
+  margin: var(--space-5) 0 0;
+  font-size: 0.75rem;
+  line-height: 1.55;
+  color: var(--au-ink-soft);
+}
+.si-popia svg { flex: none; margin-top: 1px; color: var(--au-gold); }
+
+/* The phone and citizen pointers. Quieter than the POPIA line above it, which is a legal
+   notice, where this is a signpost for somebody who is on the wrong screen. */
+.si-surfaces {
+  margin: var(--space-5) 0 0;
+  font-size: 0.75rem;
+  line-height: 1.55;
+  color: var(--au-ink-soft);
+}
+.si-surfaces a { color: inherit; text-decoration: underline; }
+
+/* ---------------------------------------------------------------- demo accounts */
+
+.si-demo {
+  margin-top: var(--space-6);
+  padding: var(--space-4);
+  border: 1px dashed var(--au-field-line);
   border-radius: var(--radius);
-  font-size: 0.875rem;
-  background: var(--warn-wash);
-  border: 1px solid var(--warn-border);
-  color: var(--ink);
+  background: rgba(255, 255, 255, 0.5);
 }
+.si-demo-head { display: flex; gap: var(--space-3); align-items: flex-start; margin-bottom: var(--space-3); }
+.si-demo-head svg { flex: none; margin-top: 2px; color: var(--au-gold); }
+.si-demo-head strong { display: block; font-size: 0.8125rem; color: var(--au-ink); }
+.si-demo-head p { margin: 2px 0 0; font-size: 0.6875rem; line-height: 1.5; color: var(--au-ink-soft); }
 
-.signin-foot { margin-top: var(--space-5); }
+.si-demo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
+.si-demo-card {
+  --btn-hover-bg: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  text-align: left;
+  min-height: 0;
+  padding: 10px 12px;
+  background: var(--au-field);
+  border: 1px solid var(--au-field-line);
+  border-radius: var(--radius-sm);
+  font-weight: 400;
+}
+.si-demo-card:hover:not(:disabled) { border-color: var(--au-green); }
+.si-demo-role {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 0.75rem; font-weight: 700; color: var(--au-ink);
+}
+.si-demo-what { font-size: 0.625rem; line-height: 1.4; color: var(--au-ink-soft); }
 
-.dev-roles { display: grid; gap: var(--space-2); grid-template-columns: 1fr 1fr; }
-@media (max-width: 420px) { .dev-roles { grid-template-columns: 1fr; } }
+@media (max-width: 520px) {
+  .si-demo-grid { grid-template-columns: 1fr; }
+}
