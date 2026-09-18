@@ -80,3 +80,7 @@
   .heat-band { flex-direction: column; }
   .heat-label { flex: none; padding-top: 0; }
 }
+
+/* The two ways off this screen that an executive actually uses: ask it something, or go to the
+   charts and the export. Above the counts, because a question arrives before the reading does. */
+.po-tools { display: flex; flex-wrap: wrap; gap: var(--space-2); }

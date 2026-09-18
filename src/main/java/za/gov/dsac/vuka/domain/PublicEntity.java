@@ -63,6 +63,19 @@ public class PublicEntity {
     @Column(length = 200)
     private String contactEmail;
 
+    /**
+     * The body's own public website.
+     *
+     * <p>Vuka holds what was allocated and what was reported against it. Everything else a
+     * citizen might want next — what is on this week, how to visit, who the board is — lives on
+     * the entity's own site, and the public page links there rather than pretending to be it.
+     *
+     * <p>Null where no address is on record, and the citizen page then shows no link. A wrong
+     * address on a named public body is worse than none.
+     */
+    @Column(length = 500)
+    private String website;
+
     /** Set by DSAC. Gates whether this entity appears in the citizen view at all. */
     @Column(name = "publicly_visible", nullable = false)
     private boolean publiclyVisible;
@@ -96,6 +109,9 @@ public class PublicEntity {
 
     public String getContactEmail() { return contactEmail; }
     public void setContactEmail(String contactEmail) { this.contactEmail = contactEmail; }
+
+    public String getWebsite() { return website; }
+    public void setWebsite(String website) { this.website = website; }
 
     public boolean isPubliclyVisible() { return publiclyVisible; }
     public void setPubliclyVisible(boolean publiclyVisible) { this.publiclyVisible = publiclyVisible; }

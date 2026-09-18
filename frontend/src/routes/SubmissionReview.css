@@ -2,6 +2,10 @@
 
 .sr-foot { position: sticky; bottom: var(--space-3); box-shadow: 0 -2px 8px rgba(26,26,26,0.06); }
 
+/* The sentence that says which of the two decisions this submission is now at. It sits above
+   the button rather than under it, because it is what the button means. */
+.sr-next { margin: 0 0 var(--space-3); font-size: 0.9375rem; }
+
 .sr-disputes { list-style: none; margin: 0; padding: 0; }
 .sr-disputes li {
   padding: var(--space-2) 0;

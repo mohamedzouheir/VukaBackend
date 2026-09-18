@@ -25,6 +25,10 @@ import java.util.UUID;
  * No risk scores, no unconfirmed figures, no contact details, no workforce demographics,
  * no comments. The projection carries what a citizen needs to see where the money went
  * and nothing that would embarrass an entity before its reviewer has read the submission.
+ *
+ * <p>The one thing it carries that is not a figure is the entity's own website. That is not a
+ * contact detail: it is already published by the body itself, and it is the answer to the
+ * question this page always leaves a reader with.
  */
 @Service
 public class PublicationService {
@@ -53,6 +57,16 @@ public class PublicationService {
             String name,
             String sector,
             String mandate,
+            /**
+             * The entity's own public website, or null.
+             *
+             * <p>The only field on this projection that is not a figure, and the only one that
+             * points off this system. It is here because the page answers one question well and
+             * raises three it cannot: a reader who has seen what the museum was given and what it
+             * reported will want to know what is on, and sending them to a search engine to find
+             * out is how a public record stops being read.
+             */
+            String website,
             String financialYearLabel,
             BigDecimal totalAllocation,
             int targetsCommitted,
@@ -87,7 +101,7 @@ public class PublicationService {
         FinancialYear fy = years.findByCurrentTrue().orElse(null);
         if (fy == null) {
             return new CitizenView(e.getId(), e.getName(), pretty(e.getSector()), e.getMandate(),
-                    "No current financial year", BigDecimal.ZERO, 0, 0, 0, 0, 0, null);
+                    e.getWebsite(), "No current financial year", BigDecimal.ZERO, 0, 0, 0, 0, 0, null);
         }
 
         BigDecimal total = allocations.findByEntityIdAndFinancialYearId(e.getId(), fy.getId()).stream()
@@ -118,7 +132,8 @@ public class PublicationService {
                 .findFirst().orElse(null);
 
         return new CitizenView(e.getId(), e.getName(), pretty(e.getSector()), e.getMandate(),
-                fy.getLabel(), total, ts.size(), achieved, inProgress, missed, notStarted, lastReported);
+                e.getWebsite(), fy.getLabel(), total, ts.size(), achieved, inProgress, missed,
+                notStarted, lastReported);
     }
 
     private String pretty(Enums.Sector s) {

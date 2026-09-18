@@ -33,6 +33,11 @@
     table { width:100%; border-collapse:collapse; font-size:15px; }
     th, td { padding:9px 0; border-bottom:1px solid var(--line); text-align:left; font-weight:400; }
     td.n { text-align:right; font-variant-numeric:tabular-nums; font-weight:600; }
+    /* The link off this page to the entity's own site. Sized as a control rather than as body
+       text, because it is the one thing on the page a reader is likely to want to tap. */
+    .site { margin:24px 0 0; padding:14px 16px; background:var(--panel); border-radius:10px; }
+    .site a { display:inline-flex; align-items:center; min-height:44px; font-weight:600; }
+    .site .note { margin:0; font-size:13px; color:var(--muted); }
     .foot { margin-top:28px; padding-top:16px; border-top:1px solid var(--line);
             font-size:13px; color:var(--muted); }
     .foot p { margin:0 0 12px; }
@@ -99,6 +104,18 @@
         </tr>
       </tbody>
     </table>
+
+    <!--/* The way out of this page.
+           Vuka answers one question about a funded body and raises three it cannot: what is on,
+           how to visit, who runs it. Without this link the reader's next step was a search
+           engine, which is where a public record stops being read. Omitted entirely where no
+           address is on record, because a wrong link under a government masthead is worse than
+           no link at all. */-->
+    <div class="site" th:if="${e.website() != null}">
+      <a th:href="${e.website()}" target="_blank" rel="noopener noreferrer external"
+         th:text="#{page.entity.website(${e.name()})}">Visit the entity</a>
+      <p class="note" th:text="#{page.entity.website.note}">This is the entity's own website.</p>
+    </div>
 
     <div class="foot">
       <p th:if="${e.lastReportedAt() != null}"

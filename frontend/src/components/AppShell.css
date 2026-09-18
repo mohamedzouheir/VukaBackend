@@ -370,3 +370,15 @@
 @media (prefers-reduced-motion: reduce) {
   .rail-collapse svg { transition: none; }
 }
+
+/* ---------------------------------------------------------------- print
+   A printed screen is a committee pack. The rail, the top bar and the outbox
+   notice are navigation and have no meaning on paper, so the page becomes one
+   column of content. Individual screens add their own rules on top; Analytics
+   in particular keeps its chart fills. */
+@media print {
+  .shell { display: block; }
+  .rail, .rail-scrim, .topbar, .conn-bar, .no-print { display: none !important; }
+  .shell-main { display: block; }
+  .shell-content { padding: 0; }
+}

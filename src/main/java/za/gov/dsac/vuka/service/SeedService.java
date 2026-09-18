@@ -393,6 +393,11 @@ public class SeedService implements ApplicationRunner {
             // notification log has an address to print. Not a real inbox.
             e.setContactName("Reporting Officer (placeholder)");
             e.setContactEmail(shortName.toLowerCase() + "@example.org.za");
+            // The entity's own site, for the citizen page to link out to. The one column in the
+            // reference file that is not from a published document, so a blank cell stays blank
+            // rather than becoming a guessed URL under a government masthead.
+            String site = text(row, "website");
+            e.setWebsite(site == null || site.isBlank() ? null : site.trim());
             e.setPubliclyVisible(Boolean.parseBoolean(row.get("publiclyVisible")));
             entities.save(e);
             byShortName.put(shortName, e);

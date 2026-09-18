@@ -1,0 +1,68 @@
+/*
+ * Ask Vuka. A side panel, not a chat window.
+ *
+ * There is no transcript and no scrollback on purpose. This is used in a meeting, where the
+ * question is asked once and the answer has to be readable from across a table. A history of
+ * earlier answers would push the current one off the screen, which is the opposite of what the
+ * moment needs.
+ */
+
+.ask { display: flex; flex-direction: column; }
+
+.ask-body { display: flex; flex-direction: column; gap: var(--space-4); }
+
+.ask-what { margin: 0; }
+
+.ask-form { display: flex; gap: var(--space-2); }
+.ask-form input {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 1rem;
+}
+
+.ask-answer {
+  padding: var(--space-4);
+  background: var(--brand-wash);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.ask-nomatch { background: var(--surface-sunk); }
+
+/* The sentence that gets quoted in the room. Sized so it can be read at arm's length. */
+.ask-headline { margin: 0; font-size: 1.0625rem; line-height: 1.45; }
+
+.ask-detail { margin: 0; font-size: 0.9375rem; color: var(--ink); }
+.ask-detail p { margin: 0 0 var(--space-2); }
+.ask-detail p:last-child { margin-bottom: 0; }
+
+/* Where the figure came from. Never optional: an answer without a source is a rumour. */
+.ask-source {
+  display: flex;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--ink-muted);
+}
+.ask-source svg { flex: none; margin-top: 2px; }
+
+.ask-answer .btn { align-self: flex-start; }
+
+.ask-suggest ul {
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ask-suggest button {
+  width: 100%;
+  text-align: left;
+  font-size: 0.875rem;
+  min-height: 40px;
+}

@@ -27,13 +27,14 @@ import { api } from '../lib/api';
 import { useAsync } from '../lib/useAsync';
 import { date, num } from '../lib/format';
 import { useI18n } from '../lib/i18n';
+import type { Key } from '../lib/i18n';
 import { useLabels } from '../lib/labels';
-import type { AdminEntityRow, IssuedReporter, PeriodView } from '../lib/types';
+import type { AdminEntityRow, IssuedReporter, PeriodView, WorkspaceDocument } from '../lib/types';
 import { PageHead } from '../components/AppShell';
 import { EmptyState, ErrorState, Loading, Modal, Tile } from '../components/Shell';
 import {
-  IconAlert, IconCalendar, IconCheck, IconExternal, IconEye, IconEyeOff, IconLock, IconPlus,
-  IconSettings, IconSpinner, IconUser,
+  IconAlert, IconCalendar, IconCheck, IconCloud, IconExternal, IconEye, IconEyeOff, IconLock,
+  IconPlus, IconRefresh, IconSettings, IconSpinner, IconUser,
 } from '../icons';
 
 const SECTORS = ['ARTS', 'HERITAGE', 'LIBRARIES', 'SPORT', 'LANGUAGE', 'OTHER'];
@@ -51,10 +52,12 @@ export function EntityAdmin() {
   const L = useLabels();
   const entities = useAsync(() => api.adminEntities(), []);
   const periods = useAsync(() => api.adminPeriods(), []);
+  const msStatus = useAsync(() => api.microsoftStatus(), []);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [registering, setRegistering] = useState(false);
   const [issuingFor, setIssuingFor] = useState<AdminEntityRow | null>(null);
+  const [microsoftFor, setMicrosoftFor] = useState<AdminEntityRow | null>(null);
 
   async function toggle(entityId: string, next: boolean) {
     setBusy(entityId);
@@ -124,6 +127,7 @@ export function EntityAdmin() {
                   <th className="num">{t('admin.colTargets')}</th>
                   <th>{t('admin.colReporters')}</th>
                   <th>{t('nav.citizenView')}</th>
+                  <th>{t('ms.column')}</th>
                   <th />
                 </tr>
               </thead>
@@ -172,6 +176,11 @@ export function EntityAdmin() {
                       )}
                     </td>
                     <td>
+                      <button type="button" className="link small" onClick={() => setMicrosoftFor(r)}>
+                        <IconCloud size={14} /> {t('admin.msConfigure')}
+                      </button>
+                    </td>
+                    <td>
                       <button
                         type="button"
                         disabled={busy === r.entityId}
@@ -204,6 +213,14 @@ export function EntityAdmin() {
           entity={issuingFor}
           onClose={() => setIssuingFor(null)}
           onIssued={() => entities.reload()}
+        />
+      ) : null}
+
+      {microsoftFor ? (
+        <MicrosoftModal
+          entity={microsoftFor}
+          tenantStatus={(msStatus.data as Record<string, unknown> | null) ?? null}
+          onClose={() => setMicrosoftFor(null)}
         />
       ) : null}
     </div>
@@ -519,6 +536,260 @@ function IssueReporterModal({
           </div>
         </form>
       )}
+    </Modal>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Microsoft 365                                                       */
+/*                                                                     */
+/* Binding, the Teams webhook and an on-demand sync, per entity. There */
+/* is no GET for the binding itself or for the webhook (the backend    */
+/* deliberately never reads a saved webhook URL back), so both are     */
+/* shown as what this session actually knows: the binding as read off  */
+/* the entity's own documents, the webhook only after this session has */
+/* set or cleared it.                                                  */
+/* ------------------------------------------------------------------ */
+
+function bindingSummary(docs: WorkspaceDocument[]) {
+  const mirrored = docs.filter((d) => d.microsoftState && d.microsoftState !== 'NOT_CONFIGURED');
+  return {
+    checked: docs.length > 0,
+    bound: docs.length > 0 && mirrored.length > 0,
+    synced: mirrored.filter((d) => d.microsoftState === 'SYNCED').length,
+    pending: mirrored.filter((d) => d.microsoftState === 'PENDING').length,
+    failed: mirrored.filter((d) => d.microsoftState === 'FAILED').length,
+    source: mirrored.filter((d) => d.microsoftState === 'SOURCE').length,
+  };
+}
+
+function pickedMessage(t: (key: Key, ...args: (string | number)[]) => string, picked: number) {
+  if (picked === 0) return t('ms.pickedNone');
+  if (picked === 1) return t('ms.pickedOne');
+  return t('ms.pickedMany', picked);
+}
+
+function MicrosoftModal({
+  entity,
+  tenantStatus,
+  onClose,
+}: {
+  entity: AdminEntityRow;
+  tenantStatus: Record<string, unknown> | null;
+  onClose: () => void;
+}) {
+  const { t } = useI18n();
+  const docs = useAsync(() => api.workspaceDocuments(entity.entityId), [entity.entityId]);
+  const summary = bindingSummary(docs.data ?? []);
+  const configured = tenantStatus?.configured;
+
+  const [advanced, setAdvanced] = useState(false);
+  const [siteHostname, setSiteHostname] = useState('');
+  const [sitePath, setSitePath] = useState('');
+  const [driveId, setDriveId] = useState('');
+  const [folderPath, setFolderPath] = useState('Vuka');
+  const [binding, setBinding] = useState(false);
+  const [bindFailure, setBindFailure] = useState<string | null>(null);
+  const [bound, setBound] = useState<{ driveId: string; folderPath: string } | null>(null);
+
+  const [webhookUrl, setWebhookUrl] = useState('');
+  const [webhookBusy, setWebhookBusy] = useState(false);
+  const [webhookFailure, setWebhookFailure] = useState<string | null>(null);
+  const [webhookState, setWebhookState] = useState<'set' | 'cleared' | null>(null);
+
+  const [syncing, setSyncing] = useState(false);
+  const [syncFailure, setSyncFailure] = useState<string | null>(null);
+  const [syncResult, setSyncResult] = useState<{ picked: number; note?: string } | null>(null);
+
+  const bindReady = advanced ? driveId.trim() !== '' : siteHostname.trim() !== '' && sitePath.trim() !== '';
+
+  async function bind(e: FormEvent) {
+    e.preventDefault();
+    setBinding(true);
+    setBindFailure(null);
+    setBound(null);
+    try {
+      const res = await api.bindMicrosoft(entity.entityId, {
+        driveId: advanced ? driveId.trim() : null,
+        siteHostname: advanced ? null : siteHostname.trim(),
+        sitePath: advanced ? null : sitePath.trim(),
+        folderPath: folderPath.trim() || 'Vuka',
+      });
+      setBound(res);
+      docs.reload();
+    } catch (err) {
+      setBindFailure(err instanceof Error ? err.message : t('admin.msBindFailed'));
+    } finally {
+      setBinding(false);
+    }
+  }
+
+  async function saveWebhook(url: string | null) {
+    setWebhookBusy(true);
+    setWebhookFailure(null);
+    try {
+      const res = await api.setMicrosoftWebhook(entity.entityId, url);
+      setWebhookState(res.status);
+      setWebhookUrl('');
+    } catch (err) {
+      setWebhookFailure(err instanceof Error ? err.message : t('admin.msWebhookFailed'));
+    } finally {
+      setWebhookBusy(false);
+    }
+  }
+
+  async function syncNow() {
+    setSyncing(true);
+    setSyncFailure(null);
+    setSyncResult(null);
+    try {
+      setSyncResult(await api.syncMicrosoftNow(entity.entityId));
+      docs.reload();
+    } catch (err) {
+      setSyncFailure(err instanceof Error ? err.message : t('ms.syncFailed'));
+    } finally {
+      setSyncing(false);
+    }
+  }
+
+  return (
+    <Modal title={t('admin.msTitleFor', entity.shortName ?? entity.name)} onClose={onClose} wide>
+      <div className="stack">
+        {configured === false ? (
+          <p className="small muted row" style={{ gap: 6, margin: 0 }}>
+            <IconAlert size={15} /> {t('admin.msNotConfiguredWarning')}
+          </p>
+        ) : null}
+
+        <div className="card card-sunk" style={{ margin: 0 }}>
+          {docs.loading ? (
+            <span className="small muted row" style={{ gap: 6 }}>
+              <IconSpinner size={14} className="spin" /> {t('admin.msCheckingDocs')}
+            </span>
+          ) : !summary.checked ? (
+            <span className="small muted">{t('admin.msNoDocsYet')}</span>
+          ) : summary.bound ? (
+            <span className="small row" style={{ gap: 6, color: 'var(--ok)' }}>
+              <IconCloud size={15} />{' '}
+              {t('admin.msBoundLine', num(summary.synced) ?? 0, num(summary.pending) ?? 0, num(summary.failed) ?? 0, num(summary.source) ?? 0)}
+            </span>
+          ) : (
+            <span className="small muted row" style={{ gap: 6 }}>
+              <IconCloud size={15} /> {t('admin.msNotBoundLine')}
+            </span>
+          )}
+        </div>
+
+        <form className="stack" onSubmit={(e) => void bind(e)}>
+          <h3 style={{ margin: 0 }}>{t('admin.msBindHeading')}</h3>
+          {!advanced ? (
+            <>
+              <div>
+                <label htmlFor="ms-host">{t('admin.msFieldHostname')}</label>
+                <input
+                  id="ms-host"
+                  type="text"
+                  placeholder="contoso.sharepoint.com"
+                  value={siteHostname}
+                  onChange={(e) => setSiteHostname(e.target.value)}
+                />
+              </div>
+              <div>
+                <label htmlFor="ms-path">{t('admin.msFieldPath')}</label>
+                <input
+                  id="ms-path"
+                  type="text"
+                  placeholder="/sites/DSAC-Iziko"
+                  value={sitePath}
+                  onChange={(e) => setSitePath(e.target.value)}
+                />
+              </div>
+            </>
+          ) : (
+            <div>
+              <label htmlFor="ms-drive">{t('admin.msFieldDriveId')}</label>
+              <input id="ms-drive" type="text" className="mono" value={driveId} onChange={(e) => setDriveId(e.target.value)} />
+            </div>
+          )}
+          <div>
+            <label htmlFor="ms-folder">{t('admin.msFieldFolder')}</label>
+            <input id="ms-folder" type="text" value={folderPath} onChange={(e) => setFolderPath(e.target.value)} />
+          </div>
+          <label className="row small" style={{ gap: 6 }}>
+            <input type="checkbox" checked={advanced} onChange={(e) => setAdvanced(e.target.checked)} />
+            {t('admin.msUseDriveId')}
+          </label>
+          {bindFailure ? <p className="field-error" role="alert">{bindFailure}</p> : null}
+          {bound ? (
+            <p className="small row" style={{ gap: 6, color: 'var(--ok)', margin: 0 }}>
+              <IconCheck size={14} /> {t('admin.msBoundTo', bound.driveId, bound.folderPath)}
+            </p>
+          ) : null}
+          <div className="row">
+            <button type="submit" className="primary" disabled={!bindReady || binding}>
+              {binding ? <IconSpinner size={16} className="spin" /> : null} {t('admin.msBind')}
+            </button>
+          </div>
+        </form>
+
+        <div className="stack">
+          <h3 style={{ margin: 0 }}>{t('admin.msWebhookHeading')}</h3>
+          <p className="small muted" style={{ margin: 0 }}>
+            {t('admin.msWebhookNote')}
+          </p>
+          <p className="small" style={{ margin: 0 }}>
+            {t('admin.msWebhookCurrentLabel')}{' '}
+            {webhookState === null ? (
+              <em className="muted">{t('admin.msWebhookUnknown')}</em>
+            ) : (
+              <strong>{webhookState === 'set' ? t('admin.setDone') : t('common.notSet')}</strong>
+            )}
+          </p>
+          <div>
+            <label htmlFor="ms-webhook">{t('admin.msFieldWebhookUrl')}</label>
+            <input
+              id="ms-webhook"
+              type="url"
+              placeholder="https://..."
+              value={webhookUrl}
+              onChange={(e) => setWebhookUrl(e.target.value)}
+            />
+          </div>
+          {webhookFailure ? <p className="field-error" role="alert">{webhookFailure}</p> : null}
+          <div className="row">
+            <button
+              type="button"
+              className="primary"
+              disabled={webhookUrl.trim() === '' || webhookBusy}
+              onClick={() => void saveWebhook(webhookUrl.trim())}
+            >
+              {webhookBusy ? <IconSpinner size={16} className="spin" /> : null} {t('common.save')}
+            </button>
+            <button type="button" disabled={webhookBusy} onClick={() => void saveWebhook(null)}>
+              {t('admin.msClear')}
+            </button>
+          </div>
+        </div>
+
+        <div className="stack">
+          <h3 style={{ margin: 0 }}>{t('admin.msSyncHeading')}</h3>
+          <div className="row" style={{ alignItems: 'center' }}>
+            <button type="button" disabled={syncing} onClick={() => void syncNow()}>
+              {syncing ? <IconSpinner size={16} className="spin" /> : <IconRefresh size={16} />} {t('ms.syncNow')}
+            </button>
+            {syncResult ? (
+              <span className="small muted">{syncResult.note ?? pickedMessage(t, syncResult.picked)}</span>
+            ) : null}
+          </div>
+          {syncFailure ? <p className="field-error" role="alert">{syncFailure}</p> : null}
+        </div>
+
+        <div className="row">
+          <button type="button" onClick={onClose}>
+            {t('common.close')}
+          </button>
+        </div>
+      </div>
     </Modal>
   );
 }

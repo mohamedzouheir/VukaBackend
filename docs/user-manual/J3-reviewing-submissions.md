@@ -73,19 +73,31 @@ explanation and its evidence documents. Click a document to open it without leav
 
 ![Dispute box on HER-1.1 with the reason written and Mark disputed marked](img/j3-06-dispute.png)
 
-The figure now carries a **DISPUTED** label. Dispute as many figures as you need to before you
-return the submission.
+The box closes and the figure now carries a **DISPUTED** label with your reason read back
+underneath it, so you can see at a glance what will be sent. **Nothing has gone to the entity
+yet.** Two links sit under the reason:
+
+- **Edit the reason** reopens the box with what you wrote.
+- **Undo this dispute** takes the mark off entirely.
 
 ![HER-1.1 marked as disputed](img/j3-07-disputed.png)
 
+Dispute as many figures as you need to before you return the submission. A figure that was
+disputed on an earlier round and is already with the entity says so and offers no undo: that one
+has left your hands.
+
 ## 6. Return, or approve
 
-The bar at the bottom of the page counts the disputed figures and holds the two decisions.
+The bar at the bottom of the page states which of the two decisions this submission is at, and
+carries the one button that follows from it.
 
 ![Bottom bar with Return with comments and Approve marked](img/j3-08-actions.png)
 
-1. **Return with comments** sends only the disputed figures back.
-2. **Approve** accepts the whole submission. It is off while any figure is disputed.
+- While **nothing is marked**, the button is **Approve all *n* figures**.
+- As soon as **anything is marked**, it becomes **Return *n* figures to the entity**.
+
+You never have to work out which of two buttons applies: the sentence above the button says what
+you have done so far and what the button will do about it.
 
 **Export with provenance** downloads the filing with the source of every figure.
 
@@ -109,7 +121,12 @@ that. Click **Approve** to confirm.
 ![Approve this submission dialog](img/j3-10-approve-modal.png)
 
 Approval is recorded with your name and the time, one submission at a time. There is no bulk
-approval. Back in the queue, the entity shows **Approved**.
+approval.
+
+Either decision takes you back to the queue, where a line at the top confirms what was recorded
+and the entity's row has moved. With no connection the change waits in the outbox and the line
+says so; it goes as soon as there is a connection, and your disputes and the return go together
+and in order.
 
 ![Review queue with Boxing South Africa now Approved](img/j3-11-approved.png)
 

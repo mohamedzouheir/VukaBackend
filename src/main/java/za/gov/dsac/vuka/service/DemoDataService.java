@@ -60,9 +60,10 @@ import java.util.UUID;
  *       live and the reporter can answer.</li>
  *   <li><b>Q2 2026/27, open.</b> Two entities with a draft started. The demo reporter's entity has
  *       nothing yet, and a completed template is written to {@code vuka.demo.output-dir} for the
- *       reporter to upload. It carries the cases the confirmation screen exists for: a figure typed
- *       as words, a figure typed as text, a missing figure with its reason, a shortfall with no
- *       reason, and an indicator code the entity never registered.</li>
+ *       reporter to upload. Every figure in it is present and clean except one deliberately empty
+ *       row, so the confirmation screen opens with one button that writes the rest and one row to
+ *       fill by hand and attach a supporting document to. It also carries an indicator code the
+ *       entity never registered, which lands in "Held aside" without the reporter touching it.</li>
  * </ul>
  *
  * <h2>When it runs</h2>
@@ -727,8 +728,23 @@ public class DemoDataService implements ApplicationRunner {
      * Writes the demo reporter's Q2 template, completed, for uploading live.
      *
      * <p>Built by {@link TemplateWriter}, the same code behind the Download template button, so it
-     * matches on the same indicator codes. Most rows are ordinary. Five are not, one for each thing
-     * the confirmation screen is there to catch.
+     * matches on the same indicator codes.
+     *
+     * <h3>One gap, on purpose</h3>
+     *
+     * <p>Every row but one arrives complete, numeric and inside the variance threshold, so the
+     * confirmation screen opens with a single button that writes all of them. Exactly one row
+     * ({@link #BLANK_ROW}) carries no figure and no evidence reference. That is the row the
+     * demonstration is actually about: the reporter types the figure, sees the provenance line say
+     * it was entered by hand rather than parsed, and attaches the supporting document against it.
+     *
+     * <p>This used to leave five rows needing attention, one for each thing the screen catches: a
+     * figure typed as words, a figure typed as text, a shortfall with no reason, a missing figure
+     * with its reason, and an unregistered indicator code. Each of those is a real case and each
+     * is still handled by the code that reads the file; what they were not is a demonstration.
+     * Four minutes of somebody retyping numbers in front of a panel buried the one claim the
+     * screen exists to make. The unregistered code stays, because it costs the reporter nothing:
+     * it lands in "Held aside" on its own.
      */
     private void writeCompletedTemplate(Context ctx) {
         PublicEntity e = ctx.entity(reporterEntity);
@@ -774,34 +790,37 @@ public class DemoDataService implements ApplicationRunner {
     }
 
     /**
+     * The one row of the completed template left empty, counted from the first data row.
+     *
+     * <p>Third rather than first, so the reporter scrolls past two complete rows before reaching
+     * it and can see what a filled row looks like, and early enough that it is on the first screen
+     * without scrolling.
+     */
+    private static final int BLANK_ROW = 2;
+
+    /**
      * One row of the completed template. Columns: 5 actual, 6 variance, 7 status, 8 explanation,
      * 9 spend, 10 evidence reference.
+     *
+     * <p>Every row is a clean number just above or on its quarter target, except {@link #BLANK_ROW},
+     * which carries nothing at all. Nothing here is short enough of target to trip the variance
+     * threshold, so the confirmation screen can write the lot in one click and the reporter's
+     * whole task is the one row that is missing.
      */
     private static void fillRow(Row row, int i, BigDecimal target, BigDecimal spend, String ref) {
-        double q = target.doubleValue();
-        String evidence = "Q2/" + ref + "/register.pdf";
-        switch (i) {
-            case 2 -> {         // typed as words: the parser reads it at low confidence
-                row.getCell(5).setCellValue("approx " + Math.round(q));
-                row.getCell(8).setCellValue("Count from the education office, final figure to follow.");
-            }
-            case 6 -> row.getCell(5).setCellValue(String.valueOf(Math.round(q)));   // a number typed as text
-            case 8 -> {         // well short, and no reason: confirmation refuses it until one is given
-                row.getCell(5).setCellValue(Math.round(q * 0.4));
-            }
-            case 10 -> {        // no figure, with the reason
-                row.getCell(8).setCellValue("Gallery closed for roof repairs for the whole quarter. "
-                        + "Delivery moves to Q3.");
-                evidence = null;
-            }
-            default -> {
-                long actual = Math.round(q * (i % 4 == 0 ? 1.1 : 1.0));
-                row.getCell(5).setCellValue(actual);
-                row.getCell(6).setCellValue(actual - Math.round(q));
-            }
+        // A target with no quarter value has nothing to fill a figure against, so it is left
+        // empty for the same reason the blank row is.
+        if (i == BLANK_ROW || target == null) {
+            // No figure, no explanation and no evidence reference. The reporter types the figure
+            // and attaches the supporting document against this target, live.
+            return;
         }
+        double q = target.doubleValue();
+        long actual = Math.round(q * (i % 4 == 0 ? 1.1 : 1.0));
+        row.getCell(5).setCellValue(actual);
+        row.getCell(6).setCellValue(actual - Math.round(q));
         if (spend != null) row.getCell(9).setCellValue(spend.doubleValue());
-        if (evidence != null) row.getCell(10).setCellValue(evidence);
+        row.getCell(10).setCellValue("Q2/" + ref + "/register.pdf");
     }
 
     // ------------------------------------------------------------------

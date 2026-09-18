@@ -335,6 +335,23 @@ export interface WorkspaceDocument {
   microsoftError: string | null;
 }
 
+/** WorkspaceController.bind's response: the drive it actually resolved to. */
+export interface MicrosoftBindResult {
+  driveId: string;
+  folderPath: string;
+}
+
+/** WorkspaceController.teamsWebhook's response. The URL itself is never sent back. */
+export interface MicrosoftWebhookResult {
+  status: 'set' | 'cleared';
+}
+
+/** WorkspaceController.syncNow's response. */
+export interface MicrosoftSyncResult {
+  picked: number;
+  note?: string;
+}
+
 /** WorkspaceService.Person */
 export interface TaskPerson {
   uid: string;
