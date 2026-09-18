@@ -671,6 +671,29 @@ uuid mid-demonstration. The local database had never received the demo seed (it 
 comments, so the seed stepped aside) and the demo uids pointed at Firebase accounts; `run-demo.sh`
 runs against a separate `vuka_demo` database with the dev uids, and `--reset` restores it.
 
+### The demonstration journey: deadline, warning, account
+
+The journey the demo now shows, end to end and each step real:
+
+1. **Admin sets the deadline.** Administration, Submission deadlines. For Schedule 3A the date is
+   a departmental instruction, so the Department sets it here. A passed deadline is locked; a new
+   one cannot be past, before the quarter ends, or later than a statutory date
+   (`DeadlineRulesTest`). Audit logged.
+2. **Reporter signs in and is warned.** `DeadlineAlert`: late (due date passed, nothing filed) or
+   approaching (open quarter due within thirty days, not filed), the same thirty days at which the
+   reminders begin. Once per sign in for a given set of warnings. A returned quarter is not called
+   late; the returned card handles it. In the seeded demo Q2 is due 30 October, 42 days out, so
+   the warning appears only after the admin brings it forward, which is the point to show.
+3. **Admin registers an entity and issues its reporter account.** There is no sign up anywhere.
+   With Firebase the account is created with claims and a set-password link; without it the person
+   is recorded in the directory and the screen says no credential was issued. A new entity appears
+   in the queue as not scored with nothing filed, and its reporter is warned that Q1 is late.
+
+This departs from the PRD, which cut entity creation and user administration (section 12, cuts 1
+and 3). The brief's emphasis on who may report and by when made them the demonstration rather than
+admin screens nobody watches. Targets are still not entered by form: they are versioned against a
+tabled plan.
+
 ---
 
 ## 11. Still open

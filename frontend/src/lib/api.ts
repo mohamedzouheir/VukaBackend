@@ -10,7 +10,8 @@
 import type {
   ChainView, CommentView, EntityDetail, ExtractionView, IndicatorRowView, MeView,
   ParseReport, PeerComparison, PeriodView, PortfolioRow, SubmissionDetail, SubmissionRow,
-  UnitCostView, WorkspaceDocument, WorkspaceTask, TaskPerson, NewTask,
+  UnitCostView, WorkspaceDocument, WorkspaceTask, TaskPerson, NewTask, AdminEntityRow,
+  IssuedReporter, AnalyticsView,
 } from './types';
 import { copyOf, enqueue, keep, reachable, registerSender, type Queued } from './offline';
 
@@ -143,15 +144,38 @@ async function failureMessage(res: Response): Promise<string> {
     : 'The request was refused (' + res.status + ').';
 }
 
+/** Files a browser can show itself. Anything else, a workbook in particular, is saved instead. */
+const VIEWABLE = /\.(pdf|png|jpe?g|gif|webp|txt)$/i;
+
 /**
  * The click handler for a link to a stored file. The link keeps a real href so it still reads
- * and behaves as a link to assistive technology, but the click fetches with the token.
+ * and behaves as a link to assistive technology, but the click fetches with the token. A plain
+ * link, or one opened in a new tab, carries no token and lands on a 401.
+ *
+ * A PDF or an image opens in a new tab, because a reviewer checking evidence wants to read it,
+ * not to find it in a downloads folder. The tab is opened inside the click and pointed at the
+ * file once it arrives: a window opened after the fetch resolves is no longer a user gesture, and
+ * the popup blocker would swallow it.
  */
 export function openFile(e: { preventDefault: () => void }, url: string, name: string) {
   e.preventDefault();
-  api.download(url, name).catch((err: unknown) => {
+  const tab = VIEWABLE.test(name) ? window.open('', '_blank') : null;
+  const fail = (err: unknown) => {
+    tab?.close();
     window.alert(err instanceof Error ? err.message : 'The file could not be opened.');
-  });
+  };
+  if (!tab) {
+    api.download(url, name).catch(fail);
+    return;
+  }
+  api.fetchFile(url)
+    .then(({ blob }) => {
+      const href = URL.createObjectURL(blob);
+      tab.location.href = href;
+      // Long enough for the viewer to have read the whole file.
+      setTimeout(() => URL.revokeObjectURL(href), 60_000);
+    })
+    .catch(fail);
 }
 
 /** One answer to the comment poll: either nothing moved, or here is the whole list again. */
@@ -181,6 +205,8 @@ export const api = {
 
   portfolio: (periodId?: string) =>
     request<PortfolioRow[]>('/api/dashboard/portfolio' + qs({ periodId })),
+
+  analytics: () => request<AnalyticsView>('/api/dashboard/analytics'),
 
   entity: (entityId: string, periodId?: string) =>
     request<EntityDetail>('/api/dashboard/entity/' + entityId + qs({ periodId })),
@@ -318,7 +344,7 @@ export const api = {
    * Every file the office surface hands over goes through here, so the bearer token travels with
    * it. A plain link cannot carry the token, and one that tried landed the user on a JSON 401.
    */
-  download: async (url: string, fallbackName: string) => {
+  fetchFile: async (url: string): Promise<{ blob: Blob; fileName: string | null }> => {
     const token = await getToken();
     const res = await fetch(url, {
       headers: token ? { Authorization: 'Bearer ' + token } : undefined,
@@ -328,12 +354,16 @@ export const api = {
         ? 'That file could not be found.'
         : await failureMessage(res));
     }
-    const blob = await res.blob();
     const disposition = res.headers.get('content-disposition') ?? '';
     const match = /filename="?([^"]+)"?/.exec(disposition);
+    return { blob: await res.blob(), fileName: match ? match[1] : null };
+  },
+
+  download: async (url: string, fallbackName: string) => {
+    const { blob, fileName } = await api.fetchFile(url);
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = match ? match[1] : fallbackName;
+    a.download = fileName ?? fallbackName;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -396,10 +426,36 @@ export const api = {
       { method: 'POST', body: JSON.stringify({ publiclyVisible }) },
     ),
 
-  adminEntities: () =>
-    request<
-      { entityId: string; name: string; sector: string; publiclyVisible: boolean; targetCount: number }[]
-    >('/api/admin/entities'),
+  adminEntities: () => request<AdminEntityRow[]>('/api/admin/entities'),
+
+  /** Registers a funded body. No targets and no reporter yet, and unpublished. */
+  createEntity: (body: {
+    name: string;
+    shortName: string;
+    sector: string;
+    pfmaSchedule: string;
+    contactName: string;
+    contactEmail: string;
+  }) =>
+    request<{ entityId: string; name: string }>('/api/admin/entities', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+
+  /** The only way a reporter account comes to exist. There is no sign up. */
+  issueReporter: (entityId: string, name: string, email: string) =>
+    request<IssuedReporter>('/api/admin/entities/' + entityId + '/reporters', {
+      method: 'POST',
+      body: JSON.stringify({ name, email }),
+    }),
+
+  adminPeriods: () => request<PeriodView[]>('/api/admin/periods'),
+
+  setDueDate: (periodId: string, dueDate: string) =>
+    request<PeriodView>('/api/admin/periods/' + periodId + '/due-date', {
+      method: 'POST',
+      body: JSON.stringify({ dueDate }),
+    }),
 };
 
 // Replay goes through the same client, with the same token and the same error rules.

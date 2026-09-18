@@ -367,3 +367,126 @@ export interface WorkspaceTask {
   documentId: string | null;
   createdAt: string | null;
 }
+
+/** AdminController, the entity register as the administrator sees it. */
+export interface AdminEntityRow {
+  entityId: string;
+  name: string;
+  shortName: string | null;
+  sector: string;
+  publiclyVisible: boolean;
+  targetCount: number;
+  reporters: { name: string | null; email: string | null; credentialIssued: boolean }[];
+}
+
+/** ReporterAccountService.Issued */
+export interface IssuedReporter {
+  uid: string;
+  email: string;
+  displayName: string;
+  credentialIssued: boolean;
+  setPasswordLink: string | null;
+  note: string;
+}
+
+/* ---------- analytics ---------- */
+
+/** One financial year: ENE allocation, and the Auditor-General's published outcome where audited. */
+export interface AnalyticsYear {
+  financialYear: string;
+  current: boolean;
+  /** Null where no allocation row exists for the year. */
+  allocated: number | null;
+  entitiesFunded: number;
+  /** Zero where the year has not been audited yet. */
+  entitiesAudited: number;
+  entitiesWithCounts: number;
+  targetsAchieved: number | null;
+  targetsTotal: number | null;
+  achievedPercent: number | null;
+  outcomes: Record<string, number>;
+  repeatFindings: number | null;
+}
+
+export interface AnalyticsMovement {
+  entityId: string;
+  name: string;
+  shortName: string | null;
+  sector: string;
+  fromAchieved: number;
+  fromTotal: number;
+  fromPercent: number;
+  toAchieved: number;
+  toTotal: number;
+  toPercent: number;
+  changePoints: number;
+  fromOutcome: string | null;
+  toOutcome: string | null;
+}
+
+export interface AnalyticsCohort {
+  fromYear: string;
+  toYear: string;
+  entities: number;
+  fromPercent: number | null;
+  toPercent: number | null;
+  improved: number;
+  declined: number;
+  unchanged: number;
+  rows: AnalyticsMovement[];
+}
+
+export interface AnalyticsQuarter {
+  periodId: string;
+  label: string;
+  quarter: number | null;
+  dueDate: string | null;
+  open: boolean;
+  fallenDue: boolean;
+  expected: number;
+  filed: number;
+  onTime: number;
+  late: number;
+  /** Null until the due date has passed. */
+  notFiled: number | null;
+  drafts: number;
+  approved: number;
+  returned: number;
+  awaitingReview: number;
+  channels: Record<string, number>;
+  figuresReported: number;
+  metTarget: number;
+  belowTarget: number;
+  noFigure: number;
+  figuresVerified: number;
+  metPercent: number | null;
+  scored: number;
+  highOrCritical: number;
+}
+
+export interface AnalyticsSector {
+  sector: string;
+  entities: number;
+  allocated: number | null;
+  allocatedEarliest: number | null;
+  filed: number;
+  expected: number;
+  figuresReported: number;
+  metTarget: number;
+  metPercent: number | null;
+  scored: number;
+  highOrCritical: number;
+}
+
+export interface AnalyticsView {
+  currentYear: string | null;
+  earliestAllocationYear: string | null;
+  /** Entities with no target registered for the current year. They still owe a report. */
+  entitiesWithoutTargets: number;
+  reviewPeriodId: string | null;
+  reviewPeriodLabel: string | null;
+  years: AnalyticsYear[];
+  cohort: AnalyticsCohort | null;
+  quarters: AnalyticsQuarter[];
+  sectors: AnalyticsSector[];
+}

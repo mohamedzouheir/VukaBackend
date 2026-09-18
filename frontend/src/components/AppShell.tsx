@@ -10,10 +10,10 @@
  * which is the one thing this product exists not to do, so an unknown count renders as no badge
  * rather than as a zero or a guess.
  *
- * The designs also carry Analytics & Insights in the rail. It is not in any rail here, because the
- * trends it shows have no source: nothing in the schema records a figure per month, and a rail
- * entry that opens on "not built" spends a click of the demonstration on an apology. The route
- * still answers, and says why, for anyone who reaches it by address.
+ * Analytics & Insights is in the reviewer's and the executive's rails. It shows the trends the
+ * data can actually carry: allocation and audited results per year, the same entities across two
+ * audited years, and the current year quarter by quarter and by sector. The monthly series and
+ * document counts in the designs are not there, because nothing records them.
  */
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
@@ -21,7 +21,7 @@ import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import type { MeView, Role } from '../lib/types';
 import {
-  IconAlert, IconArms, IconBell, IconChevronDown, IconChevronRight, IconCitation,
+  IconAlert, IconArms, IconBell, IconChart, IconChevronDown, IconChevronRight, IconCitation,
   IconExternal,
   IconFolder, IconGauge, IconHome, IconLandmark, IconList, IconMenu, IconSettings, IconSignOut,
   IconTasks, IconWorkspaces,
@@ -49,15 +49,17 @@ interface NavItem {
  *   reporter   reports for one entity, taken from the token. Their home is the reporting screen
  *              itself (J1: no generic landing page), with anything the Department returned at
  *              the top. Documents, workspace and tasks are their side of the conversation.
- *   reviewer   works the risk-ranked queue and decides. Today, queue, risk, documents to decide
- *              on, the workspaces and tasks where the conversation with an entity happens.
+ *   reviewer   works the risk-ranked queue and decides. Today, queue, risk, analytics, documents
+ *              to decide on, the workspaces and tasks where the conversation with an entity happens.
  *   executive  reads the portfolio and never changes anything. Portfolio, the register to find
- *              one entity by name, and the citizen view. No tasks, no workspaces, no recompute,
+ *              one entity by name, analytics for whether it is improving, and the citizen
+ *              view. No tasks, no workspaces, no recompute,
  *              because nothing there is theirs to act on.
- *   admin      decides what the public sees and binds workspaces to Microsoft 365. No queue and
- *              no risk screen: the admin holds no review capability at all, so that publication
- *              and approval always take two people. Tasks stay, because the reviewer hands the
- *              publication decision over as one.
+ *   admin      sets quarter deadlines, registers entities, issues reporter accounts (there is no
+ *              sign up), decides what the public sees, and binds workspaces to Microsoft 365. No
+ *              queue and no risk screen: the admin holds no review capability at all, so that
+ *              publication and approval always take two people. Tasks stay, because the reviewer
+ *              hands the publication decision over as one.
  *
  * A route left out of a rail is still reachable by address where the capability allows it, so a
  * link from inside a screen keeps working. The rail is what each person is for, not the fence.
@@ -69,6 +71,7 @@ function railFor(
   const citizen: NavItem = { to: '/public', label: 'Citizen View', icon: <IconExternal size={19} />, external: true };
   const workspaces: NavItem = { to: '/workspaces', label: 'Workspaces', icon: <IconWorkspaces size={19} /> };
   const documents: NavItem = { to: '/documents', label: 'Documents', icon: <IconFolder size={19} /> };
+  const analytics: NavItem = { to: '/analytics', label: 'Analytics', icon: <IconChart size={19} /> };
   const tasks: NavItem = { to: '/tasks', label: 'Tasks', icon: <IconTasks size={19} />, badge: openTaskCount ?? null };
 
   switch (role) {
@@ -85,6 +88,7 @@ function railFor(
         { to: '/', label: 'Today', icon: <IconHome size={19} /> },
         { to: '/review', label: 'Review queue', icon: <IconList size={19} /> },
         { to: '/risk', label: 'Risk & Alerts', icon: <IconAlert size={19} />, badge: criticalCount ?? null },
+        analytics,
         documents,
         workspaces,
         tasks,
@@ -93,6 +97,7 @@ function railFor(
       return [
         { to: '/', label: 'Portfolio', icon: <IconGauge size={19} /> },
         { to: '/entities', label: 'Entities', icon: <IconLandmark size={19} /> },
+        analytics,
         citizen,
       ];
     case 'ADMIN':

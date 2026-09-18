@@ -698,8 +698,12 @@ public class ReportingViewService {
     /* administration                                                      */
     /* ================================================================== */
 
-    public record AdminEntityRow(UUID entityId, String name, String sector,
-                                 boolean publiclyVisible, int targetCount) {}
+    /** One person who reports for an entity. credentialIssued is false where Firebase was absent. */
+    public record ReporterView(String name, String email, boolean credentialIssued) {}
+
+    public record AdminEntityRow(UUID entityId, String name, String shortName, String sector,
+                                 boolean publiclyVisible, int targetCount,
+                                 List<ReporterView> reporters) {}
 
     @Transactional(readOnly = true)
     public List<AdminEntityRow> adminEntityRows() {
@@ -708,8 +712,13 @@ public class ReportingViewService {
         for (PublicEntity e : entities.findAll()) {
             int count = fy == null ? 0
                     : (int) targets.countByEntityIdAndFinancialYearId(e.getId(), fy.getId());
-            out.add(new AdminEntityRow(e.getId(), e.getName(), String.valueOf(e.getSector()),
-                    e.isPubliclyVisible(), count));
+            List<ReporterView> reporters = users.findByEntityIdAndRole(e.getId(), Enums.Role.ENTITY_REPORTER)
+                    .stream()
+                    .map(u -> new ReporterView(u.getDisplayName(), u.getEmail(),
+                            u.getUid() != null && !u.getUid().startsWith("unissued:")))
+                    .toList();
+            out.add(new AdminEntityRow(e.getId(), e.getName(), e.getShortName(),
+                    String.valueOf(e.getSector()), e.isPubliclyVisible(), count, reporters));
         }
         out.sort(Comparator.comparing(AdminEntityRow::name));
         return out;

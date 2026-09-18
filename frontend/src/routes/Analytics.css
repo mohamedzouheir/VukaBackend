@@ -1,0 +1,48 @@
+/* Analytics & Insights. Bars carry their figure in text beside them, so nothing here is read
+   from colour alone. */
+
+.an-section { margin-top: var(--space-5); }
+.an-section h2 { margin-bottom: var(--space-2); }
+
+.an-bar { display: flex; align-items: center; gap: var(--space-2); min-width: 12rem; }
+.an-track {
+  flex: 0 0 6rem;
+  height: 8px;
+  background: var(--rule);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+.an-fill { display: block; height: 100%; background: var(--brand); border-radius: var(--radius-pill); }
+.an-bar-text { font-size: 0.875rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.an-outcomes { display: flex; flex-direction: column; gap: var(--space-1); min-width: 12rem; }
+.an-stack {
+  display: flex;
+  height: 10px;
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+  background: var(--rule);
+}
+.an-seg { display: block; height: 100%; }
+.an-seg + .an-seg { border-left: 2px solid var(--surface); }
+.an-o-unqualified { background: var(--band-low); }
+.an-o-unqualified_with_findings { background: var(--teal); }
+.an-o-qualified { background: var(--band-medium); }
+.an-o-adverse { background: var(--band-high); }
+.an-o-disclaimer { background: var(--band-critical); }
+.an-o-outstanding { background: var(--navy-ink); }
+
+.an-up { color: var(--ok); font-weight: 600; }
+.an-down { color: var(--danger); font-weight: 600; }
+
+tr.an-current td { background: var(--brand-wash); }
+
+.an-note {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+  margin: var(--space-3) 0 0;
+  font-size: 0.875rem;
+  color: var(--ink-muted);
+}
+.an-note svg { flex: 0 0 auto; margin-top: 2px; }

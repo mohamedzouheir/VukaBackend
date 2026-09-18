@@ -19,11 +19,12 @@ import { isOpenDispute, useLiveComments } from '../lib/useLiveComments';
 import type { SubmissionRow } from '../lib/types';
 import { date, dateTime, daysRemainingText, num, statusLabel } from '../lib/format';
 import { PeriodCard } from '../components/PeriodCard';
+import { DeadlineAlert } from '../components/DeadlineAlert';
 import { StateLine } from '../components/StateLine';
 import { EmptyState, ErrorState, Loading, Tile } from '../components/Shell';
 import {
-  IconAlert, IconCheckCircle, IconChevronRight, IconComment, IconDownload, IconPhone, IconReturn,
-  IconUpload,
+  IconAlert, IconCheckCircle, IconChevronRight, IconComment, IconDownload, IconList, IconPhone,
+  IconReturn, IconUpload,
 } from '../icons';
 import './EntityHome.css';
 
@@ -115,6 +116,14 @@ export function EntityHome() {
         </div>
       </div>
 
+      {/* The warning on signing in, when a quarter is late or falls due within thirty days. */}
+      <DeadlineAlert
+        entityId={entityId}
+        periods={periods.data}
+        subs={subs.data}
+        onReport={(periodId) => void open.run(periodId, 'review')}
+      />
+
       {/* What the Department sent back comes first, above the new quarter, because it is the
           only thing on this screen somebody else is waiting on. */}
       {returned.map((r) => (
@@ -130,6 +139,43 @@ export function EntityHome() {
       >
         {current ? (
           <>
+            {/* Typing the figures in is the first way offered, because it needs nothing but this
+                screen. The template stays for an entity that already fills it in, and a figure
+                read from it keeps the cell it came from. Opening a period is idempotent, so the
+                same button starts a new quarter and returns to one already begun. */}
+            <button
+              type="button"
+              className="primary"
+              disabled={open.pending || opening}
+              onClick={() => {
+                if (currentSub) {
+                  navigate('/entity/submission/' + currentSub.submissionId + '/review');
+                  return;
+                }
+                setOpening(true);
+                void open.run(current.periodId, 'review').finally(() => setOpening(false));
+              }}
+            >
+              {currentSub && currentSub.status !== 'DRAFT' && currentSub.status !== 'RETURNED' ? (
+                <>
+                  <IconCheckCircle size={16} /> Open this period
+                </>
+              ) : (
+                <>
+                  <IconList size={16} /> {currentSub ? 'Continue entering figures' : 'Enter figures'}
+                </>
+              )}
+            </button>
+            <button
+              type="button"
+              disabled={open.pending || opening}
+              onClick={() => {
+                setOpening(true);
+                void open.run(current.periodId, 'upload').finally(() => setOpening(false));
+              }}
+            >
+              <IconUpload size={16} /> Upload completed file
+            </button>
             <a
               className="btn"
               href={api.templateUrl(entityId, current.periodId)}
@@ -148,28 +194,9 @@ export function EntityHome() {
             >
               <IconDownload size={16} /> Download template
             </a>
-            <button
-              type="button"
-              className="primary"
-              disabled={open.pending || opening}
-              onClick={() => {
-                setOpening(true);
-                void open.run(current.periodId, 'upload').finally(() => setOpening(false));
-              }}
-            >
-              <IconUpload size={16} /> Upload completed file
-            </button>
             <a className="btn" href="/m" title="One indicator per screen, server rendered, under 5KB">
               <IconPhone size={16} /> Capture on a phone
             </a>
-            {currentSub ? (
-              <button
-                type="button"
-                onClick={() => navigate('/entity/submission/' + currentSub.submissionId + '/review')}
-              >
-                <IconCheckCircle size={16} /> Open this period
-              </button>
-            ) : null}
           </>
         ) : null}
       </PeriodCard>

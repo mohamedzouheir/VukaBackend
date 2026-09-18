@@ -138,6 +138,12 @@ interface ReviewProps extends CommonProps {
   onConfirm: () => void;
   onAttach: () => void;
   /**
+   * Text pasted into the figure box. True where the parent used it, which is every paste it
+   * could read, including a whole column copied from a spreadsheet filling this row and the ones
+   * below it.
+   */
+  onPasteText?: (text: string) => boolean;
+  /**
    * Confirmed, but open again because the Department disputed it and returned the period.
    * Without this a returned figure rendered as locked and the reporter could not correct it.
    */
@@ -276,6 +282,9 @@ export function IndicatorRowReview(props: ReviewProps) {
               value={value}
               disabled={props.noResult || props.disabled}
               onChange={(e) => onValue(e.target.value)}
+              onPaste={(e) => {
+                if (props.onPasteText?.(e.clipboardData.getData('text/plain'))) e.preventDefault();
+              }}
               aria-describedby={explanationRequired ? errorId : undefined}
               aria-invalid={explanationRequired || undefined}
             />

@@ -33,8 +33,3 @@
 .ws-link:hover { background: var(--canvas); text-decoration: none; }
 .ws-link > span { flex: 1 1 auto; }
 
-/* ---------- analytics list ---------- */
-
-.an-list { margin: var(--space-3) 0 0; padding-left: 1.1rem; }
-.an-list li { margin-bottom: var(--space-3); }
-.an-list strong { color: var(--navy-ink); }

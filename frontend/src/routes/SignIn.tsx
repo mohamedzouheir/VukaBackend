@@ -96,6 +96,11 @@ export function SignIn() {
         )}
 
         <p className="small muted signin-foot">
+          There is no sign up. Accounts are issued by the Department for one named entity, so if you
+          report for an entity and have no account, ask your DSAC administrator for one.
+        </p>
+
+        <p className="small muted signin-foot">
           Reporting on a phone? The low bandwidth surface is at <a href="/m">/m</a> and needs no
           JavaScript. The citizen view at <a href="/public">/public</a> needs no account at all.
         </p>

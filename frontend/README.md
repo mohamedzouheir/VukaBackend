@@ -31,7 +31,8 @@ npm run dev
 
 The dashboard needs an identity. If you have a Firebase project, copy `.env.example` to `.env` and
 fill in the three `VITE_FIREBASE_*` values, and set the `role` and `entityId` custom claims on a
-user through the Admin SDK.
+DSAC user through the Admin SDK. Reporter accounts are issued from the Administration screen
+instead; there is no sign up.
 
 If you do not, both sides have a development sign in. It must never be enabled anywhere real.
 

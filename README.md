@@ -135,6 +135,16 @@ entityId  the entity a reporter is bound to; omit for DSAC roles
 choose it. It is what stops one entity reading another's data, and every controller routes that
 check through `VukaPrincipal.canRead`.
 
+**Reporters cannot sign up; they can only sign in.** A reporter account is issued by a DSAC
+administrator from the Administration screen, for one named entity (`ReporterAccountService`).
+With Firebase configured it creates the user with no password, sets both claims and returns a
+set-password link for the administrator to send, so the password never passes through DSAC.
+Without Firebase it records the person in the directory, so they still receive the entity's
+reminders, and says that no credential was issued. Firebase's own sign-up endpoint can only be
+switched off in the console (Authentication, Settings, User actions); turn it off for any real
+deployment. Either way an account made that way carries no `role` claim and every endpoint
+refuses it. DSAC staff accounts are still set by script.
+
 With no usable credential the application still starts. The citizen view, the migrations and the
 Thymeleaf surfaces have nothing to do with Firebase, and taking them down because a key file is
 missing is the wrong failure. It logs loudly, verifies nothing, and every authenticated endpoint
@@ -212,7 +222,7 @@ dashboard shows a page or a button only when the API behind it would accept the 
 | Download the pre-filled template | yes | yes | | yes |
 | See across entities | | yes | yes | yes |
 | Approve, return, decide on documents | | yes | | |
-| Publication, Microsoft binding | | | | yes |
+| Register entities, issue reporter accounts, set deadlines, publish, bind Microsoft | | | | yes |
 
 The executive column reads everything and changes nothing. The reporter column is the only one
 that puts figures or evidence on the record. Before this table existed, two endpoints let an
@@ -224,10 +234,19 @@ only.
 
 | Role | Lands on | Rail |
 |---|---|---|
-| Reporter | My reporting (W1), with anything the Department returned at the top: who returned it, why, and each disputed figure in the reviewer's words, live | My reporting, Documents, Workspaces, Tasks, Citizen View |
+| Reporter | My reporting (W1). On sign in, a warning when a quarter is late or due within 30 days. Anything the Department returned sits at the top: who, why, and each disputed figure in the reviewer's words, live | My reporting, Documents, Workspaces, Tasks, Citizen View |
 | Reviewer | Today: what awaits their decision, and the top three of the risk-ranked queue | Today, Review queue, Risk & Alerts, Documents, Workspaces, Tasks |
 | Executive | The portfolio (W9): counts, bands, rands in the critical band | Portfolio, Entities, Citizen View |
-| Admin | Administration: the publication switch per entity | Administration, Workspaces, Tasks, Citizen View |
+| Admin | Administration: quarter deadlines, register an entity, issue its reporter account, publish | Administration, Workspaces, Tasks, Citizen View |
+
+**Deadlines are the Department's to set, and a passed one is fixed.** For a Schedule 3A entity
+TR 30.2.1 names no day count, so the quarterly due date is a departmental instruction, set per
+quarter on the Administration screen. The reporter's warning, the countdown, the email reminders
+and the lateness signal all read that one date. Four refusals, each tested in
+`DeadlineRulesTest`: a deadline that has passed cannot be moved (lateness was measured against
+it), a new one cannot be in the past, it cannot fall before the quarter ends, and it cannot be
+later than a statutory deadline where one applies. Every change is written to the audit log with
+the administrator's name.
 
 The admin does not review, in the table or on screen. Whoever decides what the public sees is not
 the person who approves the figures it will see, so publication and approval always take two
@@ -584,6 +603,22 @@ State these before someone finds them.
   version, history, download, the receipt, DSAC approval, per-criterion evidence, a cross-boundary
   task and the tenancy refusals were exercised over HTTP with the development sign in. The
   Microsoft calls were not, for want of a tenant; see below.
+- **Evidence can be attached a quarter at a time.** "Attach evidence files" on the confirmation
+  screen takes every file at once, reads the indicator code (`HER-1.1`, `her_1_1`, `HER1.1`) and
+  the reliability test (attendance, reconciliation, register) from each file name, and asks only
+  about the files it could not place. A file with no indicator or no test is held back, never
+  attached as a guess. Each file goes through `POST /api/submissions/{id}/evidence`, the same path
+  as a single attach. The matching was walked in Chrome against the demo data; the attach itself
+  was not pressed there, to keep the demo database clean, and is the same call the single attach
+  already makes.
+- **The template is optional on the web.** The quarter card leads with "Enter figures", which opens
+  the confirmation screen with a box per indicator; uploading the template is the second option.
+  A column of figures copied from any spreadsheet can be pasted into the first box and fills the
+  rows below it in screen order, and two columns, indicator code and figure, fill by code in any
+  order. Wider selections are refused, because a row of the template also holds its targets.
+  Pasting only fills the boxes; nothing is written until the reporter confirms, so a typed or
+  pasted figure carries "entered by hand" and the confirmer's name rather than a source cell. Both
+  were walked in Chrome against a seeded draft; nothing was confirmed.
 - **It runs, and starting it found two bugs that reading did not.** `./mvnw clean test` passes, 60
   source files and 17 tests, Flyway applies all three migrations, the seed loads and
   `Started VukaApplication` appears. Getting there took three attempts. `ddl-auto: validate`
@@ -597,7 +632,8 @@ State these before someone finds them.
   and on a phone, reviewer, executive, administrator and citizen, against a freshly seeded
   Postgres, driven by a script that clicks what a person would click. That pass found and fixed:
   the template download, the source cell links and the evidence links all opening without the
-  token; submission detail, submit, review, export, the drilldown, the phone home and the phone
+  token (the Open link on the Documents screen was missed by that pass and fixed later; a PDF or
+  image now opens in a new tab, anything else downloads); submission detail, submit, review, export, the drilldown, the phone home and the phone
   receipt answering 500 on lazy loads; every phone form bouncing to sign in because each request
   deleted the CSRF cookie; a returned figure that could not be corrected; and no state checks on
   confirm, submit or review, so a figure could be changed after submission and a draft approved.

@@ -19,7 +19,10 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useAsync } from '../lib/useAsync';
 import { isOpenDispute, useLiveComments } from '../lib/useLiveComments';
+import { BulkEvidence } from '../components/BulkEvidence';
 import { CommentPanel } from '../components/CommentPanel';
+import { RELIABILITY } from '../lib/evidenceMatch';
+import { readPaste } from '../lib/pasteFigures';
 import { num } from '../lib/format';
 import type { IndicatorRowView } from '../lib/types';
 import { IndicatorRowReview, IndicatorRowSkeleton, needsExplanation } from '../components/IndicatorRow';
@@ -53,6 +56,9 @@ export function ExtractionReview() {
   const [confirmModal, setConfirmModal] = useState<{ rows: IndicatorRowView[] } | null>(null);
   const [submitModal, setSubmitModal] = useState(false);
   const [evidenceFor, setEvidenceFor] = useState<IndicatorRowView | null>(null);
+  const [bulkEvidence, setBulkEvidence] = useState(false);
+  /** What the last paste did, said where the reporter will see it: the sticky footer. */
+  const [pasteNote, setPasteNote] = useState<{ text: string; refused: boolean } | null>(null);
   const [busy, setBusy] = useState(false);
   /* UC-6. A returned period is a request to correct specific figures, so once the Department
      has disputed something the screen opens on those and nothing else. The reporter can still
@@ -134,6 +140,77 @@ export function ExtractionReview() {
   }, []);
 
   const outstanding = useMemo(() => rows.filter((r) => !r.confirmed || isReopened(r)), [rows, isReopened]);
+
+  /* A paste from the reporter's own spreadsheet. One column fills the box pasted into and the
+     boxes below it, in the order on screen; a code and a figure side by side fill by code. Rows
+     already confirmed keep their place in the column but are not changed, so a column copied
+     whole still lines up. Nothing is written: the figures wait in the boxes for Confirm. */
+  const pasteInto = useCallback(
+    (from: IndicatorRowView, text: string): boolean => {
+      const open = (r: IndicatorRowView) => !r.confirmed || isReopened(r);
+      const pasted = readPaste(text, rows);
+
+      if (pasted.kind === 'refused') {
+        setPasteNote({ text: pasted.reason, refused: true });
+        return true;
+      }
+
+      let placements: { row: IndicatorRowView; figure: string | null | undefined }[];
+      let unmatched = 0;
+      if (pasted.kind === 'column') {
+        // A single figure is an ordinary paste, left to the box unless it needs tidying.
+        if (pasted.figures.length === 1) {
+          const f = pasted.figures[0];
+          if (f === undefined || f === null || f === text.trim()) return false;
+        }
+        const start = visibleRows.findIndex((r) => r.targetId === from.targetId);
+        placements = pasted.figures.map((figure, i) => ({ row: visibleRows[start + i], figure }))
+          .filter((p) => p.row !== undefined);
+        unmatched = Math.max(0, pasted.figures.length - placements.length);
+      } else {
+        placements = pasted.matches;
+        unmatched = pasted.unmatched;
+      }
+
+      const filled: IndicatorRowView[] = [];
+      const patch: Record<string, Draft> = {};
+      let notNumbers = 0;
+      let skippedConfirmed = 0;
+      for (const { row, figure } of placements) {
+        if (figure === null) continue;
+        if (figure === undefined) { notNumbers++; continue; }
+        if (!open(row)) { skippedConfirmed++; continue; }
+        patch[row.targetId] = { ...draftFor(row), value: figure, noResult: false };
+        filled.push(row);
+      }
+      setDrafts((current) => ({ ...current, ...patch }));
+
+      if (filled.length === 0 && notNumbers === 0 && skippedConfirmed === 0) {
+        setPasteNote({ text: 'Nothing in the paste could be read as a figure.', refused: true });
+        return true;
+      }
+      const parts = [
+        'Filled ' + filled.length + (filled.length === 1 ? ' figure' : ' figures')
+          + (pasted.kind === 'byCode'
+            ? ' by indicator code'
+            : filled.length > 0
+            ? ', ' + filled[0].indicatorRef
+              + (filled.length > 1 ? ' to ' + filled[filled.length - 1].indicatorRef : '')
+            : '')
+          + '. Check them, then confirm.',
+      ];
+      if (skippedConfirmed) parts.push(skippedConfirmed + ' already confirmed and left as filed.');
+      if (notNumbers) parts.push(notNumbers + (notNumbers === 1 ? ' cell was' : ' cells were') + ' not a number and left alone.');
+      if (unmatched) {
+        parts.push(pasted.kind === 'byCode'
+          ? unmatched + (unmatched === 1 ? ' line names' : ' lines name') + ' no indicator on this report.'
+          : unmatched + (unmatched === 1 ? ' figure ran' : ' figures ran') + ' past the last indicator.');
+      }
+      setPasteNote({ text: parts.join(' '), refused: false });
+      return true;
+    },
+    [rows, visibleRows, isReopened, draftFor],
+  );
   const confirmedCount = rows.length - outstanding.length;
 
   /* Rows a confirm-all may legally write: a numeric value, and a reason wherever the
@@ -239,7 +316,15 @@ export function ExtractionReview() {
         <span className="spacer" />
         <p className="muted small nowrap">
           {num(confirmedCount)} of {num(rows.length)} confirmed
+          {', '}
+          {num(withEvidence)} with evidence
         </p>
+        {/* Not hidden once submitted: evidence may be attached late, and withholding it is worse. */}
+        {rows.length > 0 ? (
+          <button type="button" onClick={() => setBulkEvidence(true)}>
+            <IconPaperclip size={16} /> Attach evidence files
+          </button>
+        ) : null}
       </div>
 
       {/* The warning that has to be above the rows rather than beside the button. */}
@@ -302,6 +387,7 @@ export function ExtractionReview() {
             noResultReason={draft.noResultReason}
             onNoResultReason={(v) => setDraft(row.targetId, { noResultReason: v }, draft)}
             onAttach={() => setEvidenceFor(row)}
+            onPasteText={(text) => pasteInto(row, text)}
             onConfirm={() => {
               setPendingRow(row.targetId);
               setConfirmModal({ rows: [row] });
@@ -360,6 +446,16 @@ export function ExtractionReview() {
               <IconSend size={16} /> Submit to the Department
             </button>
           </div>
+
+          <p
+            className={'small ' + (pasteNote?.refused ? 'er-paste-refused' : 'muted')}
+            role="status"
+            style={{ marginTop: 'var(--space-2)' }}
+          >
+            {pasteNote
+              ? pasteNote.text
+              : 'Figures in a spreadsheet? Copy the column and paste it into the first box: it fills the rows below in order. Or copy two columns, code and figure, to match by code.'}
+          </p>
 
           {outstanding.length > 0 ? (
             <p className="small muted" style={{ marginTop: 'var(--space-2)' }}>
@@ -534,6 +630,17 @@ export function ExtractionReview() {
         </Modal>
       ) : null}
 
+      {bulkEvidence ? (
+        <BulkEvidence
+          submissionId={submissionId!}
+          rows={rows}
+          onClose={(attachedAny) => {
+            setBulkEvidence(false);
+            if (attachedAny) detail.reload();
+          }}
+        />
+      ) : null}
+
       {evidenceFor ? (
         <EvidenceDrawer
           submissionId={submissionId!}
@@ -573,12 +680,6 @@ function EvidenceDrawer({
   const [criteria, setCriteria] = useState<string[]>(['COMPLETENESS']);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const RELIABILITY = [
-    { key: 'VALIDITY', text: 'Validity. The reported figure actually occurred and relates to this entity.' },
-    { key: 'ACCURACY', text: 'Accuracy. The amounts and quantities are recorded correctly.' },
-    { key: 'COMPLETENESS', text: 'Completeness. Everything that should have been recorded was.' },
-  ];
 
   function toggle(key: string) {
     setCriteria((c) => (c.includes(key) ? c.filter((x) => x !== key) : [...c, key]));
@@ -647,7 +748,7 @@ function EvidenceDrawer({
         {RELIABILITY.map((c) => (
           <label key={c.key} className="ind-check">
             <input type="checkbox" checked={criteria.includes(c.key)} onChange={() => toggle(c.key)} />
-            <span>{c.text}</span>
+            <span>{c.label}. {c.text}</span>
           </label>
         ))}
       </fieldset>
