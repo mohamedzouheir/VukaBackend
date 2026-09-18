@@ -44,6 +44,25 @@ public final class Enums {
 
     public enum ApprovalStatus { PENDING, APPROVED, REJECTED }
 
+    /**
+     * Where a version of a document came from.
+     *
+     * <p>{@code MICROSOFT_365} means nobody uploaded it: someone saved a file in the entity's
+     * SharePoint library or Teams channel and the delta poller picked the change up. The
+     * challenge asks for version control "triggered at save/upload", and this enum is how a
+     * reader tells which of the two happened.
+     */
+    public enum DocumentSource { VUKA_UPLOAD, MICROSOFT_365 }
+
+    /**
+     * What has happened between a document version and Microsoft Graph.
+     *
+     * <p>{@code NOT_CONFIGURED} is the normal state on a deployment with no tenant bound, and it
+     * is deliberately not an error. {@code SOURCE} means the bytes came from Microsoft 365, so
+     * there is nothing to push back and never will be.
+     */
+    public enum GraphSyncState { NOT_CONFIGURED, PENDING, SYNCED, FAILED, SOURCE }
+
     public enum RiskBand { LOW, MEDIUM, HIGH, CRITICAL }
 
     /** The five contributing factors behind a risk score. Always shown with the score. */

@@ -30,7 +30,7 @@
          who cannot tell will send it again. -->
     <h1 role="status">The Department has your report</h1>
 
-    <p th:text="${submission.getReportingPeriod().getLabel()} + ' was submitted on your entity''s behalf, in your name.'">
+    <p th:text="|${submission.getReportingPeriod().getLabel()} was submitted on your entity's behalf, in your name.|">
       Submitted.
     </p>
 

@@ -18,6 +18,8 @@ import { useCallback, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useAsync } from '../lib/useAsync';
+import { isOpenDispute, useLiveComments } from '../lib/useLiveComments';
+import { CommentPanel } from '../components/CommentPanel';
 import { num } from '../lib/format';
 import type { IndicatorRowView } from '../lib/types';
 import { IndicatorRowReview, IndicatorRowSkeleton, needsExplanation } from '../components/IndicatorRow';
@@ -53,17 +55,60 @@ export function ExtractionReview() {
   const [evidenceFor, setEvidenceFor] = useState<IndicatorRowView | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const rows = detail.data?.rows ?? [];
+  // A dispute written while this screen is open appears against the figure without a reload.
+  // Until the first poll answers, the row keeps what the page was served with.
+  const live = useLiveComments(submissionId);
+  const rows = useMemo(
+    () =>
+      (detail.data?.rows ?? []).map((r) =>
+        live.comments === null
+          ? r
+          : {
+              ...r,
+              disputed: live.disputes.has(r.targetId),
+              disputeComment: live.disputes.get(r.targetId) ?? null,
+            },
+      ),
+    [detail.data, live.comments, live.disputes],
+  );
+
+  /* A returned period reopens exactly the figures the Department disputed, and each one closes
+     again once the reporter confirms a figure after the dispute was raised. The dispute itself
+     stays open until the Department closes it, so it cannot be the test on its own: that left a
+     corrected figure reopened forever and the period impossible to resubmit. */
+  const returned = detail.data?.submission.status === 'RETURNED';
+  const disputedAt = useMemo(() => {
+    const out = new Map<string, string>();
+    for (const c of live.comments ?? []) {
+      if (!isOpenDispute(c) || !c.createdAt) continue;
+      const seen = out.get(c.anchorId!);
+      if (!seen || c.createdAt > seen) out.set(c.anchorId!, c.createdAt);
+    }
+    return out;
+  }, [live.comments]);
+  const isReopened = useCallback(
+    (row: IndicatorRowView) => {
+      if (!returned || !row.confirmed || !row.disputed) return false;
+      const raised = disputedAt.get(row.targetId);
+      // Before the first poll answers there is no time to compare, so the row stays open.
+      if (!raised || !row.confirmedAt) return true;
+      return new Date(row.confirmedAt).getTime() < new Date(raised).getTime();
+    },
+    [returned, disputedAt],
+  );
 
   /* The draft for a row starts from whatever the parser read, which is what the reporter
-     is being asked to check. It is never pre-filled with a target or a zero. */
+     is being asked to check. A reopened row starts from the figure actually filed, since that
+     is the one in dispute. Never pre-filled with a target or a zero. */
   const draftFor = useCallback(
     (row: IndicatorRowView): Draft => {
       const held = drafts[row.targetId];
       if (held) return held;
+      const filed = row.actual !== null ? String(row.actual) : '';
+      const readable = row.extractedValue !== null && !Number.isNaN(Number(row.extractedValue));
       return {
         ...EMPTY,
-        value: row.extractedValue ?? (row.actual !== null ? String(row.actual) : ''),
+        value: row.confirmed ? filed : readable ? row.extractedValue! : filed,
         explanation: row.varianceExplanation ?? '',
       };
     },
@@ -74,7 +119,7 @@ export function ExtractionReview() {
     setDrafts((d) => ({ ...d, [targetId]: { ...base, ...patch } }));
   }, []);
 
-  const outstanding = useMemo(() => rows.filter((r) => !r.confirmed), [rows]);
+  const outstanding = useMemo(() => rows.filter((r) => !r.confirmed || isReopened(r)), [rows, isReopened]);
   const confirmedCount = rows.length - outstanding.length;
 
   /* Rows a confirm-all may legally write: a numeric value, and a reason wherever the
@@ -228,6 +273,8 @@ export function ExtractionReview() {
               setPendingRow(row.targetId);
               setConfirmModal({ rows: [row] });
             }}
+            reopened={isReopened(row)}
+            fileParsed={d.sourceDocument !== null}
             pending={pendingRow === row.targetId && busy}
             disabled={locked}
           />
@@ -287,13 +334,48 @@ export function ExtractionReview() {
               before the period can be submitted.
               {readyForBulk.length < outstanding.length
                 ? ' ' +
-                  num(outstanding.length - readyForBulk.length) +
-                  ' of the remaining rows are not ready, most likely a variance past twenty percent with no reason given.'
+                  (outstanding.length - readyForBulk.length === 1
+                    ? 'One row still needs'
+                    : num(outstanding.length - readyForBulk.length) + ' rows still need') +
+                  ' a figure, a reason for a shortfall past twenty percent, or a reason for having no result.'
                 : null}
+              {readyForBulk.length < outstanding.length ? (
+                <>
+                  {' '}
+                  <button
+                    type="button"
+                    className="link"
+                    onClick={() => {
+                      const first = outstanding.find((r) => !readyForBulk.includes(r));
+                      const el = first ? document.getElementById('row-' + first.targetId) : null;
+                      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                      el?.querySelector<HTMLElement>('input, textarea')?.focus({ preventScroll: true });
+                    }}
+                  >
+                    Go to the first one
+                  </button>
+                </>
+              ) : null}
             </p>
           ) : null}
         </div>
       ) : null}
+
+      <CommentPanel
+        comments={live.comments}
+        targets={rows}
+        announcement={live.announcement}
+        onReply={async (targetId, parentId, body) => {
+          try {
+            await api.addComment(submissionId!, body, targetId, parentId);
+            live.refresh();
+            return true;
+          } catch (e) {
+            setActionError(e instanceof Error ? e.message : 'The reply was not sent.');
+            return false;
+          }
+        }}
+      />
 
       <StateLine
         status={d.submission.status}

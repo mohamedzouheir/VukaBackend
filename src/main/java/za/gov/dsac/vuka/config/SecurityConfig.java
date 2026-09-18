@@ -1,5 +1,6 @@
 package za.gov.dsac.vuka.config;
 
+import jakarta.servlet.DispatcherType;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
@@ -10,10 +11,8 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
-import org.springframework.security.web.util.matcher.RequestMatcher;
+import org.springframework.security.web.authentication.session.NullAuthenticatedSessionStrategy;
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 
 /**
  * Access control.
@@ -63,10 +62,6 @@ public class SecurityConfig {
         this.devAuthFilter = devAuthFilter;
     }
 
-    /** Anything under the server-rendered reporter surface, which is the cookie-authenticated part. */
-    private static final RequestMatcher MOBILE_SURFACE =
-            request -> path(request).equals("/m") || path(request).startsWith("/m/");
-
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
@@ -78,6 +73,12 @@ public class SecurityConfig {
             // SameSite is a browser behaviour and the token is ours.
             .csrf(csrf -> csrf
                 .csrfTokenRepository(new CookieCsrfTokenRepository())
+                // Authentication is rebuilt from a token on every request, so with the default
+                // strategy every request counted as a fresh sign-in and deleted the CSRF cookie.
+                // The browser's own favicon request after loading a form was enough to do it, and
+                // every form on the phone then bounced to sign-in. Nothing here is a session to
+                // fixate, so there is nothing for rotation to protect.
+                .sessionAuthenticationStrategy(new NullAuthenticatedSessionStrategy())
                 .ignoringRequestMatchers(request -> path(request).startsWith("/api/")))
 
             // No server-side session. The cookie carries a verified Firebase token, not a
@@ -86,11 +87,20 @@ public class SecurityConfig {
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
             .authorizeHttpRequests(auth -> auth
+                // Error rendering and internal forwards carry no data of their own and must not be
+                // refused a second time. Without this, a 403 becomes an error dispatch that has
+                // lost the principal, which then reads as "not signed in" and redirects.
+                .dispatcherTypeMatchers(DispatcherType.ERROR, DispatcherType.FORWARD).permitAll()
+
                 // Citizen view, health, static assets.
                 .requestMatchers("/public/**", "/actuator/health", "/css/**", "/js/**").permitAll()
 
                 // The reporter has to be able to reach the sign-in form without being signed in.
                 .requestMatchers("/m/signin").permitAll()
+                // Anyone holding the cookie must be able to drop it, whatever their role. This used
+                // to sit under the reporter-only rule, so a reviewer who signed in on a phone had
+                // no way to sign out again.
+                .requestMatchers("/m/signout").permitAll()
                 // Everything else under /m writes performance data in a named person's name.
                 .requestMatchers("/m/**").hasRole("ENTITY_REPORTER")
 
@@ -110,14 +120,13 @@ public class SecurityConfig {
                 // data underneath it cannot.
                 .anyRequest().authenticated())
 
-            // A browser that hits 401 on an ordinary page navigation has reached a dead end. The
-            // API still gets its 401; only the reporter surface redirects, and it carries the
-            // path it was heading for so an expired token costs the reporter nothing but a
-            // sign-in. Where they were is in the URL, which is the same property the whole
-            // mobile flow is built on.
-            .exceptionHandling(e -> e.defaultAuthenticationEntryPointFor(
-                    (request, response, ex) -> response.sendRedirect(signInWithReturnTo(request)),
-                    MOBILE_SURFACE))
+            // Not signed in and signed in as the wrong role are answered differently, and the API
+            // and the phone surface are answered differently again. See AccessResponses for the
+            // table. The previous single entry point, registered for /m, had become the default
+            // for every path, so the API answered refusals with a redirect to the phone sign-in.
+            .exceptionHandling(e -> e
+                    .authenticationEntryPoint(AccessResponses.entryPoint())
+                    .accessDeniedHandler(AccessResponses.deniedHandler()))
 
             .addFilterBefore(firebaseTokenFilter, UsernamePasswordAuthenticationFilter.class);
 
@@ -131,13 +140,7 @@ public class SecurityConfig {
         return http.build();
     }
 
-    private static String signInWithReturnTo(HttpServletRequest request) {
-        if (!"GET".equals(request.getMethod())) return "/m/signin";
-        return "/m/signin?next=" + URLEncoder.encode(path(request), StandardCharsets.UTF_8);
-    }
-
     private static String path(HttpServletRequest request) {
-        String servletPath = request.getServletPath();
-        return servletPath == null || servletPath.isEmpty() ? request.getRequestURI() : servletPath;
+        return AccessResponses.path(request);
     }
 }

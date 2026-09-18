@@ -24,7 +24,7 @@ import {
   type User,
 } from 'firebase/auth';
 import { api, setTokenSource } from './api';
-import type { MeView, Role } from './types';
+import type { MeView, Role, Capability } from './types';
 
 const DEV_AUTH = import.meta.env.VITE_DEV_AUTH === 'true';
 const DEV_TOKEN_KEY = 'vuka.dev.token';
@@ -166,6 +166,16 @@ export function useAuth(): AuthState {
 }
 
 /* ---------- what each role may reach ---------- */
+
+/**
+ * Whether the signed-in person may do something, as the server decided it.
+ *
+ * Read from /api/me rather than worked out from the role here, so the screen offers exactly
+ * the actions the API will accept. A missing list fails closed: nothing is offered.
+ */
+export function can(me: MeView | null | undefined, capability: Capability): boolean {
+  return !!me && Array.isArray(me.capabilities) && me.capabilities.includes(capability);
+}
 
 export function isDsac(role: Role | undefined | null): boolean {
   return role === 'DSAC_REVIEWER' || role === 'DSAC_EXECUTIVE' || role === 'ADMIN';

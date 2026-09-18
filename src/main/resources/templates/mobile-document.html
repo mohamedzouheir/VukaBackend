@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Document</title>
+  <style>
+    :root { --ink:#1a1a1a; --green:#0f3d2e; --on-green:#fff; --muted:#5a6b64; --line:#dfe6e3; --bg:#fff; --panel:#f4f8f6; }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) { --ink:#e8edeb; --green:#7fd1b0; --on-green:#121714; --muted:#9bb0a7; --line:#2b3a34; --bg:#121714; --panel:#1a221e; }
+    }
+    :root[data-theme="dark"] { --ink:#e8edeb; --green:#7fd1b0; --on-green:#121714; --muted:#9bb0a7; --line:#2b3a34; --bg:#121714; --panel:#1a221e; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink);
+           font:17px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+    .wrap { max-width:520px; margin:0 auto; padding:20px 16px 40px; }
+    h1 { font-size:20px; margin:0 0 4px; color:var(--green); word-break:break-word; }
+    h2 { font-size:16px; margin:26px 0 8px; }
+    p.lede { font-size:14px; color:var(--muted); margin:0 0 18px; }
+    dl { margin:0; background:var(--panel); border-radius:10px; padding:14px; font-size:15px; }
+    dt { font-size:13px; color:var(--muted); margin-top:8px; }
+    dt:first-child { margin-top:0; }
+    dd { margin:0; word-break:break-all; }
+    ol.versions { list-style:none; margin:0; padding:0; }
+    ol.versions li { border-left:2px solid var(--line); padding:0 0 14px 14px; position:relative; }
+    ol.versions li:last-child { padding-bottom:0; }
+    ol.versions .v { font-weight:700; color:var(--green); }
+    ol.versions .m { font-size:14px; color:var(--muted); }
+    ul.thread { list-style:none; margin:0; padding:0; }
+    ul.thread li { background:var(--panel); border-radius:10px; padding:12px 14px; margin:0 0 10px; font-size:15px; }
+    ul.thread .who { font-size:13px; color:var(--muted); }
+    label { display:block; font-size:14px; margin:14px 0 4px; }
+    .hint { font-size:13px; color:var(--muted); margin:2px 0 0; }
+    textarea { width:100%; font:inherit; font-size:16px; padding:10px; min-height:90px;
+               border:1px solid var(--line); border-radius:8px; background:var(--bg); color:var(--ink); }
+    button { margin-top:12px; width:100%; min-height:48px; font:inherit; font-size:17px; font-weight:700;
+             background:var(--green); color:var(--on-green); border:none; border-radius:8px; cursor:pointer; }
+    .none { color:var(--muted); font-size:15px; }
+    a { color:var(--green); }
+    a:focus-visible, button:focus-visible, textarea:focus-visible {
+      outline:3px solid var(--green); outline-offset:3px; border-radius:3px; }
+    .back { display:inline-block; margin-top:26px; font-size:14px; }
+    .skip { position:absolute; left:-9999px; }
+    .skip:focus { position:fixed; left:8px; top:8px; z-index:10; padding:10px 14px;
+                  background:var(--ink); color:var(--bg); border-radius:6px; }
+  </style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to the main content</a>
+<div class="wrap">
+  <main id="main">
+    <h1 th:text="${doc.getFileName()}">Annual report.pdf</h1>
+    <p class="lede" th:text="${doc.getDocumentKey()}">ANNUAL_REPORT/annual report.pdf</p>
+
+    <dl>
+      <dt>Receipt</dt>
+      <dd th:text="${doc.getReceiptNumber()}">VK-20260918-A1B2C3D4</dd>
+      <dt>Received</dt>
+      <dd th:text="${doc.getReceivedAt() != null ? #temporals.format(doc.getReceivedAt(), 'd MMMM yyyy, HH:mm') : 'Not recorded'}">18 September 2026</dd>
+      <dt>Departmental decision</dt>
+      <dd>
+        <span th:if="${doc.getDecidedAt() == null}">Not yet reviewed. A receipt is not an approval.</span>
+        <span th:if="${doc.getDecidedAt() != null}"
+              th:text="${#strings.toLowerCase(doc.getApprovalStatus().name())} + ' by ' + ${doc.getDecidedByName()}">approved by A Reviewer</span>
+      </dd>
+      <dt>Content hash (SHA-256)</dt>
+      <dd th:text="${doc.getContentHash()}">e3b0c442…</dd>
+      <dt>Microsoft 365</dt>
+      <dd>
+        <span th:if="${doc.getGraphSyncState() == null or doc.getGraphSyncState().name() == 'NOT_CONFIGURED'}">Not connected for this organisation.</span>
+        <span th:if="${doc.getGraphSyncState() != null and doc.getGraphSyncState().name() == 'PENDING'}">Queued to copy into your Microsoft folder.</span>
+        <span th:if="${doc.getGraphSyncState() != null and doc.getGraphSyncState().name() == 'FAILED'}">The copy to Microsoft 365 failed. The document is safely held here.</span>
+        <span th:if="${doc.getGraphSyncState() != null and doc.getGraphSyncState().name() == 'SYNCED'}"
+              th:text="'In your Microsoft folder' + (${doc.getGraphVersionLabel()} != null ? ' as version ' + ${doc.getGraphVersionLabel()} : '') + '.'">In your Microsoft folder.</span>
+        <span th:if="${doc.getGraphSyncState() != null and doc.getGraphSyncState().name() == 'SOURCE'}">Picked up from a save in Microsoft 365.</span>
+      </dd>
+    </dl>
+
+    <h2>Version history</h2>
+    <ol class="versions">
+      <li th:each="v : ${history}">
+        <span class="v" th:text="'Version ' + ${v.getVersion()}">Version 2</span>
+        <span class="m" th:if="${v.isCurrent()}">, current</span>
+        <p class="m" style="margin:2px 0 0">
+          <span th:text="${v.getUploadedAt() != null ? #temporals.format(v.getUploadedAt(), 'd MMM yyyy, HH:mm') : ''}">18 Sep 2026</span>
+          <span th:if="${v.getSource() != null and v.getSource().name() == 'MICROSOFT_365'}"> · saved in Microsoft 365</span>
+          <span th:if="${v.getSource() != null and v.getSource().name() == 'VUKA_UPLOAD'}"> · uploaded here</span>
+        </p>
+      </li>
+    </ol>
+
+    <h2>Comments</h2>
+    <p class="none">The conversation about this document, with DSAC, is kept with every other
+      query about your reporting.</p>
+    <p><a th:href="@{'/m/comments/document/' + ${doc.getId()}}">Open the thread about this document</a></p>
+
+    <a class="back" th:href="@{/m/workspace}">Back to the workspace</a>
+  </main>
+</div>
+
+</body>
+</html>

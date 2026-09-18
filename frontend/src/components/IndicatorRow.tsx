@@ -137,6 +137,13 @@ interface ReviewProps extends CommonProps {
   onNoResultReason: (v: string) => void;
   onConfirm: () => void;
   onAttach: () => void;
+  /**
+   * Confirmed, but open again because the Department disputed it and returned the period.
+   * Without this a returned figure rendered as locked and the reporter could not correct it.
+   */
+  reopened?: boolean;
+  /** Whether a file has been parsed for this period, so a missing value is described truthfully. */
+  fileParsed?: boolean;
   pending?: boolean;
   disabled?: boolean;
 }
@@ -157,17 +164,26 @@ export function IndicatorRowReview(props: ReviewProps) {
   const noteId = 'note-' + row.targetId;
   const errorId = 'err-' + row.targetId;
 
+  // A confirmed row is closed unless a return reopened it.
+  const locked = row.confirmed && !props.reopened;
+
+  // What the parser read, and whether it was a number at all. "about 12" is not.
+  const extractedNumeric =
+    row.extractedValue !== null && row.extractedValue.trim() !== '' && !Number.isNaN(Number(row.extractedValue));
+
   const canConfirm =
     !props.disabled &&
     !props.pending &&
     ((props.noResult && props.noResultReason.trim() !== '') || (numeric && !explanationRequired));
 
   return (
-    <div className={'ind ind-review' + (row.confirmed ? ' ind-done' : '')}>
+    <div className={'ind ind-review' + (locked ? ' ind-done' : '')} id={'row-' + row.targetId}>
       <div className="ind-head">
         <span className="mono ind-ref">{row.indicatorRef}</span>
         <h3>{row.indicator}</h3>
-        {row.confirmed ? (
+        {props.reopened ? (
+          <span className="ind-badge">Reopened for correction</span>
+        ) : row.confirmed ? (
           <span className="ind-badge ind-badge-ok">
             <IconCheckCircle size={14} /> Confirmed
           </span>
@@ -184,14 +200,20 @@ export function IndicatorRowReview(props: ReviewProps) {
         </p>
       ) : null}
 
-      {/* What the parser read, beside the cell it came from. Nothing is saved yet. */}
-      {row.extractedValue !== null || row.sourceLocation ? (
+      {/* Before confirming, what the parser read beside the cell it came from. After, the figure
+          actually filed, which is what the Department sees. Showing the parsed value on a
+          confirmed row put a different number in front of each side of a dispute. */}
+      {row.confirmed || row.extractedValue !== null || row.sourceLocation ? (
         <div className="ind-figures">
           <ProvenanceCell
-            value={row.extractedValue === null ? null : row.extractedValue}
+            value={
+              row.confirmed
+                ? row.actual === null ? null : num(row.actual)
+                : row.extractedValue === null ? null : row.extractedValue
+            }
             sourceLocation={row.sourceLocation}
             documentUrl={documentUrl && row.extractionId ? documentUrl(row.extractionId) : null}
-            emptyText="Not parsed"
+            emptyText={row.confirmed ? 'No result' : 'Not parsed'}
           />
           <dl className="ind-targets">
             <div>
@@ -212,20 +234,36 @@ export function IndicatorRowReview(props: ReviewProps) {
             </div>
           </dl>
         </div>
-      ) : (
+      ) : null}
+
+      {!locked && !row.confirmed && row.extractedValue !== null && !extractedNumeric ? (
+        <p className="ind-note">
+          <IconAlert size={15} />
+          <span>
+            <strong>Not a number.</strong>{' '}
+            {row.sourceLocation ? 'Cell ' + row.sourceLocation : 'The file'} reads &ldquo;
+            {row.extractedValue}&rdquo;. Enter the figure as a number, or record that there is no
+            result this quarter.
+          </span>
+        </p>
+      ) : null}
+
+      {!(row.confirmed || row.extractedValue !== null || row.sourceLocation) ? (
         <p className="ind-note">
           <IconAlert size={15} />
           <span>
             <strong>Not parsed.</strong>{' '}
             {row.sourceLocation
               ? 'Cell ' + row.sourceLocation + ' could not be read as a number.'
-              : 'No value for this indicator was found in the uploaded file.'}{' '}
+              : props.fileParsed
+                ? 'No value for this indicator was found in the uploaded file.'
+                : 'No file has been uploaded for this period.'}{' '}
             Enter it here, or record that there is no result this quarter.
           </span>
         </p>
-      )}
+      ) : null}
 
-      {!row.confirmed ? (
+      {!locked ? (
         <div className="ind-form">
           <div className="ind-field">
             <label htmlFor={inputId}>
@@ -266,7 +304,7 @@ export function IndicatorRowReview(props: ReviewProps) {
         </div>
       ) : null}
 
-      {!row.confirmed ? (
+      {!locked ? (
         <div className="ind-noresult">
           <label className="ind-check">
             <input
@@ -295,10 +333,11 @@ export function IndicatorRowReview(props: ReviewProps) {
         agsaCriteria={row.agsaCriteria}
         traceable={row.traceable}
         documentUrl={documentUrl}
-        onAttach={props.disabled ? undefined : props.onAttach}
+        // Offered even on a locked period: evidence may follow the figure, and withholding it is worse than late.
+        onAttach={props.onAttach}
       />
 
-      {row.confirmed ? (
+      {locked ? (
         <p className="ind-confirmed">
           <IconUser size={14} />
           <span>

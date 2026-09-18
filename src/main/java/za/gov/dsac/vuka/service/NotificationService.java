@@ -7,9 +7,13 @@ import org.springframework.stereotype.Service;
 import za.gov.dsac.vuka.domain.*;
 import za.gov.dsac.vuka.repository.*;
 
+import za.gov.dsac.vuka.service.microsoft.TeamsNotifier;
+
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -20,6 +24,13 @@ import java.util.UUID;
  * A reminder that says "your report is due" is nagging. A reminder that says "these four
  * targets have no evidence attached" is a tool. The extra query costs nothing and is the
  * difference between a notification people act on and one they filter to a folder.
+ *
+ * <h2>Where it lands</h2>
+ *
+ * Into the entity's Microsoft Teams channel where one has been bound, and into the log either
+ * way. A countdown that arrives in the channel the finance officer already has open is worth
+ * several that arrive in an inbox beside everything else, and it is the point at which the
+ * early warning requirement and the workspace requirement stop being two separate features.
  */
 @Service
 public class NotificationService {
@@ -31,15 +42,20 @@ public class NotificationService {
     private final TargetRepository targets;
     private final TargetResultRepository results;
     private final SubmissionRepository submissions;
+    private final EntityWorkspaceRepository workspaces;
+    private final TeamsNotifier teams;
 
     public NotificationService(ReportingPeriodRepository periods, PublicEntityRepository entities,
                                TargetRepository targets, TargetResultRepository results,
-                               SubmissionRepository submissions) {
+                               SubmissionRepository submissions, EntityWorkspaceRepository workspaces,
+                               TeamsNotifier teams) {
         this.periods = periods;
         this.entities = entities;
         this.targets = targets;
         this.results = results;
         this.submissions = submissions;
+        this.workspaces = workspaces;
+        this.teams = teams;
     }
 
     /** Runs hourly. The hourly cadence is what makes the final-day countdown possible. */
@@ -80,9 +96,9 @@ public class NotificationService {
     /**
      * Builds and sends the message.
      *
-     * Delivery is logged rather than emailed here: wiring a mail provider is a
-     * configuration decision for whoever deploys this, and the useful part — working
-     * out what is actually outstanding — is done either way.
+     * <p>Delivered to the entity's Teams channel where one is bound, and logged in every case.
+     * Email is still not wired: a mail provider is a configuration decision for whoever deploys
+     * this, and the useful part, working out what is actually outstanding, is done either way.
      */
     private void notifyEntity(PublicEntity entity, ReportingPeriod period,
                               Enums.NotificationOffset offset, long daysOut) {
@@ -103,5 +119,23 @@ public class NotificationService {
                     outstanding.size(), String.join(", ", outstanding));
 
         log.info("[{}] -> {} : {}", offset, entity.getContactEmail(), body);
+
+        workspaces.findByEntityId(entity.getId())
+                .map(EntityWorkspace::getTeamsWebhookUrl)
+                .ifPresent(webhook -> {
+                    Map<String, String> facts = new LinkedHashMap<>();
+                    facts.put("Reporting period", period.getLabel());
+                    facts.put("Due", String.valueOf(period.getRegulatoryDeadline()));
+                    facts.put("Basis", period.getDeadlineBasis() == null
+                            ? "Departmental instruction"
+                            : period.getDeadlineBasis().name());
+                    facts.put("Targets without evidence", outstanding.isEmpty()
+                            ? "None"
+                            : outstanding.size() + ": " + String.join(", ", outstanding));
+                    teams.post(webhook,
+                            entity.getShortName() + ": " + period.getLabel()
+                                    + " is due in " + daysOut + " day(s)",
+                            body, facts);
+                });
     }
 }

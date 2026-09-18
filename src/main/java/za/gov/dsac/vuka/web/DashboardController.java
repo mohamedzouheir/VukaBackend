@@ -8,11 +8,11 @@ import za.gov.dsac.vuka.config.VukaPrincipal;
 import za.gov.dsac.vuka.domain.*;
 import za.gov.dsac.vuka.repository.*;
 import za.gov.dsac.vuka.service.ReportingViewService;
+import za.gov.dsac.vuka.service.RiskSchedule;
 import za.gov.dsac.vuka.service.RiskService;
 import za.gov.dsac.vuka.service.UnitCostService;
 
 import java.math.BigDecimal;
-import java.time.Instant;
 import java.util.*;
 
 /**
@@ -24,7 +24,7 @@ import java.util.*;
  */
 @RestController
 @RequestMapping("/api/dashboard")
-@PreAuthorize("hasAnyRole('DSAC_REVIEWER','DSAC_EXECUTIVE','ADMIN')")
+@PreAuthorize("@can.has('VIEW_PORTFOLIO')")
 public class DashboardController {
 
     private final PublicEntityRepository entities;
@@ -38,13 +38,15 @@ public class DashboardController {
     private final RiskService riskService;
     private final UnitCostService unitCost;
     private final ReportingViewService views;
+    private final RiskSchedule riskSchedule;
 
     public DashboardController(PublicEntityRepository entities, RiskScoreRepository riskScores,
                                ReportingPeriodRepository periods, FinancialYearRepository years,
                                TargetRepository targets, TargetResultRepository results,
                                AllocationRepository allocations, AuditFindingRepository findings,
                                RiskService riskService, UnitCostService unitCost,
-                               ReportingViewService views) {
+                               ReportingViewService views, RiskSchedule riskSchedule) {
+        this.riskSchedule = riskSchedule;
         this.entities = entities;
         this.riskScores = riskScores;
         this.periods = periods;
@@ -160,7 +162,7 @@ public class DashboardController {
      * caller that a record exists but is not theirs is itself a disclosure about another entity.
      */
     @GetMapping("/entity/{entityId}")
-    @PreAuthorize("hasAnyRole('ENTITY_REPORTER','DSAC_REVIEWER','DSAC_EXECUTIVE','ADMIN')")
+    @PreAuthorize("@can.has('READ_OWN_REPORTING')")
     public ResponseEntity<EntityDetail> entity(@PathVariable("entityId") UUID entityId,
                                                @RequestParam(name = "periodId", required = false) UUID periodId,
                                                @AuthenticationPrincipal VukaPrincipal who) {
@@ -261,7 +263,7 @@ public class DashboardController {
      * boxes are worth showing and a screen that replaces all four with an error is not.
      */
     @GetMapping("/entity/{entityId}/chain")
-    @PreAuthorize("hasAnyRole('ENTITY_REPORTER','DSAC_REVIEWER','DSAC_EXECUTIVE','ADMIN')")
+    @PreAuthorize("@can.has('READ_OWN_REPORTING')")
     public ResponseEntity<ReportingViewService.ChainView> chain(
             @PathVariable("entityId") UUID entityId,
             @RequestParam(name = "periodId", required = false) UUID periodId,
@@ -284,7 +286,7 @@ public class DashboardController {
      * construction rather than by a filter the caller sets.
      */
     @GetMapping("/entity/{entityId}/unit-cost")
-    @PreAuthorize("hasAnyRole('ENTITY_REPORTER','DSAC_REVIEWER','DSAC_EXECUTIVE','ADMIN')")
+    @PreAuthorize("@can.has('READ_OWN_REPORTING')")
     public ResponseEntity<List<ReportingViewService.UnitCostView>> unitCosts(
             @PathVariable("entityId") UUID entityId,
             @RequestParam(name = "targetId", required = false) UUID targetId,
@@ -297,20 +299,12 @@ public class DashboardController {
 
     // ---------- recompute ----------
 
-    /** Recomputes scores for every entity. Also runs nightly; this is the demo button. */
+    /** Recomputes scores for every entity. Also runs at start and nightly, in RiskSchedule. */
     @PostMapping("/recompute")
-    @PreAuthorize("hasAnyRole('DSAC_REVIEWER','ADMIN')")
+    @PreAuthorize("@can.has('REVIEW_SUBMISSIONS')")
     public Map<String, Object> recompute(@RequestParam(name = "periodId", required = false) UUID periodId,
                                          @AuthenticationPrincipal VukaPrincipal who) {
-        UUID period = periodId != null ? periodId : currentPeriodId();
-        if (period == null) return Map.of("computed", 0, "reason", "no current reporting period");
-
-        int n = 0;
-        for (PublicEntity e : entities.findAll()) {
-            riskService.computeAndStore(e.getId(), period);
-            n++;
-        }
-        return Map.of("computed", n, "periodId", period, "at", Instant.now().toString());
+        return riskSchedule.recompute(periodId);
     }
 
     /** The most recent period whose window has opened. */

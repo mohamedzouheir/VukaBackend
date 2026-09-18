@@ -39,7 +39,7 @@ import java.util.UUID;
  */
 @RestController
 @RequestMapping("/api/admin")
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("@can.has('ADMINISTER')")
 public class AdminController {
 
     /**

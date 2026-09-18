@@ -7,6 +7,8 @@ import org.springframework.web.bind.annotation.*;
 import za.gov.dsac.vuka.config.VukaPrincipal;
 import za.gov.dsac.vuka.domain.*;
 import za.gov.dsac.vuka.repository.*;
+import za.gov.dsac.vuka.service.CommentService;
+import za.gov.dsac.vuka.service.ReportingViewService;
 import za.gov.dsac.vuka.service.SubmissionService;
 
 import java.math.BigDecimal;
@@ -37,13 +39,18 @@ public class MobileController {
     private final SubmissionRepository submissions;
     private final TargetResultRepository results;
     private final SubmissionService submissionService;
+    private final CommentService comments;
+    private final ReportingViewService views;
 
     public MobileController(TargetRepository targets, SubmissionRepository submissions,
-                            TargetResultRepository results, SubmissionService submissionService) {
+                            TargetResultRepository results, SubmissionService submissionService,
+                            CommentService comments, ReportingViewService views) {
+        this.views = views;
         this.targets = targets;
         this.submissions = submissions;
         this.results = results;
         this.submissionService = submissionService;
+        this.comments = comments;
     }
 
     /** Landing: what is outstanding for this reporter's entity. */
@@ -61,7 +68,38 @@ public class MobileController {
 
         model.addAttribute("who", who);
         model.addAttribute("open", open);
+
+        // The period that is open now, where nothing has been started for it yet. Without this the
+        // phone said "nothing outstanding" through a whole open quarter, because a submission only
+        // existed once someone had opened one on the web.
+        List<Submission> all = submissions.findByEntityIdOrderByCreatedAtDesc(entityId);
+        views.periodsForCurrentYear().stream()
+                .filter(ReportingViewService.PeriodView::open)
+                .reduce((a, b) -> b)
+                .filter(p -> all.stream().noneMatch(s -> s.getReportingPeriod().getId().equals(p.periodId())))
+                .ifPresent(p -> {
+                    model.addAttribute("startable", p);
+                    model.addAttribute("startableDue", p.dueDate() == null ? null
+                            : java.time.LocalDate.parse(p.dueDate())
+                                    .format(java.time.format.DateTimeFormatter.ofPattern("d MMMM")));
+                });
+        // A query DSAC has raised is more urgent than anything else on this screen, and a
+        // reporter who has to go looking for it will find it after the deadline.
+        model.addAttribute("openComments", comments.openThreadCount(entityId));
         return "mobile-home";
+    }
+
+    /** Starts the open period from the phone, then goes straight to the first indicator. */
+    @PostMapping("/period/{periodId}/start")
+    public String start(@PathVariable("periodId") UUID periodId,
+                        @AuthenticationPrincipal VukaPrincipal who, Model model) {
+        if (who.entityId() == null) {
+            model.addAttribute("message", "This view is for entity reporters.");
+            return "mobile-message";
+        }
+        Submission s = submissionService.openDraft(UUID.fromString(who.entityId()), periodId,
+                Enums.SubmissionChannel.MOBILE, who);
+        return "redirect:/m/submission/" + s.getId() + "/step/0";
     }
 
     /**
@@ -113,7 +151,8 @@ public class MobileController {
      */
     @PostMapping("/submission/{submissionId}/step/{index}")
     public String saveStep(@PathVariable("submissionId") UUID submissionId, @PathVariable("index") int index,
-                           @RequestParam("actualValue") BigDecimal actualValue,
+                           @RequestParam(name = "actualValue", required = false) BigDecimal actualValue,
+                           @RequestParam(name = "noResult", defaultValue = "false") boolean noResult,
                            @RequestParam(name = "spendToDate", required = false) BigDecimal spendToDate,
                            @RequestParam(name = "varianceExplanation", required = false) String varianceExplanation,
                            @AuthenticationPrincipal VukaPrincipal who, Model model) {
@@ -130,10 +169,41 @@ public class MobileController {
             return "mobile-message";
         }
 
-        submissionService.confirm(submissionId,
-                List.of(new SubmissionService.ConfirmedRow(
-                        list.get(index).getId(), actualValue, spendToDate, varianceExplanation)),
-                who);
+        // No result is an absence with a reason, stored the way the office screen stores it: a null
+        // figure and the reason, never a zero.
+        String reason = varianceExplanation == null || varianceExplanation.isBlank() ? null : varianceExplanation.trim();
+        BigDecimal figure = noResult ? null : actualValue;
+        if (noResult && reason != null) reason = "No result this quarter. " + reason;
+
+        try {
+            if (!noResult && figure == null) {
+                throw new SubmissionService.ReasonRequired(
+                        "Enter the number delivered, or tick that there is no result this quarter.");
+            }
+            submissionService.confirm(submissionId,
+                    List.of(new SubmissionService.ConfirmedRow(
+                            list.get(index).getId(), figure, spendToDate, reason)),
+                    who);
+        } catch (SubmissionService.ReasonRequired e) {
+            // Back to the same step with what was typed still in the boxes. Sending a reporter on a
+            // weak connection to a separate error page loses their answer.
+            Target t = list.get(index);
+            model.addAttribute("submission", submission);
+            model.addAttribute("target", t);
+            model.addAttribute("index", index);
+            model.addAttribute("total", list.size());
+            model.addAttribute("quarterTarget", quarterTarget(t, submission.getReportingPeriod().getQuarter()));
+            model.addAttribute("existing", null);
+            model.addAttribute("error", e.getMessage());
+            model.addAttribute("enteredValue", actualValue);
+            model.addAttribute("enteredSpend", spendToDate);
+            model.addAttribute("enteredReason", varianceExplanation);
+            model.addAttribute("enteredNoResult", noResult);
+            return "mobile-step";
+        } catch (SubmissionService.StateException e) {
+            model.addAttribute("message", e.getMessage());
+            return "mobile-message";
+        }
 
         return "redirect:/m/submission/" + submissionId + "/step/" + (index + 1);
     }
@@ -149,7 +219,12 @@ public class MobileController {
             return "mobile-message";
         }
 
-        submissionService.submit(submissionId, who);
+        try {
+            submissionService.submit(submissionId, who);
+        } catch (SubmissionService.StateException e) {
+            model.addAttribute("message", e.getMessage());
+            return "mobile-message";
+        }
         return "redirect:/m/submission/" + submissionId + "/submitted";
     }
 
@@ -191,7 +266,7 @@ public class MobileController {
      * disclosure about another entity, which is the same rule ExportController follows.
      */
     private Submission ownSubmission(UUID submissionId, VukaPrincipal who) {
-        Submission submission = submissions.findById(submissionId).orElse(null);
+        Submission submission = submissions.findWithEntityAndPeriodById(submissionId).orElse(null);
         if (submission == null) return null;
         return who.canRead(submission.getEntity().getId().toString()) ? submission : null;
     }

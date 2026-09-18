@@ -13,6 +13,7 @@
  */
 import { IconExternal, IconSheet } from '../icons';
 import { splitSourceCell } from '../lib/format';
+import { openFile } from '../lib/api';
 import './components.css';
 
 interface Props {
@@ -52,9 +53,8 @@ export function ProvenanceCell({
           <a
             className="prov-source"
             href={documentUrl}
-            target="_blank"
-            rel="noreferrer"
-            title={'Opens ' + (source.sheet ?? 'the source file') + ' at cell ' + source.cell}
+            onClick={(e) => openFile(e, documentUrl, 'source.xlsx')}
+            title={'Downloads the uploaded file. This value is in ' + (source.sheet ?? 'the sheet') + ', cell ' + source.cell + '.'}
           >
             <IconSheet size={14} />
             <span>

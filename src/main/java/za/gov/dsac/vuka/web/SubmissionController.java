@@ -8,6 +8,8 @@ import org.springframework.web.multipart.MultipartFile;
 import za.gov.dsac.vuka.config.VukaPrincipal;
 import za.gov.dsac.vuka.domain.*;
 import za.gov.dsac.vuka.repository.*;
+import za.gov.dsac.vuka.service.CommentService;
+import za.gov.dsac.vuka.service.DocumentVersionService;
 import za.gov.dsac.vuka.service.ReportingViewService;
 import za.gov.dsac.vuka.service.SubmissionService;
 import za.gov.dsac.vuka.service.TemplateWriter;
@@ -35,17 +37,20 @@ public class SubmissionController {
     private final ReportingViewService views;
     private final TemplateWriter templateWriter;
     private final DocumentRecordRepository documents;
-    private final CommentRepository comments;
     private final RiskScoreRepository riskScores;
     private final PublicEntityRepository entities;
     private final ReportingPeriodRepository periods;
+    private final DocumentVersionService documentVersions;
+    private final CommentService commentService;
 
     public SubmissionController(SubmissionService service, SubmissionRepository submissions,
                                 ExtractionResultRepository extractions, TargetRepository targets,
                                 ReportingViewService views, TemplateWriter templateWriter,
-                                DocumentRecordRepository documents, CommentRepository comments,
+                                DocumentRecordRepository documents,
                                 RiskScoreRepository riskScores, PublicEntityRepository entities,
-                                ReportingPeriodRepository periods) {
+                                ReportingPeriodRepository periods,
+                                DocumentVersionService documentVersions,
+                                CommentService commentService) {
         this.service = service;
         this.submissions = submissions;
         this.extractions = extractions;
@@ -53,10 +58,11 @@ public class SubmissionController {
         this.views = views;
         this.templateWriter = templateWriter;
         this.documents = documents;
-        this.comments = comments;
         this.riskScores = riskScores;
         this.entities = entities;
         this.periods = periods;
+        this.documentVersions = documentVersions;
+        this.commentService = commentService;
     }
 
     /**
@@ -68,7 +74,7 @@ public class SubmissionController {
      * itself a disclosure about that somebody else.
      */
     private Optional<Submission> readable(UUID submissionId, VukaPrincipal who) {
-        return submissions.findById(submissionId)
+        return submissions.findWithEntityAndPeriodById(submissionId)
                 .filter(s -> who == null || who.canRead(s.getEntity().getId().toString()));
     }
 
@@ -77,7 +83,7 @@ public class SubmissionController {
     public record OpenRequest(UUID entityId, UUID periodId, String channel) {}
 
     @PostMapping("/open")
-    @PreAuthorize("hasRole('ENTITY_REPORTER')")
+    @PreAuthorize("@can.has('SUBMIT_REPORTING')")
     public ResponseEntity<?> open(@RequestBody OpenRequest req, @AuthenticationPrincipal VukaPrincipal who) {
         if (!who.canRead(req.entityId().toString())) return ResponseEntity.status(403).build();
         Enums.SubmissionChannel channel;
@@ -93,7 +99,7 @@ public class SubmissionController {
     // ---------- upload and parse ----------
 
     @PostMapping("/{submissionId}/upload")
-    @PreAuthorize("hasRole('ENTITY_REPORTER')")
+    @PreAuthorize("@can.has('SUBMIT_REPORTING')")
     public ResponseEntity<?> upload(@PathVariable("submissionId") UUID submissionId,
                                     @RequestParam("file") MultipartFile file,
                                     @AuthenticationPrincipal VukaPrincipal who) throws Exception {
@@ -149,7 +155,7 @@ public class SubmissionController {
      * goes onto every row.
      */
     @PostMapping("/{submissionId}/confirm")
-    @PreAuthorize("hasRole('ENTITY_REPORTER')")
+    @PreAuthorize("@can.has('SUBMIT_REPORTING')")
     public ResponseEntity<?> confirm(@PathVariable("submissionId") UUID submissionId,
                                      @RequestBody ConfirmRequest req,
                                      @AuthenticationPrincipal VukaPrincipal who) {
@@ -169,13 +175,16 @@ public class SubmissionController {
     // ---------- submit ----------
 
     @PostMapping("/{submissionId}/submit")
-    @PreAuthorize("hasRole('ENTITY_REPORTER')")
+    @PreAuthorize("@can.has('SUBMIT_REPORTING')")
     public ResponseEntity<?> submit(@PathVariable("submissionId") UUID submissionId,
                                     @AuthenticationPrincipal VukaPrincipal who) {
         Submission s = submissions.findById(submissionId).orElse(null);
         if (s == null) return ResponseEntity.notFound().build();
         if (!who.canRead(s.getEntity().getId().toString())) return ResponseEntity.status(403).build();
-        return ResponseEntity.ok(service.submit(submissionId, who));
+        // Not the entity itself: its lazy entity and period proxies cannot be serialised once the
+        // service transaction has closed, which answered 500 to a submission that had succeeded.
+        Submission done = service.submit(submissionId, who);
+        return ResponseEntity.ok(Map.of("submissionId", done.getId(), "status", done.getStatus().name()));
     }
 
 
@@ -189,7 +198,7 @@ public class SubmissionController {
      * entity and receive everything.
      */
     @GetMapping
-    @PreAuthorize("hasAnyRole('ENTITY_REPORTER','DSAC_REVIEWER','DSAC_EXECUTIVE','ADMIN')")
+    @PreAuthorize("@can.has('READ_OWN_REPORTING')")
     public List<ReportingViewService.SubmissionRow> list(
             @RequestParam(name = "entityId", required = false) UUID entityId,
             @RequestParam(name = "periodId", required = false) UUID periodId,
@@ -216,7 +225,7 @@ public class SubmissionController {
      * so the two screens cannot disagree about what was filed.
      */
     @GetMapping("/{submissionId}")
-    @PreAuthorize("hasAnyRole('ENTITY_REPORTER','DSAC_REVIEWER','DSAC_EXECUTIVE','ADMIN')")
+    @PreAuthorize("@can.has('READ_OWN_REPORTING')")
     public ResponseEntity<ReportingViewService.SubmissionDetail> detail(
             @PathVariable("submissionId") UUID submissionId, @AuthenticationPrincipal VukaPrincipal who) {
 
@@ -273,7 +282,7 @@ public class SubmissionController {
 
     /** The indicator rows on their own, for a screen that already has the header. */
     @GetMapping("/{submissionId}/rows")
-    @PreAuthorize("hasAnyRole('ENTITY_REPORTER','DSAC_REVIEWER','DSAC_EXECUTIVE','ADMIN')")
+    @PreAuthorize("@can.has('READ_OWN_REPORTING')")
     public ResponseEntity<List<ReportingViewService.IndicatorRowView>> rows(
             @PathVariable("submissionId") UUID submissionId, @AuthenticationPrincipal VukaPrincipal who) {
 
@@ -295,7 +304,7 @@ public class SubmissionController {
      * producing an empty file, because an empty file reads as a system fault.
      */
     @GetMapping("/template")
-    @PreAuthorize("hasAnyRole('ENTITY_REPORTER','DSAC_REVIEWER','ADMIN')")
+    @PreAuthorize("@can.has('DOWNLOAD_TEMPLATE')")
     public ResponseEntity<?> template(@RequestParam("entityId") UUID entityId, @RequestParam("periodId") UUID periodId,
                                       @AuthenticationPrincipal VukaPrincipal who) throws Exception {
 
@@ -342,7 +351,7 @@ public class SubmissionController {
      * <p>Permitted after submission. Withholding evidence is worse than late evidence.
      */
     @PostMapping("/{submissionId}/evidence")
-    @PreAuthorize("hasRole('ENTITY_REPORTER')")
+    @PreAuthorize("@can.has('SUBMIT_REPORTING')")
     public ResponseEntity<?> attachEvidence(@PathVariable("submissionId") UUID submissionId,
                                             @RequestParam("file") MultipartFile file,
                                             @RequestParam("targetId") UUID targetId,
@@ -372,45 +381,27 @@ public class SubmissionController {
             }
         }
 
-        String hash = sha256(file.getBytes());
-        String storagePath = "uploads/" + s.getEntity().getId() + "/" + UUID.randomUUID();
+        // Through the document write path rather than built here. That path stores the bytes,
+        // versions a re-upload instead of adding an unrelated row beside it, and issues a receipt.
+        // The per criterion shape is kept: the criterion is part of the document key, so each
+        // claim about the file has its own version chain and the bytes are stored once.
+        byte[] content = file.getBytes();
         UUID firstId = null;
 
         // At least one row, even with no criterion recorded. The interface then reads the figure as
         // attached but not traceable, which is a real and different state from unverifiable.
         int rowsToWrite = Math.max(1, criteria.size());
         for (int i = 0; i < rowsToWrite; i++) {
-            DocumentRecord doc = new DocumentRecord();
-            doc.setEntity(s.getEntity());
-            doc.setSubmission(s);
-            doc.setTarget(target);
-            doc.setDocumentType(Enums.DocumentType.QUARTERLY_REPORT);
-            doc.setFileName(file.getOriginalFilename());
-            doc.setStoragePath(storagePath);
-            doc.setSizeBytes(file.getSize());
-            doc.setVersion(1);
-            doc.setUploadedByUid(who == null ? null : who.uid());
-            doc.setUploadedAt(java.time.Instant.now());
-            doc.setApprovalStatus(Enums.ApprovalStatus.PENDING);
-            // A reviewer opening evidence six months later needs to know it is the file that was
-            // attached rather than a file that replaced it.
-            doc.setContentHash(hash);
-            if (i < criteria.size()) doc.setAgsaCriterion(criteria.get(i));
-            documents.save(doc);
+            DocumentRecord doc = documentVersions.store(DocumentVersionService.Incoming.evidence(
+                    s.getEntity().getId(), target.getId(), file.getOriginalFilename(),
+                    file.getContentType(), content, who, s.getId(),
+                    i < criteria.size() ? criteria.get(i) : null)).record();
             if (firstId == null) firstId = doc.getId();
         }
 
         return ResponseEntity.ok(Map.of(
                 "documentId", firstId,
                 "agsaCriteria", criteria.stream().map(Enum::name).toList()));
-    }
-
-    private static String sha256(byte[] bytes) throws Exception {
-        byte[] digest = java.security.MessageDigest.getInstance("SHA-256").digest(bytes);
-        StringBuilder sb = new StringBuilder(digest.length * 2);
-        for (byte b : digest) sb.append(Character.forDigit((b >> 4) & 0xF, 16))
-                               .append(Character.forDigit(b & 0xF, 16));
-        return sb.toString();
     }
 
     // ---------- comments, the per target dispute trail ----------
@@ -422,56 +413,76 @@ public class SubmissionController {
      * the whole point: a note against a specific indicator tells the entity exactly which figure
      * is disputed, where a single free text box for the whole submission makes them guess, correct
      * the wrong number, and lose another two weeks.
+     *
+     * <p>This is also what the office surface polls, every five seconds, so that a dispute written
+     * by a reviewer appears on the reporter's open screen without a reload. It carries the same
+     * validator as {@code /api/comments}: the list is every comment for the entity, so the entity
+     * digest is exactly what describes it, and an unchanged poll is a 304 with no body.
      */
     @GetMapping("/{submissionId}/comments")
-    @PreAuthorize("hasAnyRole('ENTITY_REPORTER','DSAC_REVIEWER','DSAC_EXECUTIVE','ADMIN')")
+    @PreAuthorize("@can.has('READ_OWN_REPORTING')")
     public ResponseEntity<List<ReportingViewService.CommentView>> listComments(
-            @PathVariable("submissionId") UUID submissionId, @AuthenticationPrincipal VukaPrincipal who) {
+            @PathVariable("submissionId") UUID submissionId,
+            @RequestHeader(name = HttpHeaders.IF_NONE_MATCH, required = false) String ifNoneMatch,
+            @AuthenticationPrincipal VukaPrincipal who) {
 
         Submission s = readable(submissionId, who).orElse(null);
         if (s == null) return ResponseEntity.notFound().build();
-        return ResponseEntity.ok(views.commentsFor(s));
+
+        String etag = commentService.digest(s.getEntity().getId()).etag();
+        var noStore = org.springframework.http.CacheControl.noStore().mustRevalidate();
+        if (CommentController.matches(ifNoneMatch, etag)) {
+            return ResponseEntity.status(304).eTag(etag).cacheControl(noStore).build();
+        }
+        return ResponseEntity.ok().eTag(etag).cacheControl(noStore).body(views.commentsFor(s));
     }
 
-    public record CommentRequest(String body, UUID targetId) {}
+    /**
+     * @param targetId the figure being disputed or discussed. Required: see {@link #addComment}
+     * @param parentId the comment being answered, or null to open a thread
+     */
+    public record CommentRequest(String body, UUID targetId, UUID parentId) {}
 
+    /**
+     * Writes through {@link CommentService}, which is the one write path for comments.
+     *
+     * <p>This endpoint used to build the row itself, and in doing so it took the target id from
+     * the request without checking that the target belonged to the submission's entity, and filed
+     * a comment with no target against the submission id under the DOCUMENT anchor type, where no
+     * document with that id exists. A comment now has to name the figure it is about, and that
+     * figure has to be one of this entity's. Every screen that posts here already sends one.
+     */
     @PostMapping("/{submissionId}/comments")
-    @PreAuthorize("hasAnyRole('ENTITY_REPORTER','DSAC_REVIEWER','ADMIN')")
+    @PreAuthorize("@can.has('PARTICIPATE')")
     public ResponseEntity<?> addComment(@PathVariable("submissionId") UUID submissionId,
                                         @RequestBody CommentRequest req,
                                         @AuthenticationPrincipal VukaPrincipal who) {
 
         Submission s = readable(submissionId, who).orElse(null);
-        if (s == null) return ResponseEntity.notFound().build();
-        if (req.body() == null || req.body().isBlank()) {
-            return ResponseEntity.badRequest().body(Map.of("error", "A comment needs a body."));
+        if (s == null || who == null) return ResponseEntity.notFound().build();
+        if (req.targetId() == null) {
+            return ResponseEntity.badRequest().body(Map.of("error",
+                    "Say which figure this is about. A comment on the whole filing tells the entity nothing it can correct."));
         }
 
-        Comment c = new Comment();
-        c.setEntity(s.getEntity());
-        // A comment with no target is about the filing as a whole. One with a target is about that
-        // figure, and the entity is shown it against that figure only.
-        c.setAnchorType(req.targetId() == null ? Enums.AnchorType.DOCUMENT : Enums.AnchorType.TARGET);
-        c.setAnchorId(req.targetId() == null ? s.getId() : req.targetId());
-        c.setAuthorUid(who == null ? null : who.uid());
-        c.setAuthorName(who == null ? null : who.name());
-        if (who != null && who.role() != null) {
-            try {
-                c.setAuthorRole(Enums.Role.valueOf(who.role()));
-            } catch (IllegalArgumentException ignored) {
-                // An unknown role on a token is an administration problem, not a reason to lose the
-                // comment. The body and the author stay on the record either way.
-            }
+        UUID entityId = s.getEntity().getId();
+        CommentService.Anchor anchor = commentService.anchor(Enums.AnchorType.TARGET, req.targetId())
+                .filter(a -> a.entityId().equals(entityId))
+                .orElse(null);
+        if (anchor == null) return ResponseEntity.notFound().build();
+
+        Comment c;
+        try {
+            c = commentService.post(anchor, req.parentId(), req.body(), who);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
-        c.setBody(req.body().trim());
-        c.setResolved(false);
-        c.setCreatedAt(java.time.Instant.now());
-        comments.save(c);
 
         return ResponseEntity.ok(new ReportingViewService.CommentView(
                 c.getId(), c.getBody(), c.getAuthorName(),
                 c.getAuthorRole() == null ? null : c.getAuthorRole().name(),
-                c.getCreatedAt().toString(), c.getAnchorType().name(), c.getAnchorId(), null));
+                c.getCreatedAt().toString(), c.getAnchorType().name(), c.getAnchorId(), null,
+                c.getParentId(), c.isResolved()));
     }
 
     // ---------- review ----------
@@ -486,12 +497,13 @@ public class SubmissionController {
      * original confirmation and its author remain on the record.
      */
     @PostMapping("/{submissionId}/review")
-    @PreAuthorize("hasAnyRole('DSAC_REVIEWER','ADMIN')")
+    @PreAuthorize("@can.has('REVIEW_SUBMISSIONS')")
     public ResponseEntity<?> review(@PathVariable("submissionId") UUID submissionId,
                                     @RequestBody ReviewRequest req,
                                     @AuthenticationPrincipal VukaPrincipal who) {
         Submission s = submissions.findById(submissionId).orElse(null);
         if (s == null) return ResponseEntity.notFound().build();
-        return ResponseEntity.ok(service.review(submissionId, req.approve(), req.returnReason(), who));
+        Submission done = service.review(submissionId, req.approve(), req.returnReason(), who);
+        return ResponseEntity.ok(Map.of("submissionId", done.getId(), "status", done.getStatus().name()));
     }
 }

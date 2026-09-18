@@ -72,6 +72,34 @@ vuka:
     # Loads realistic DSAC entities and three years of history on first start.
     enabled: ${SEED_ENABLED:true}
 
+  documents:
+    # Where uploaded evidence is stored, content-addressed by SHA-256. On a multi-instance
+    # deployment this must be a shared volume: two instances with two local directories means
+    # half the downloads 404. Object storage is one DocumentStore implementation away.
+    root: ${DOCUMENT_ROOT:./var/documents}
+
+  microsoft:
+    # Nothing here is required. With no tenant configured, workspaces, document versioning,
+    # comments and tasks all work and the integration reports itself as not configured.
+    #
+    # The app registration needs Files.ReadWrite.All or Sites.ReadWrite.All as an APPLICATION
+    # permission with admin consent. Sites.Selected plus a per-library grant is the smaller
+    # and better-argued configuration for a real department.
+    tenant-id: ${MS_TENANT_ID:}
+    client-id: ${MS_CLIENT_ID:}
+    # A path to a file holding the client secret, not the secret itself. Same rule as the
+    # Firebase web API key: the value never sits in an environment variable or an image layer.
+    client-secret-path: ${MS_CLIENT_SECRET_FILE:}
+    graph-base-url: ${MS_GRAPH_BASE_URL:https://graph.microsoft.com/v1.0}
+    login-base-url: ${MS_LOGIN_BASE_URL:https://login.microsoftonline.com}
+    # Turns the background poller off without unconfiguring the tenant.
+    sync-enabled: ${MS_SYNC_ENABLED:true}
+    # Push queued uploads every minute; ask each bound drive what changed every five.
+    mirror-interval-ms: ${MS_MIRROR_INTERVAL_MS:60000}
+    poll-interval-ms: ${MS_POLL_INTERVAL_MS:300000}
+    max-files-per-sync: ${MS_MAX_FILES_PER_SYNC:50}
+    max-file-bytes: ${MS_MAX_FILE_BYTES:15728640}
+
 logging:
   level:
     za.gov.dsac.vuka: DEBUG

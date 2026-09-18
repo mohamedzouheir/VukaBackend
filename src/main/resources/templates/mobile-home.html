@@ -21,6 +21,12 @@
              margin:0 0 12px; text-decoration:none; color:var(--ink); }
     a.card .t { font-weight:700; color:var(--green); font-size:17px; text-decoration:underline; }
     a.card .m { font-size:14px; color:var(--muted); margin-top:2px; }
+    a.card.q { background:none; border:2px solid var(--line); padding:14px 16px; }
+    form.start { margin:0 0 12px; }
+    form.start button { display:block; width:100%; text-align:left; border:none; cursor:pointer;
+                        background:var(--panel); border-radius:10px; padding:16px; font:inherit; color:var(--ink); }
+    form.start .t { font-weight:700; color:var(--green); font-size:17px; text-decoration:underline; display:block; }
+    form.start .m { font-size:14px; color:var(--muted); margin-top:2px; display:block; }
     .none { color:var(--muted); font-size:15px; }
     .out { margin-top:28px; padding-top:16px; border-top:1px solid var(--line); }
     .out button { background:none; border:none; padding:0; min-height:44px; font:inherit;
@@ -38,7 +44,19 @@
     <h1>Your reporting</h1>
     <p class="lede" th:text="'Signed in as ' + ${who.name()}">Signed in</p>
 
-    <p th:if="${#lists.isEmpty(open)}" class="none">
+    <!--/*
+      The open quarter, where nothing has been started for it yet. A POST, because starting a
+      period creates the draft; the button then goes straight to the first indicator.
+    */-->
+    <form class="start" th:if="${startable != null}" method="post"
+          th:action="@{'/m/period/' + ${startable.periodId()} + '/start'}">
+      <button type="submit">
+        <span class="t" th:text="'Start ' + ${startable.label()}">Start Q2 2026/27</span>
+        <span class="m" th:text="${startableDue != null} ? 'Not started yet. Due ' + ${startableDue} + '.' : 'Not started yet.'">Not started yet.</span>
+      </button>
+    </form>
+
+    <p th:if="${#lists.isEmpty(open) and startable == null}" class="none">
       Nothing outstanding. When a reporting period opens you will see it here.
     </p>
 
@@ -55,6 +73,25 @@
         </a>
       </li>
     </ul>
+    <!--/*
+      The queries DSAC has raised. Second, because reporting is why a reporter opened this, but
+      on the same screen, because an unanswered query is how a submission gets returned twice.
+    */-->
+    <a class="card q" th:href="@{/m/comments}">
+      <span class="t">Comments</span>
+      <span class="m" th:if="${openComments > 0}"
+            th:text="${openComments} + (${openComments} == 1 ? ' open query about your figures' : ' open queries about your figures')">2 open</span>
+      <span class="m" th:unless="${openComments > 0}">Nothing outstanding.</span>
+    </a>
+    <!--/*
+      The repository. Third, because uploading a plan is not what a reporter came here to do on a
+      deadline day, but on the same screen, because it is where the evidence behind the figures
+      goes and a version of it kept anywhere else is a version DSAC cannot see.
+    */-->
+    <a class="card q" th:href="@{/m/workspace}">
+      <span class="t">Documents</span>
+      <span class="m">Plans, reports and financials. Every upload is kept as a new version.</span>
+    </a>
   </main>
 
   <form class="out" th:action="@{/m/signout}" method="post">

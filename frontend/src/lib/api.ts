@@ -56,16 +56,50 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   if (res.status === 403 || res.status === 404) {
     throw new ApiError(res.status, 'Not found.', true);
   }
-  if (!res.ok) {
-    const detail = await res.text().catch(() => '');
-    throw new ApiError(res.status, detail.slice(0, 300) || 'Request failed with ' + res.status + '.');
-  }
+  if (!res.ok) throw new ApiError(res.status, await failureMessage(res));
   if (res.status === 204) return undefined as T;
 
   const type = res.headers.get('content-type') ?? '';
   if (!type.includes('application/json')) return (await res.text()) as unknown as T;
   return (await res.json()) as T;
 }
+
+/**
+ * A sentence a person can act on. The backend answers a refused action with a JSON message
+ * written for the screen, so that is shown as it is. Anything else, a server fault in
+ * particular, is never shown raw: a stack trace or a JSON body on screen reads as a broken
+ * product and tells the user nothing about what to do next.
+ */
+async function failureMessage(res: Response): Promise<string> {
+  const text = await res.text().catch(() => '');
+  try {
+    const body = JSON.parse(text) as { message?: unknown };
+    if (res.status < 500 && typeof body.message === 'string' && body.message.trim() !== '') {
+      return body.message;
+    }
+  } catch {
+    // Not JSON. Fall through to the plain sentence.
+  }
+  return res.status >= 500
+    ? 'Something went wrong on the server and nothing was changed by this request. Try again, and if it keeps happening tell the Department.'
+    : 'The request was refused (' + res.status + ').';
+}
+
+/**
+ * The click handler for a link to a stored file. The link keeps a real href so it still reads
+ * and behaves as a link to assistive technology, but the click fetches with the token.
+ */
+export function openFile(e: { preventDefault: () => void }, url: string, name: string) {
+  e.preventDefault();
+  api.download(url, name).catch((err: unknown) => {
+    window.alert(err instanceof Error ? err.message : 'The file could not be opened.');
+  });
+}
+
+/** One answer to the comment poll: either nothing moved, or here is the whole list again. */
+export type LivePoll =
+  | { changed: false }
+  | { changed: true; etag: string | null; comments: CommentView[] };
 
 function qs(params: Record<string, string | number | undefined | null>) {
   const out = new URLSearchParams();
@@ -171,31 +205,69 @@ export const api = {
   },
 
   /** Opens the stored source document. */
-  documentUrl: (documentId: string) => '/api/documents/' + documentId,
+  /** The file itself. Takes a document id or an extraction id, and needs the token: open it with download. */
+  documentUrl: (documentId: string) => '/api/documents/' + documentId + '/content',
 
   /* ---------- comments, the per target dispute trail ---------- */
 
   comments: (submissionId: string) =>
     request<CommentView[]>('/api/submissions/' + submissionId + '/comments'),
 
-  addComment: (submissionId: string, body: string, targetId?: string) =>
+  /**
+   * A comment against one figure. The backend refuses one with no target: a comment on the
+   * whole filing tells the entity nothing it can correct.
+   */
+  addComment: (submissionId: string, body: string, targetId: string, parentId?: string) =>
     request<CommentView>('/api/submissions/' + submissionId + '/comments', {
       method: 'POST',
-      body: JSON.stringify({ body, targetId: targetId ?? null }),
+      body: JSON.stringify({ body, targetId, parentId: parentId ?? null }),
     }),
+
+  /**
+   * The poll behind live comments. Sends back the validator from the last answer, and the server
+   * replies 304 with no body until something has been said, so a screen left open all afternoon
+   * costs one set of headers every five seconds.
+   *
+   * Outside `request` because a 304 is the expected answer here rather than a failure, and
+   * `request` treats anything that is not 2xx as an error.
+   */
+  commentsSince: async (submissionId: string, etag: string | null): Promise<LivePoll> => {
+    const token = await getToken();
+    const headers = new Headers();
+    if (token) headers.set('Authorization', 'Bearer ' + token);
+    if (etag) headers.set('If-None-Match', etag);
+
+    const res = await fetch('/api/submissions/' + submissionId + '/comments', { headers });
+    if (res.status === 304) return { changed: false };
+    if (res.status === 401) throw new ApiError(401, 'Your session has expired. Sign in again.');
+    if (res.status === 403 || res.status === 404) throw new ApiError(res.status, 'Not found.', true);
+    if (!res.ok) throw new ApiError(res.status, 'Comments could not be refreshed.');
+    return {
+      changed: true,
+      etag: res.headers.get('ETag'),
+      comments: (await res.json()) as CommentView[],
+    };
+  },
 
   /* ---------- export ---------- */
 
   exportUrl: (submissionId: string, shape: 'full.csv' | 'eqprs.csv' | 'json') =>
     '/api/export/submission/' + submissionId + '/' + shape,
 
-  /** Exports go through fetch so the bearer token travels with them. */
+  /**
+   * Every file the office surface hands over goes through here, so the bearer token travels with
+   * it. A plain link cannot carry the token, and one that tried landed the user on a JSON 401.
+   */
   download: async (url: string, fallbackName: string) => {
     const token = await getToken();
     const res = await fetch(url, {
       headers: token ? { Authorization: 'Bearer ' + token } : undefined,
     });
-    if (!res.ok) throw new ApiError(res.status, 'The export could not be generated.');
+    if (!res.ok) {
+      throw new ApiError(res.status, res.status === 403 || res.status === 404
+        ? 'That file could not be found.'
+        : await failureMessage(res));
+    }
     const blob = await res.blob();
     const disposition = res.headers.get('content-disposition') ?? '';
     const match = /filename="?([^"]+)"?/.exec(disposition);
@@ -205,7 +277,8 @@ export const api = {
     document.body.appendChild(a);
     a.click();
     a.remove();
-    URL.revokeObjectURL(a.href);
+    // Revoked a moment later rather than at once: some browsers read the URL after click returns.
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   },
 
   /* ---------- template ---------- */
