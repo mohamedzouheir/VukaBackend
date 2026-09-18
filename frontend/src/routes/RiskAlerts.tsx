@@ -28,7 +28,9 @@ import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useAsync } from '../lib/useAsync';
 import type { PortfolioRow, SubmissionRow } from '../lib/types';
-import { BAND_ORDER, bandColour, bandWord, num, rands, signalLabel, statusLabel } from '../lib/format';
+import { BAND_ORDER, bandColour, num, rands } from '../lib/format';
+import { useI18n } from '../lib/i18n';
+import { useLabels } from '../lib/labels';
 import { PageHead } from '../components/AppShell';
 import { RiskBadge } from '../components/RiskBadge';
 import { RiskPanel } from '../components/RiskPanel';
@@ -41,6 +43,8 @@ import './RiskAlerts.css';
 type BandFilter = 'ALL' | 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
 
 export function RiskAlerts() {
+  const { t } = useI18n();
+  const L = useLabels();
   const portfolio = useAsync(() => api.portfolio(), []);
   const subs = useAsync(() => api.submissions(), []);
   const periods = useAsync(() => api.periods(), []);
@@ -90,8 +94,8 @@ export function RiskAlerts() {
       <div>
         <PageHead
           icon={<IconAlert size={26} />}
-          title="Risk & Alerts"
-          subtitle="Where the Department should look first this quarter, and why."
+          title={t('riskScreen.title')}
+          subtitle={t('riskScreen.sub')}
         >
           <button type="button" onClick={() => void recompute()} disabled={recomputing}>
             {recomputing ? <IconSpinner size={16} className="spin" /> : <IconGauge size={16} />}
@@ -100,7 +104,7 @@ export function RiskAlerts() {
         </PageHead>
 
         {portfolio.loading ? (
-          <Loading what="risk scores" />
+          <Loading what={t('riskScreen.what')} />
         ) : scored.length === 0 ? (
           <EmptyState>
             No entity has been scored for this period. That is an absence of scoring rather than an
@@ -109,15 +113,15 @@ export function RiskAlerts() {
         ) : (
           <>
             <div className="tiles">
-              <Tile icon={<IconAlert size={22} />} tone="critical" value={num(bandCount('CRITICAL'))} label="Critical" sub="Score of 70 or above" />
-              <Tile icon={<IconAlert size={22} />} tone="warn" value={num(bandCount('HIGH'))} label="High" sub="50 to 69" />
-              <Tile icon={<IconInfo size={22} />} tone="purple" value={num(bandCount('MEDIUM'))} label="Medium" sub="25 to 49" />
-              <Tile icon={<IconCheckCircle size={22} />} tone="ok" value={num(bandCount('LOW'))} label="Low" sub="Below 25" />
+              <Tile icon={<IconAlert size={22} />} tone="critical" value={num(bandCount('CRITICAL'))} label={L.band('CRITICAL')} sub={t('riskScreen.criticalSub')} />
+              <Tile icon={<IconAlert size={22} />} tone="warn" value={num(bandCount('HIGH'))} label={L.band('HIGH')} sub={t('riskScreen.highSub')} />
+              <Tile icon={<IconInfo size={22} />} tone="purple" value={num(bandCount('MEDIUM'))} label={L.band('MEDIUM')} sub={t('riskScreen.mediumSub')} />
+              <Tile icon={<IconCheckCircle size={22} />} tone="ok" value={num(bandCount('LOW'))} label={L.band('LOW')} sub={t('riskScreen.lowSub')} />
             </div>
 
             <div className="card ra-block">
               <div className="section-head">
-                <h2>Active alerts</h2>
+                <h2>{t('riskScreen.activeAlerts')}</h2>
                 <span className="spacer" />
                 <div className="row" style={{ gap: 6 }}>
                   {(['ALL', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as BandFilter[]).map((b) => (
@@ -128,24 +132,26 @@ export function RiskAlerts() {
                       aria-pressed={filter === b}
                       onClick={() => setFilter(b)}
                     >
-                      {b === 'ALL' ? 'All (' + num(scored.length) + ')' : bandWord(b) + ' (' + num(bandCount(b)) + ')'}
+                      {b === 'ALL'
+                        ? t('riskScreen.filterCount', t('common.all'), num(scored.length) ?? '')
+                        : t('riskScreen.filterCount', L.band(b), num(bandCount(b)) ?? '')}
                     </button>
                   ))}
                 </div>
               </div>
 
               {rows.length === 0 ? (
-                <EmptyState>Nothing in that band for this period.</EmptyState>
+                <EmptyState>{t('riskScreen.emptyBand')}</EmptyState>
               ) : (
                 <div className="table-wrap">
                   <table>
                     <thead>
                       <tr>
-                        <th>Band</th>
-                        <th>Entity</th>
-                        <th>Largest contributing factor</th>
-                        <th className="num">Score</th>
-                        <th>Reporting</th>
+                        <th>{t('riskScreen.colBand')}</th>
+                        <th>{t('entities.colEntity')}</th>
+                        <th>{t('riskScreen.colFactor')}</th>
+                        <th className="num">{t('riskScreen.colScore')}</th>
+                        <th>{t('riskScreen.colReporting')}</th>
                         <th />
                       </tr>
                     </thead>
@@ -159,7 +165,7 @@ export function RiskAlerts() {
                           >
                             <td>
                               <span className="ra-band" data-band={r.band}>
-                                {bandWord(r.band)}
+                                {L.band(r.band)}
                               </span>
                             </td>
                             <td>
@@ -168,21 +174,21 @@ export function RiskAlerts() {
                               </Link>
                             </td>
                             <td className="ra-factor">
-                              {r.signals[0]?.description ?? 'No signals stored for this period.'}
+                              {r.signals[0]?.description ?? t('risk.noSignals')}
                             </td>
                             <td className="num">
                               <RiskBadge size="sm" score={r.score} band={r.band} onExplain={() => setExplain(r)} />
                             </td>
                             <td className="small">
                               {s ? (
-                                statusLabel(s.status)
+                                L.status(s.status)
                               ) : (
-                                <span className="chip chip-warn">not submitted</span>
+                                <span className="chip chip-warn">{t('riskScreen.notSubmitted')}</span>
                               )}
                             </td>
                             <td>
                               <button type="button" className="link" onClick={() => setSelected(r)}>
-                                View
+                                {t('riskScreen.view')}
                               </button>
                             </td>
                           </tr>
@@ -195,11 +201,7 @@ export function RiskAlerts() {
             </div>
 
             <p className="small muted" style={{ marginTop: 'var(--space-4)' }}>
-              Weights are fixed and published. Bands: 25 medium, 50 high, 70 critical. Every score
-              here is arithmetic, not a prediction, and can be reproduced by hand from the signals
-              behind it. The design for this screen carried an alerts trend line and a predicted
-              impact figure; neither is shown, because nothing stores a score per day and the
-              engine does not forecast.
+              {t('riskScreen.methodNote')}
             </p>
           </>
         )}
@@ -215,9 +217,9 @@ export function RiskAlerts() {
           />
         ) : (
           <section className="card">
-            <h2 style={{ marginBottom: 'var(--space-3)' }}>Distribution</h2>
+            <h2 style={{ marginBottom: 'var(--space-3)' }}>{t('riskScreen.distribution')}</h2>
             {portfolio.loading ? (
-              <Loading what="scores" />
+              <Loading what={t('riskScreen.whatScores')} />
             ) : (
               <div className="stack-tight">
                 {BAND_ORDER.filter((b) => b !== 'NOT_SCORED').map((b) => {
@@ -231,7 +233,7 @@ export function RiskAlerts() {
                           style={{ background: bandColour(b), marginRight: 8 }}
                           aria-hidden="true"
                         />
-                        {bandWord(b)}
+                        {L.band(b)}
                       </span>
                       <span className="sector-count">
                         {n} <span className="muted">({pct}%)</span>
@@ -245,7 +247,7 @@ export function RiskAlerts() {
               </div>
             )}
             <p className="small muted" style={{ marginTop: 'var(--space-3)', marginBottom: 0 }}>
-              Select an alert to see the signals behind it.
+              {t('riskScreen.selectAlert')}
             </p>
           </section>
         )}
@@ -274,12 +276,15 @@ function AlertDetail({
   onClose: () => void;
   onExplain: () => void;
 }) {
+  const { t } = useI18n();
+  const L = useLabels();
+
   return (
     <section className="card ra-detail" data-band={row.band}>
       <div className="ra-detail-head" data-band={row.band}>
-        <strong>{bandWord(row.band)} risk</strong>
+        <strong>{t('riskScreen.bandRisk', L.band(row.band))}</strong>
         <span className="spacer" />
-        <button type="button" className="ra-close" onClick={onClose} aria-label="Close">
+        <button type="button" className="ra-close" onClick={onClose} aria-label={t('common.close')}>
           <IconX size={16} />
         </button>
       </div>
@@ -287,55 +292,54 @@ function AlertDetail({
       <div className="ra-detail-body">
         <h3>{row.name}</h3>
         <p className="small muted" style={{ marginTop: 2 }}>
-          {rands(row.totalAllocation) ?? 'No allocation row'} allocated this year
+          {t('riskScreen.allocatedThisYear', rands(row.totalAllocation) ?? t('riskScreen.noAllocationRow'))}
         </p>
 
         <div className="row" style={{ marginTop: 'var(--space-3)' }}>
           <RiskBadge score={row.score} band={row.band} movement={row.movement} onExplain={onExplain} />
         </div>
 
-        <h4 style={{ marginTop: 'var(--space-4)' }}>Why this score</h4>
+        <h4 style={{ marginTop: 'var(--space-4)' }}>{t('riskScreen.whyScore')}</h4>
         {row.signals.length === 0 ? (
-          <p className="small muted">No signals stored for this period.</p>
+          <p className="small muted">{t('risk.noSignals')}</p>
         ) : (
           <ul className="ra-signals">
             {row.signals.map((s) => (
               <li key={s.type}>
                 <span className="ra-sig-head">
-                  <strong>{signalLabel(s.type)}</strong>
+                  <strong>{L.signal(s.type)}</strong>
                   <span className="ra-sig-contrib">
-                    {s.contribution === null ? 'not stored' : num(s.contribution, { decimals: 1 })}
+                    {s.contribution === null ? t('risk.notStored') : num(s.contribution, { decimals: 1 })}
                   </span>
                 </span>
-                <span className="small muted">{s.description ?? 'No description stored.'}</span>
+                <span className="small muted">{s.description ?? t('riskScreen.noDescriptionStored')}</span>
               </li>
             ))}
           </ul>
         )}
 
-        <h4 style={{ marginTop: 'var(--space-4)' }}>Reporting this period</h4>
+        <h4 style={{ marginTop: 'var(--space-4)' }}>{t('riskScreen.reportingPeriod')}</h4>
         <p className="small" style={{ margin: 0 }}>
-          {submission ? (
-            <>
-              {statusLabel(submission.status)}, {num(submission.confirmedCount)} of{' '}
-              {num(submission.targetCount)} targets confirmed,{' '}
-              {submission.evidenceCount > 0
-                ? num(submission.evidenceCount) + ' evidence documents'
-                : 'no evidence attached'}
-              .
-            </>
-          ) : (
-            'Nothing has been filed for this period.'
-          )}
+          {submission
+            ? t(
+                'riskScreen.reportingLine',
+                L.status(submission.status),
+                num(submission.confirmedCount) ?? '',
+                num(submission.targetCount) ?? '',
+                submission.evidenceCount > 0
+                  ? t('riskScreen.evidenceDocs', num(submission.evidenceCount) ?? '')
+                  : t('riskScreen.noEvidenceAttached'),
+              )
+            : t('riskScreen.nothingFiled')}
         </p>
 
         <div className="row" style={{ marginTop: 'var(--space-4)' }}>
           <Link className="btn btn-primary" to={'/portfolio/entity/' + row.entityId}>
-            Open the entity <IconChevronRight size={15} />
+            {t('riskScreen.openEntity')} <IconChevronRight size={15} />
           </Link>
           {submission ? (
             <Link className="btn" to={'/review/' + submission.submissionId}>
-              Review the filing
+              {t('riskScreen.reviewFiling')}
             </Link>
           ) : null}
         </div>

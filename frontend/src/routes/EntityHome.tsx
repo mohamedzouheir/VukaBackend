@@ -15,7 +15,9 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useAsync, useAction } from '../lib/useAsync';
 import { useAuth } from '../lib/auth';
-import { date, daysRemainingText, num, statusLabel } from '../lib/format';
+import { date, num } from '../lib/format';
+import { useI18n } from '../lib/i18n';
+import { useLabels } from '../lib/labels';
 import { PeriodCard } from '../components/PeriodCard';
 import { StateLine } from '../components/StateLine';
 import { EmptyState, ErrorState, Loading, Tile } from '../components/Shell';
@@ -25,6 +27,8 @@ import {
 import './EntityHome.css';
 
 export function EntityHome() {
+  const { t } = useI18n();
+  const L = useLabels();
   const { me } = useAuth();
   const navigate = useNavigate();
   const entityId = me?.entityId ?? null;
@@ -84,10 +88,9 @@ export function EntityHome() {
     <div className="stack">
       <div className="section-head">
         <div>
-          <h1>{me?.entityName ?? 'Your entity'}</h1>
+          <h1>{me?.entityName ?? t('ws.yourEntity')}</h1>
           <p className="muted small">
-            Reporting as {me?.name ?? me?.email}. The entity is taken from your signed token, which
-            is why there is nothing here to choose.
+            {t('home.reportingAs', me?.name ?? me?.email ?? '')}
           </p>
         </div>
       </div>
@@ -104,7 +107,7 @@ export function EntityHome() {
             <a
               className="btn"
               href={api.templateUrl(entityId, current.periodId)}
-              title="An .xlsx carrying your registered targets, their indicator codes and their annual targets, with the actuals column empty"
+              title={t('home.templateTitle')}
               onClick={(e) => {
                 // Through fetch, so the token travels with it. A plain navigation carries no
                 // Authorization header and landed the reporter on a JSON 401.
@@ -113,11 +116,11 @@ export function EntityHome() {
                 api
                   .download(api.templateUrl(entityId, current.periodId), 'vuka-template.xlsx')
                   .catch((err: unknown) =>
-                    setDownloadError(err instanceof Error ? err.message : 'The template could not be downloaded.'),
+                    setDownloadError(err instanceof Error ? err.message : t('home.templateFailed')),
                   );
               }}
             >
-              <IconDownload size={16} /> Download template
+              <IconDownload size={16} /> {t('home.downloadTemplate')}
             </a>
             <button
               type="button"
@@ -128,10 +131,10 @@ export function EntityHome() {
                 void open.run(current.periodId, 'upload').finally(() => setOpening(false));
               }}
             >
-              <IconUpload size={16} /> Upload completed file
+              <IconUpload size={16} /> {t('home.uploadFile')}
             </button>
-            <a className="btn" href="/m" title="One indicator per screen, server rendered, under 5KB">
-              <IconPhone size={16} /> Capture on a phone
+            <a className="btn" href="/m" title={t('home.phoneTitle')}>
+              <IconPhone size={16} /> {t('home.captureOnPhone')}
             </a>
             {currentSub ? (
               <button
@@ -159,22 +162,21 @@ export function EntityHome() {
         <div className="card returned">
           <p className="row">
             <IconReturn size={18} />
-            <strong>The Department returned this period.</strong>
+            <strong>{t('home.returned')}</strong>
           </p>
           <p>
             {currentSub.returnReason ??
-              'No overall reason was recorded. The disputed targets are marked on the review screen.'}
+              t('home.noOverallReason')}
           </p>
           <p className="small muted">
-            Only the disputed targets were reopened. Everything else stays as filed, with the
-            original confirmation and its author on the record.
+            {t('home.onlyDisputed')}
           </p>
           <button
             type="button"
             className="primary"
             onClick={() => navigate('/entity/submission/' + currentSub.submissionId + '/review')}
           >
-            Correct the disputed figures
+            {t('home.correctDisputed')}
           </button>
         </div>
       ) : null}
@@ -182,40 +184,41 @@ export function EntityHome() {
       {/* Prior periods, because the risk engine reads exactly this history. */}
       <div className="card">
         <div className="section-head">
-          <h2>Prior periods</h2>
+          <h2>{t('reporter.priorPeriods')}</h2>
           <span className="spacer" />
           <p className="small muted">
-            The lateness signal in your risk score is computed from these rows and nothing else.
+            {t('home.latenessNote')}
           </p>
         </div>
 
         {subs.loading ? (
-          <Loading what="your reporting history" />
+          <Loading what={t('home.whatHistory')} />
         ) : subs.error ? (
           <ErrorState message={subs.error} onRetry={subs.reload} />
         ) : prior.length === 0 ? (
           <EmptyState>
-            No prior periods on record for this entity. That is an absence of history rather than a
-            clean history, and the risk engine treats it that way.
+            {t('home.noPrior')}
           </EmptyState>
         ) : (
           <ul className="prior">
             {prior.map((s) => (
               <li key={s.submissionId}>
                 <span className="prior-period">{s.periodLabel}</span>
-                <span className="chip">{statusLabel(s.status)}</span>
+                <span className="chip">{L.status(s.status)}</span>
                 <span className="muted small">
-                  {num(s.confirmedCount)} of {num(s.targetCount)} reported
+                  {t('home.reportedOf', num(s.confirmedCount) ?? '', num(s.targetCount) ?? '')}
                 </span>
                 <span className="spacer" />
                 <span className={'small' + (s.daysLate && s.daysLate > 0 ? ' prior-late' : ' muted')}>
                   {s.submittedAt
                     ? s.daysLate === null
-                      ? 'submitted ' + date(s.submittedAt)
+                      ? t('home.submittedOn', date(s.submittedAt) ?? '')
                       : s.daysLate > 0
-                        ? 'submitted ' + s.daysLate + (s.daysLate === 1 ? ' day late' : ' days late')
-                        : 'submitted on time'
-                    : 'never submitted'}
+                        ? s.daysLate === 1
+                          ? t('home.submittedOneDayLate')
+                          : t('home.submittedDaysLate', s.daysLate)
+                        : t('home.submittedOnTime')
+                    : t('home.neverSubmitted')}
                 </span>
               </li>
             ))}
@@ -227,9 +230,7 @@ export function EntityHome() {
         <p className="ind-note">
           <IconAlert size={16} />
           <span>
-            {daysRemainingText(current.daysRemaining)} on {current.label}. The Department is notified
-            at thirty days, at fifteen days and hourly in the final day, so a late submission is
-            visible to them before it is late.
+            {t('home.deadlineNote', L.daysRemaining(current.daysRemaining) ?? '', current.label)}
           </span>
         </p>
       ) : null}
@@ -237,18 +238,18 @@ export function EntityHome() {
       <div className="tiles">
         <Tile
           value={targetCount === null ? null : num(targetCount)}
-          label="Targets registered for the year"
-          sub="Loaded from your tabled Annual Performance Plan"
+          label={t('home.targetsLabel')}
+          sub={t('home.targetsSub')}
         />
         <Tile
           value={confirmed === null ? null : num(confirmed)}
-          label="Figures confirmed this period"
-          sub="Written in your name, and not editable afterwards"
+          label={t('home.confirmedLabel')}
+          sub={t('home.confirmedSub')}
         />
         <Tile
           value={currentSub === null ? null : num(currentSub.evidenceCount)}
-          label="Evidence documents attached"
-          sub="A figure with none shows as unverifiable"
+          label={t('home.evidenceLabel')}
+          sub={t('home.evidenceSub')}
         />
       </div>
     </div>

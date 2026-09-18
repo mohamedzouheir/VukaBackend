@@ -1,0 +1,223 @@
+/*
+ * The auth frame, from the screenshots: departmental bar, photograph left, form right on cream,
+ * dark green footer. Its own variables so it cannot drift into the dashboard behind it.
+ */
+.au {
+  --au-green: #123227;
+  --au-green-deep: #0B2019;
+  --au-gold: #C2A25E;
+  --au-gold-rule: #C9A227;
+  --au-cream: #F6F3EC;
+  --au-ink: #16150F;
+  --au-ink-soft: #5B564A;
+  --au-field: #FFFFFF;
+  --au-field-line: #DCD6C7;
+
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--au-cream);
+  color: var(--au-ink);
+}
+
+/* ---------------------------------------------------------------- top bar */
+
+.au-top {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-6);
+  background: var(--au-cream);
+  border-bottom: 1px solid rgba(22, 21, 15, 0.07);
+}
+
+.au-dept { display: flex; gap: var(--space-3); align-items: center; text-decoration: none; }
+.au-dept:hover { text-decoration: none; }
+.au-arms { flex: none; display: grid; place-items: center; }
+.au-dept-text { font-size: 0.625rem; line-height: 1.35; color: var(--au-ink); }
+.au-dept-text strong {
+  display: block;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  border-bottom: 1px solid var(--au-gold);
+  padding-bottom: 2px;
+  margin-bottom: 3px;
+}
+.au-dept-text b { font-weight: 700; }
+
+.au-top-right { display: flex; align-items: center; gap: var(--space-4); }
+
+.au-lang {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 0.875rem; font-weight: 500;
+  color: var(--au-ink);
+  cursor: default;
+}
+
+.au-home {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 0.875rem; font-weight: 600;
+  color: var(--au-ink);
+  background: var(--au-field);
+  border: 1px solid var(--au-field-line);
+  border-radius: var(--radius-sm);
+  padding: 10px 16px;
+  text-decoration: none;
+}
+.au-home:hover { background: #fff; border-color: var(--au-gold); color: var(--au-ink); text-decoration: none; }
+
+/* ---------------------------------------------------------------- split */
+
+.au-split {
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  min-height: 0;
+}
+
+/* ---------------------------------------------------------------- hero */
+
+.au-hero {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  padding: var(--space-7) var(--space-6);
+  background:
+    url("/img/auth-hero.jpeg") center 28% / cover no-repeat,
+    var(--au-green);
+  overflow: hidden;
+}
+
+/*
+ * The display copy sits over the lower left, so the contrast there is made rather than hoped
+ * for. Also darkens the whole frame slightly, which is what lets the gold read.
+ */
+.au-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(0deg, rgba(11, 32, 25, 0.92) 0%, rgba(11, 32, 25, 0.62) 38%, rgba(11, 32, 25, 0.12) 70%),
+    linear-gradient(90deg, rgba(11, 32, 25, 0.55) 0%, rgba(11, 32, 25, 0) 55%);
+}
+
+.au-hero-copy { position: relative; z-index: 1; max-width: 30rem; }
+
+.au-rule, .au-eyebrow::before {
+  display: block;
+  width: 58px;
+  height: 3px;
+  background: var(--au-gold-rule);
+  margin-bottom: var(--space-4);
+  content: "";
+}
+
+.au-eyebrow {
+  margin: 0 0 var(--space-3);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: #F3EEE2;
+}
+
+.au-display {
+  font-family: "Playfair Display", Georgia, "Times New Roman", serif;
+  font-size: clamp(2.5rem, 4.4vw, 3.75rem);
+  line-height: 1.04;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #fff;
+  margin: 0;
+}
+/* The second line, gold and italic, exactly as the design sets it. */
+.au-display em {
+  display: block;
+  font-style: italic;
+  font-weight: 500;
+  color: var(--au-gold);
+}
+
+.au-lede {
+  margin: var(--space-4) 0 0;
+  font-size: 0.9375rem;
+  line-height: 1.65;
+  color: #E4DFD2;
+  max-width: 26rem;
+}
+
+.au-features {
+  list-style: none;
+  display: flex;
+  gap: var(--space-5);
+  margin: var(--space-6) 0 0;
+  padding: 0;
+  flex-wrap: wrap;
+}
+.au-features li {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 8.5rem;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: #E4DFD2;
+  padding-left: var(--space-4);
+  border-left: 1px solid rgba(255, 255, 255, 0.18);
+}
+.au-features li:first-child { padding-left: 0; border-left: 0; }
+.au-feature-icon { color: var(--au-gold); }
+
+/* ---------------------------------------------------------------- form panel */
+
+.au-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6);
+  background: var(--au-cream);
+  overflow-y: auto;
+}
+.au-panel-inner { width: 100%; max-width: 420px; }
+/* The registration form is two columns, so it needs more room. */
+.au-panel-wide .au-panel-inner { max-width: 680px; }
+
+/* ---------------------------------------------------------------- footer */
+
+.au-foot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  padding: var(--space-5) var(--space-6);
+  background: var(--au-green-deep);
+  color: #C6CFC8;
+  font-size: 0.8125rem;
+}
+.au-foot p { margin: 0; }
+.au-foot-links { display: flex; align-items: center; gap: var(--space-3); }
+.au-foot-links a { color: #E4DFD2; text-decoration: none; }
+.au-foot-links a:hover { color: #fff; text-decoration: underline; }
+.au-foot-links span { color: rgba(255, 255, 255, 0.25); }
+
+/* ---------------------------------------------------------------- narrow */
+
+@media (max-width: 1040px) {
+  .au-split { grid-template-columns: minmax(0, 1fr); }
+  /* The photograph becomes a band above the form rather than half the screen. */
+  .au-hero { min-height: 340px; padding: var(--space-6) var(--space-5); }
+  .au-features { display: none; }
+}
+
+@media (max-width: 640px) {
+  .au-top { padding: var(--space-3) var(--space-4); }
+  .au-dept-text { display: none; }
+  .au-hero { min-height: 240px; padding: var(--space-5) var(--space-4); }
+  .au-panel { padding: var(--space-5) var(--space-4); }
+  .au-foot { padding: var(--space-4); justify-content: center; text-align: center; }
+}

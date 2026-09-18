@@ -15,7 +15,9 @@ import { Link, useParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useAsync } from '../lib/useAsync';
 import { useAuth } from '../lib/auth';
-import { auditOutcomeLabel, num, rands, sectorLabel, statusLabel } from '../lib/format';
+import { num, rands } from '../lib/format';
+import { useI18n } from '../lib/i18n';
+import { useLabels } from '../lib/labels';
 import { ChainStrip } from '../components/ChainStrip';
 import { RiskBadge, RiskBadgeError } from '../components/RiskBadge';
 import { RiskPanel } from '../components/RiskPanel';
@@ -24,6 +26,8 @@ import { IconAlert, IconArrowLeft, IconGauge, IconScale } from '../icons';
 import './EntityDrilldown.css';
 
 export function EntityDrilldown() {
+  const { t } = useI18n();
+  const L = useLabels();
   const { entityId } = useParams<{ entityId: string }>();
   const { me } = useAuth();
   const [explain, setExplain] = useState(false);
@@ -31,9 +35,9 @@ export function EntityDrilldown() {
   const entity = useAsync(() => api.entity(entityId!), [entityId]);
   const chain = useAsync(() => api.chain(entityId!), [entityId]);
 
-  if (entity.notFound) return <NotFoundState what="entity" />;
+  if (entity.notFound) return <NotFoundState what={t('common.entity')} />;
   if (entity.error) return <ErrorState message={entity.error} onRetry={entity.reload} />;
-  if (entity.loading) return <Loading what="this entity" />;
+  if (entity.loading) return <Loading what={t('uc.whatEntity')} />;
 
   const e = entity.data!;
   const reported = e.targets.filter((t) => t.status !== 'NOT_STARTED');
@@ -42,7 +46,7 @@ export function EntityDrilldown() {
     <div className="stack">
       <p>
         <Link to="/portfolio" className="row">
-          <IconArrowLeft size={16} /> portfolio
+          <IconArrowLeft size={16} /> {t('dd.portfolio')}
         </Link>
       </p>
 
@@ -51,7 +55,7 @@ export function EntityDrilldown() {
           <h1>{e.name}</h1>
           <p className="row small muted">
             <SectorChip sector={String(e.sector)} />
-            <span>{sectorLabel(String(e.sector))} sector</span>
+            <span>{t('dd.sectorLine', L.sector(String(e.sector)))}</span>
           </p>
         </div>
         <span className="spacer" />
@@ -66,23 +70,22 @@ export function EntityDrilldown() {
 
       {/* The chain. */}
       <section>
-        <h2 className="dd-heading">The chain</h2>
+        <h2 className="dd-heading">{t('dd.chain')}</h2>
         <ChainStrip chain={chain.data} loading={chain.loading} error={chain.error} />
       </section>
 
       {/* Trajectory. Hand drawn bars rather than a charting library, because a chart
           library is a hundred kilobytes for four numbers. */}
       <section className="card">
-        <h2 className="dd-heading">Trajectory</h2>
-        <p className="small muted">Allocation by financial year, in rands.</p>
+        <h2 className="dd-heading">{t('dd.trajectory')}</h2>
+        <p className="small muted">{t('dd.trajectorySub')}</p>
         {chain.loading ? (
-          <Loading what="the allocation history" />
+          <Loading what={t('dd.whatAllocations')} />
         ) : chain.error ? (
           <ErrorState message={chain.error} onRetry={chain.reload} />
         ) : (chain.data?.allocations ?? []).length === 0 ? (
           <EmptyState>
-            No allocation rows for this entity. That is an absent figure rather than a zero
-            allocation, and it is left absent rather than filled in.
+            {t('dd.noAllocations')}
           </EmptyState>
         ) : (
           <Trajectory rows={chain.data!.allocations} />
@@ -91,22 +94,20 @@ export function EntityDrilldown() {
 
       {/* Audit history. */}
       <section className="card">
-        <h2 className="dd-heading">Audit history</h2>
+        <h2 className="dd-heading">{t('dd.auditHistory')}</h2>
         {e.auditFindings.length === 0 ? (
           <EmptyState>
-            No published audit outcome could be reached for this entity. The risk engine treats an
-            absent row as absence of evidence rather than as a clean audit, and the row stays empty
-            rather than being filled from an assumption.
+            {t('dd.noAuditOutcome')}
           </EmptyState>
         ) : (
           <ul className="dd-findings">
             {e.auditFindings.map((f, i) => (
               <li key={i}>
-                <span className="dd-fy">{f.financialYear || 'year not recorded'}</span>
-                <span className="dd-outcome">{auditOutcomeLabel(f.outcome)}</span>
-                {f.repeatFinding ? <span className="chip chip-warn">repeat finding</span> : null}
-                <span className="dd-desc">{f.description ?? 'No description on the record.'}</span>
-                <span className="small muted">{statusLabel(f.resolutionStatus)}</span>
+                <span className="dd-fy">{f.financialYear || t('dd.yearNotRecorded')}</span>
+                <span className="dd-outcome">{L.outcome(f.outcome)}</span>
+                {f.repeatFinding ? <span className="chip chip-warn">{t('dd.repeatFinding')}</span> : null}
+                <span className="dd-desc">{f.description ?? t('dd.noDescriptionOnRecord')}</span>
+                <span className="small muted">{L.status(f.resolutionStatus)}</span>
               </li>
             ))}
           </ul>
@@ -115,32 +116,29 @@ export function EntityDrilldown() {
 
       {/* Outstanding. */}
       <section className="card">
-        <h2 className="dd-heading">Outstanding</h2>
+        <h2 className="dd-heading">{t('dd.outstanding')}</h2>
         {chain.loading ? (
-          <Loading what="what is outstanding" />
+          <Loading what={t('dd.whatOutstanding')} />
         ) : (
           <ul className="dd-outstanding">
             <li>
               <IconAlert size={16} />
               <span>
                 {chain.data?.targetsWithNoResult === null || chain.data?.targetsWithNoResult === undefined
-                  ? 'The count of targets with no result could not be read.'
-                  : num(chain.data.targetsWithNoResult) +
-                    (chain.data.targetsWithNoResult === 1
-                      ? ' target with no result'
-                      : ' targets with no result') +
-                    ' for the open period'}
+                  ? t('dd.noResultCountUnreadable')
+                  : chain.data.targetsWithNoResult === 1
+                    ? t('dd.oneTargetNoResult')
+                    : t('dd.targetsNoResult', num(chain.data.targetsWithNoResult) ?? '')}
               </span>
             </li>
             <li>
               <IconAlert size={16} />
               <span>
                 {chain.data?.figuresWithNoEvidence === null || chain.data?.figuresWithNoEvidence === undefined
-                  ? 'The count of figures with no evidence could not be read.'
-                  : num(chain.data.figuresWithNoEvidence) +
-                    (chain.data.figuresWithNoEvidence === 1
-                      ? ' reported figure with no evidence attached, which the Department sees as unverifiable'
-                      : ' reported figures with no evidence attached, which the Department sees as unverifiable')}
+                  ? t('dd.noEvidenceCountUnreadable')
+                  : chain.data.figuresWithNoEvidence === 1
+                    ? t('dd.oneFigureNoEvidence')
+                    : t('dd.figuresNoEvidence', num(chain.data.figuresWithNoEvidence) ?? '')}
               </span>
             </li>
           </ul>
@@ -148,10 +146,10 @@ export function EntityDrilldown() {
 
         <div className="row dd-actions">
           <button type="button" onClick={() => setExplain(true)}>
-            <IconGauge size={16} /> Explain the score
+            <IconGauge size={16} /> {t('risk.explain')}
           </button>
           <Link className="btn" to={'/portfolio/entity/' + entityId + '/unit-cost'}>
-            <IconScale size={16} /> Unit cost
+            <IconScale size={16} /> {t('uc.title')}
           </Link>
         </div>
       </section>
@@ -159,48 +157,47 @@ export function EntityDrilldown() {
       {/* Targets, with what has been reported against each. */}
       <section className="card">
         <div className="section-head">
-          <h2 className="dd-heading">Targets for the year</h2>
+          <h2 className="dd-heading">{t('dd.targetsForYear')}</h2>
           <span className="spacer" />
           <p className="small muted">
-            {num(reported.length)} of {num(e.targets.length)} have a result on record
+            {t('dd.haveResult', num(reported.length) ?? '', num(e.targets.length) ?? '')}
           </p>
         </div>
 
         {e.targets.length === 0 ? (
           <EmptyState>
-            No targets registered for the current financial year. An administrator loads these from
-            the entity's tabled Annual Performance Plan.
+            {t('dd.noTargets')}
           </EmptyState>
         ) : (
           <div className="table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th>Indicator</th>
-                  <th className="num">Annual target</th>
-                  <th className="num">Delivered</th>
-                  <th>Status</th>
+                  <th>{t('uc.indicator')}</th>
+                  <th className="num">{t('reporter.annualTarget')}</th>
+                  <th className="num">{t('dd.colDelivered')}</th>
+                  <th>{t('tasks.colStatus')}</th>
                 </tr>
               </thead>
               <tbody>
-                {e.targets.map((t) => (
-                  <tr key={t.targetId}>
+                {e.targets.map((row) => (
+                  <tr key={row.targetId}>
                     <td>
-                      <span className="mono ind-ref">{t.indicatorRef}</span> {t.indicator}
-                      {t.unitOfMeasure ? (
-                        <span className="small muted"> ({t.unitOfMeasure})</span>
+                      <span className="mono ind-ref">{row.indicatorRef}</span> {row.indicator}
+                      {row.unitOfMeasure ? (
+                        <span className="small muted"> ({row.unitOfMeasure})</span>
                       ) : null}
                     </td>
-                    <td className="num">{num(t.annualTarget) ?? 'not set'}</td>
+                    <td className="num">{num(row.annualTarget) ?? t('common.notSet')}</td>
                     <td className="num">
                       {/* Never a zero for an absent result. */}
-                      {t.status === 'NOT_STARTED' ? (
-                        <em className="muted">no result reported</em>
+                      {row.status === 'NOT_STARTED' ? (
+                        <em className="muted">{t('common.noResultReported')}</em>
                       ) : (
-                        num(t.delivered)
+                        num(row.delivered)
                       )}
                     </td>
-                    <td>{statusLabel(t.status)}</td>
+                    <td>{L.status(row.status)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -210,19 +207,16 @@ export function EntityDrilldown() {
       </section>
 
       <p className="small muted">
-        Total allocation on record for the current financial year:{' '}
-        {rands(e.totalAllocation) ?? 'no allocation row'}
+        {t('dd.totalAllocation', rands(e.totalAllocation) ?? t('common.noAllocationRow'))}
         {chain.data?.allocatedCitation ? '. ' + chain.data.allocatedCitation : null}
-        {me?.role === 'DSAC_EXECUTIVE'
-          ? '. This view is read only by design: an executive role cannot touch the data at all.'
-          : null}
+        {me?.role === 'DSAC_EXECUTIVE' ? t('dd.readOnlyByDesign') : null}
       </p>
 
       {explain ? (
         <RiskPanel
           risk={e.risk}
           entityName={e.name}
-          error={e.risk ? null : 'The stored score could not be read.'}
+          error={e.risk ? null : t('dd.scoreUnreadable')}
           onClose={() => setExplain(false)}
         />
       ) : null}

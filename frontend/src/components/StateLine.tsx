@@ -10,6 +10,8 @@
  * which is why the sentence lives in this file and not in six copies across the screens.
  */
 import type { Role, SubmissionStatus } from '../lib/types';
+import { useI18n } from '../lib/i18n';
+import type { Key } from '../lib/i18n';
 import { IconClock, IconInfo } from '../icons';
 import './components.css';
 
@@ -24,8 +26,14 @@ interface Props {
 }
 
 interface Line {
-  holder: string;
-  next: string;
+  holder: Key;
+  next: Key;
+  /* Carried as a flag rather than recovered by reading the holder sentence. The old version
+     tested holder.startsWith('Waiting on you'), which is true in English and false in every
+     other language, so the clock icon would have quietly stopped appearing. */
+  waiting: boolean;
+  /* Substituted into the next line where it takes one. */
+  args?: (string | number)[];
 }
 
 export function stateLine({ status, viewer, outstanding, returnReason }: Props): Line {
@@ -35,91 +43,62 @@ export function stateLine({ status, viewer, outstanding, returnReason }: Props):
   switch (status) {
     case null:
       return reporter
-        ? {
-            holder: 'Waiting on you.',
-            next: 'No submission has been opened for this period. Next: download the template, or capture on a phone.',
-          }
-        : {
-            holder: 'Waiting on the entity.',
-            next: 'Nothing has been opened for this period. Nobody at the Department can act until it arrives.',
-          };
+        ? { holder: 'state.waitingOnYou', next: 'state.nullReporter', waiting: true }
+        : { holder: 'state.waitingOnEntity', next: 'state.nullReviewer', waiting: false };
 
     case 'DRAFT':
-      return reporter
-        ? {
-            holder: 'Waiting on you.',
-            next:
-              left === null
-                ? 'Next: upload or capture, then confirm each figure.'
-                : left === 0
-                  ? 'Next: submit the period to the Department.'
-                  : 'Next: ' + left + (left === 1 ? ' figure' : ' figures') + ' still to confirm before you can submit.',
-          }
-        : {
-            holder: 'Waiting on the entity.',
-            next: 'This is a draft. The Department cannot see figures until the entity submits.',
-          };
+      if (reporter) {
+        if (left === null) return { holder: 'state.waitingOnYou', next: 'state.draftUnknown', waiting: true };
+        if (left === 0) return { holder: 'state.waitingOnYou', next: 'state.draftReady', waiting: true };
+        return {
+          holder: 'state.waitingOnYou',
+          next: left === 1 ? 'state.draftOneLeft' : 'state.draftLeft',
+          waiting: true,
+          args: [left],
+        };
+      }
+      return { holder: 'state.waitingOnEntity', next: 'state.draftReviewer', waiting: false };
 
     case 'SUBMITTED':
       return reporter
-        ? {
-            holder: 'The Department holds it.',
-            next: 'You will be notified if any figure is returned to you. Evidence may still be attached.',
-          }
-        : {
-            holder: 'Waiting on the Department.',
-            next: 'Next: verify each figure against its source, then approve or return with comments.',
-          };
+        ? { holder: 'state.deptHolds', next: 'state.submittedReporter', waiting: false }
+        : { holder: 'state.waitingOnDept', next: 'state.submittedReviewer', waiting: true };
 
     case 'UNDER_REVIEW':
       return reporter
-        ? {
-            holder: 'The Department holds it.',
-            next: 'A reviewer has it open. You will be notified if any figure is returned.',
-          }
-        : {
-            holder: 'Waiting on you.',
-            next: 'Next: approve, or dispute specific targets and return the submission.',
-          };
+        ? { holder: 'state.deptHolds', next: 'state.reviewReporter', waiting: false }
+        : { holder: 'state.waitingOnYou', next: 'state.reviewReviewer', waiting: true };
 
     case 'RETURNED':
-      return reporter
-        ? {
-            holder: 'Waiting on you.',
-            next:
-              'Next: correct only the disputed figures and confirm again. ' +
-              (returnReason ? 'Reason given: ' + returnReason : 'The disputed targets are marked below.'),
-          }
-        : {
-            holder: 'Waiting on the entity.',
-            next: 'Returned with comments. Only the disputed targets were reopened.',
-          };
+      if (reporter) {
+        return {
+          holder: 'state.waitingOnYou',
+          next: returnReason ? 'state.returnedWithReason' : 'state.returnedNoReason',
+          waiting: true,
+          args: returnReason ? [returnReason] : undefined,
+        };
+      }
+      return { holder: 'state.waitingOnEntity', next: 'state.returnedReviewer', waiting: false };
 
     case 'APPROVED':
       return reporter
-        ? {
-            holder: 'Closed.',
-            next: 'Approved by the Department. The figures stay on the record as filed and cannot be edited.',
-          }
-        : {
-            holder: 'Closed.',
-            next: 'Approved and recorded against the reviewer who approved it. Approval does not make the figures editable.',
-          };
+        ? { holder: 'state.closed', next: 'state.approvedReporter', waiting: false }
+        : { holder: 'state.closed', next: 'state.approvedReviewer', waiting: false };
 
     default:
-      return { holder: 'State unknown.', next: 'The workflow state could not be read.' };
+      return { holder: 'state.unknown', next: 'state.unreadable', waiting: false };
   }
 }
 
 export function StateLine(props: Props) {
+  const { t } = useI18n();
   const line = stateLine(props);
-  const waiting = line.holder.startsWith('Waiting on you');
 
   return (
-    <p className={'state-line' + (waiting ? ' state-line-active' : '')} role="status">
-      {waiting ? <IconClock size={16} /> : <IconInfo size={16} />}
+    <p className={'state-line' + (line.waiting ? ' state-line-active' : '')} role="status">
+      {line.waiting ? <IconClock size={16} /> : <IconInfo size={16} />}
       <span>
-        <strong>{line.holder}</strong> {line.next}
+        <strong>{t(line.holder)}</strong> {t(line.next, ...(line.args ?? []))}
       </span>
     </p>
   );

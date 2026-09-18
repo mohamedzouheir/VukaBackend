@@ -20,6 +20,7 @@ import { useAsync } from '../lib/useAsync';
 import { useLiveComments } from '../lib/useLiveComments';
 import { CommentPanel } from '../components/CommentPanel';
 import { date, dateTime, num } from '../lib/format';
+import { useI18n } from '../lib/i18n';
 import { IndicatorRowSkeleton, IndicatorRowVerify } from '../components/IndicatorRow';
 import { RiskBadge } from '../components/RiskBadge';
 import { RiskPanel } from '../components/RiskPanel';
@@ -31,6 +32,7 @@ import {
 import './SubmissionReview.css';
 
 export function SubmissionReview() {
+  const { t } = useI18n();
   const { submissionId } = useParams<{ submissionId: string }>();
   const navigate = useNavigate();
 
@@ -76,7 +78,7 @@ export function SubmissionReview() {
       setReturnModal(false);
       navigate('/review');
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'The submission was not returned.');
+      setError(e instanceof Error ? e.message : t('sr.notReturned'));
     } finally {
       setBusy(false);
     }
@@ -90,19 +92,19 @@ export function SubmissionReview() {
       setApproveModal(false);
       navigate('/review');
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'The approval was not recorded.');
+      setError(e instanceof Error ? e.message : t('sr.notApproved'));
     } finally {
       setBusy(false);
     }
   }
 
-  if (detail.notFound) return <NotFoundState what="submission" />;
+  if (detail.notFound) return <NotFoundState what={t('common.submission')} />;
   if (detail.error) return <ErrorState message={detail.error} onRetry={detail.reload} />;
 
   if (detail.loading) {
     return (
       <div className="stack">
-        <h1>Submission</h1>
+        <h1>{t('sr.title')}</h1>
         <IndicatorRowSkeleton />
         <IndicatorRowSkeleton />
       </div>
@@ -121,7 +123,7 @@ export function SubmissionReview() {
     <div className="stack">
       <p>
         <Link to="/review" className="row">
-          <IconArrowLeft size={16} /> queue
+          <IconArrowLeft size={16} /> {t('sr.queue')}
         </Link>
       </p>
 
@@ -144,32 +146,32 @@ export function SubmissionReview() {
         <p style={{ margin: 0 }}>
           {d.submission.submittedAt ? (
             <>
-              Submitted {dateTime(d.submission.submittedAt)} by{' '}
-              {d.submission.submittedByName ?? 'an official at the entity'}
+              {t(
+                'sr.submittedBy',
+                dateTime(d.submission.submittedAt) ?? '',
+                d.submission.submittedByName ?? t('ind.anOfficial'),
+              )}
               {d.submission.daysLate !== null
                 ? d.submission.daysLate > 0
-                  ? ', ' +
-                    d.submission.daysLate +
-                    (d.submission.daysLate === 1 ? ' day' : ' days') +
-                    ' after the due date of ' +
-                    date(d.period.dueDate)
-                  : ', ' +
-                    Math.abs(d.submission.daysLate) +
-                    (Math.abs(d.submission.daysLate) === 1 ? ' day' : ' days') +
-                    ' before the due date'
+                  ? d.submission.daysLate === 1
+                    ? t('sr.oneDayAfterDue', date(d.period.dueDate) ?? '')
+                    : t('sr.daysAfterDue', d.submission.daysLate, date(d.period.dueDate) ?? '')
+                  : Math.abs(d.submission.daysLate) === 1
+                    ? t('sr.oneDayBeforeDue')
+                    : t('sr.daysBeforeDue', Math.abs(d.submission.daysLate))
                 : null}
             </>
           ) : (
-            'Not submitted. Nothing has been filed for this period.'
+            t('sr.notSubmitted')
           )}
         </p>
         <p className="small muted" style={{ margin: 'var(--space-1) 0 0' }}>
-          {num(verifiable)} of {num(rows.length)} verifiable
-          {noEvidence > 0 ? ', ' + num(noEvidence) + ' reported figures with no evidence' : null}
+          {t('sr.verifiable', num(verifiable) ?? '', num(rows.length) ?? '')}
+          {noEvidence > 0 ? t('sr.noEvidenceCount', num(noEvidence) ?? '') : null}
         </p>
         {d.submission.reviewedByName ? (
           <p className="small muted" style={{ margin: 'var(--space-1) 0 0' }}>
-            Last reviewed by {d.submission.reviewedByName}
+            {t('sr.lastReviewedBy', d.submission.reviewedByName)}
             {d.submission.reviewedAt ? ', ' + dateTime(d.submission.reviewedAt) : null}
           </p>
         ) : null}
@@ -179,8 +181,7 @@ export function SubmissionReview() {
 
       {rows.length === 0 ? (
         <EmptyState>
-          No targets are registered for this entity for the current financial year, so there is
-          nothing filed to verify.
+          {t('sr.noTargets')}
         </EmptyState>
       ) : null}
 
@@ -208,9 +209,10 @@ export function SubmissionReview() {
           <div className="row">
             <strong>
               {disputedIds.length === 0
-                ? 'No figures disputed'
-                : num(disputedIds.length) +
-                  (disputedIds.length === 1 ? ' figure disputed' : ' figures disputed')}
+                ? t('review.noFiguresDisputed')
+                : disputedIds.length === 1
+                  ? t('sr.oneFigureDisputed')
+                  : t('sr.figuresDisputed', num(disputedIds.length) ?? '')}
             </strong>
             <span className="spacer" />
             <a
@@ -224,14 +226,14 @@ export function SubmissionReview() {
                 );
               }}
             >
-              <IconDownload size={16} /> Export with provenance
+              <IconDownload size={16} /> {t('sr.exportProvenance')}
             </a>
             <button
               type="button"
               disabled={closed || busy || disputedIds.length === 0}
               onClick={() => setReturnModal(true)}
             >
-              <IconReturn size={16} /> Return with comments
+              <IconReturn size={16} /> {t('review.returnWithComments')}
             </button>
             <button
               type="button"
@@ -239,16 +241,16 @@ export function SubmissionReview() {
               disabled={closed || busy || disputedIds.length > 0}
               onClick={() => setApproveModal(true)}
             >
-              <IconCheckCircle size={16} /> Approve
+              <IconCheckCircle size={16} /> {t('review.approve')}
             </button>
           </div>
 
           <p className="small muted" style={{ marginTop: 'var(--space-2)' }}>
             {d.submission.status === 'DRAFT'
-              ? 'The entity has not submitted this period yet. Approve and return open once they do.'
+              ? t('sr.draftNote')
               : disputedIds.length > 0
-              ? 'Returning sends only the disputed targets back. The rest stays as filed, with the original confirmation and its author on the record.'
-              : 'There is no control on this screen that changes a reported figure, and no endpoint behind one. A figure you do not believe is disputed and returned, not edited.'}
+                ? t('review.returningNote')
+                : t('review.noEditControl')}
           </p>
         </div>
       ) : null}
@@ -263,7 +265,7 @@ export function SubmissionReview() {
             live.refresh();
             return true;
           } catch (e) {
-            setError(e instanceof Error ? e.message : 'The reply was not sent.');
+            setError(e instanceof Error ? e.message : t('sr.replyNotSent'));
             return false;
           }
         }}
@@ -285,24 +287,24 @@ export function SubmissionReview() {
 
       {returnModal ? (
         <Modal
-          title="Return this submission"
+          title={t('sr.returnTitle')}
           onClose={() => setReturnModal(false)}
           footer={
             <>
               <button type="button" onClick={() => setReturnModal(false)} disabled={busy}>
-                Cancel
+                {t('common.cancel')}
               </button>
               <button type="button" className="primary" disabled={busy} onClick={() => void doReturn()}>
                 {busy ? <IconSpinner size={16} className="spin" /> : <IconReturn size={16} />}
-                Return {num(disputedIds.length)}{' '}
-                {disputedIds.length === 1 ? 'figure' : 'figures'}
+                {disputedIds.length === 1
+                  ? t('sr.returnOne')
+                  : t('sr.returnN', num(disputedIds.length) ?? '')}
               </button>
             </>
           }
         >
           <p>
-            The entity sees each comment against the specific target it belongs to, not as one note
-            about the whole submission. Only the disputed targets are reopened.
+            {t('sr.returnBody')}
           </p>
           <ul className="sr-disputes">
             {disputedIds.map((id) => {
@@ -317,43 +319,43 @@ export function SubmissionReview() {
             })}
           </ul>
           <div>
-            <label htmlFor="sr-overall">An overall note, if one helps (optional)</label>
+            <label htmlFor="sr-overall">{t('sr.overallNote')}</label>
             <textarea id="sr-overall" value={overall} onChange={(e) => setOverall(e.target.value)} />
           </div>
           <p className="small muted">
-            This action is recorded against your name and the time.
+            {t('sr.recordedAgainstYou')}
           </p>
         </Modal>
       ) : null}
 
       {approveModal ? (
         <Modal
-          title="Approve this submission"
+          title={t('sr.approveTitle')}
           onClose={() => setApproveModal(false)}
           footer={
             <>
               <button type="button" onClick={() => setApproveModal(false)} disabled={busy}>
-                Cancel
+                {t('common.cancel')}
               </button>
               <button type="button" className="primary" disabled={busy} onClick={() => void doApprove()}>
                 {busy ? <IconSpinner size={16} className="spin" /> : <IconCheckCircle size={16} />}
-                Approve
+                {t('review.approve')}
               </button>
             </>
           }
         >
           <p>
-            Approval is recorded against <strong>your name</strong> and the time, for this
-            submission only. It does not make any figure editable by anyone, including you.
+            {t('sr.approveBodyA')}
+            <strong>{t('sr.approveYourName')}</strong>
+            {t('sr.approveBodyB')}
           </p>
           {noEvidence > 0 ? (
             <p className="ind-note">
               <IconAlert size={16} />
               <span>
-                {num(noEvidence)} reported{' '}
-                {noEvidence === 1 ? 'figure has' : 'figures have'} no evidence attached and will
-                stay on the record as unverifiable. Approving does not change that, and the export
-                carries it.
+                {noEvidence === 1
+                  ? t('sr.oneNoEvidenceWarn')
+                  : t('sr.noEvidenceWarn', num(noEvidence) ?? '')}
               </span>
             </p>
           ) : null}

@@ -8,29 +8,32 @@
  */
 import { useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
-import { sectorLabel } from '../lib/format';
+import { useI18n } from '../lib/i18n';
+import { useLabels } from '../lib/labels';
 import { IconAlert, IconInfo, IconSpinner, IconX } from '../icons';
 import './Shell.css';
 
 /* ---------- the states a screen shows when a request does not succeed ---------- */
 
 export function Loading({ what }: { what: string }) {
+  const { t } = useI18n();
   return (
     <p className="screen-state" role="status">
       <IconSpinner size={18} className="spin" />
-      <span>Loading {what}.</span>
+      <span>{t('common.loading', what)}</span>
     </p>
   );
 }
 
 export function ErrorState({ message, onRetry }: { message: string; onRetry?: () => void }) {
+  const { t } = useI18n();
   return (
     <div className="screen-state screen-state-error" role="alert">
       <IconAlert size={18} />
       <span>{message}</span>
       {onRetry ? (
         <button type="button" onClick={onRetry}>
-          Try again
+          {t('common.tryAgain')}
         </button>
       ) : null}
     </div>
@@ -43,14 +46,12 @@ export function ErrorState({ message, onRetry }: { message: string; onRetry?: ()
  * is not theirs is itself a disclosure about another entity. The backend already behaves
  * this way in ExportController and this is the frontend matching it.
  */
-export function NotFoundState({ what = 'record' }: { what?: string }) {
+export function NotFoundState({ what }: { what?: string }) {
+  const { t } = useI18n();
   return (
     <div className="screen-state" role="status">
       <IconInfo size={18} />
-      <span>
-        No such {what}. If you followed a link, it may have been for a different entity or a
-        different period.
-      </span>
+      <span>{t('common.notFound', what ?? t('common.record'))}</span>
     </div>
   );
 }
@@ -88,6 +89,7 @@ export function Modal({
   footer?: ReactNode;
   wide?: boolean;
 }) {
+  const { t } = useI18n();
   const close = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -112,7 +114,7 @@ export function Modal({
           <span className="spacer" />
           <button type="button" className="panel-close" onClick={onClose} ref={close}>
             <IconX size={18} />
-            <span className="visually-hidden">Close</span>
+            <span className="visually-hidden">{t('common.close')}</span>
           </button>
         </div>
         <div className="panel-body modal-body">{children}</div>
@@ -125,7 +127,8 @@ export function Modal({
 /* ---------- small pieces ---------- */
 
 export function SectorChip({ sector }: { sector: string }) {
-  return <span className="chip">{sectorLabel(sector)}</span>;
+  const L = useLabels();
+  return <span className="chip">{L.sector(sector)}</span>;
 }
 
 export function Tile({

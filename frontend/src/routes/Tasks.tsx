@@ -14,7 +14,9 @@ import { useMemo, useState } from 'react';
 import { api } from '../lib/api';
 import { useAsync } from '../lib/useAsync';
 import type { WorkspaceTask } from '../lib/types';
-import { date, num, statusLabel } from '../lib/format';
+import { num, date } from '../lib/format';
+import { useI18n } from '../lib/i18n';
+import { useLabels } from '../lib/labels';
 import { PageHead } from '../components/AppShell';
 import { EmptyState, ErrorState, Loading, Tile } from '../components/Shell';
 import { IconAlert, IconCheck, IconCheckCircle, IconClock, IconSpinner, IconTasks } from '../icons';
@@ -23,6 +25,8 @@ type Filter = 'OPEN' | 'DONE' | 'ALL';
 
 export function Tasks() {
   const tasks = useAsync(() => api.myTasks(), []);
+  const { t } = useI18n();
+  const L = useLabels();
   const [filter, setFilter] = useState<Filter>('OPEN');
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -51,34 +55,34 @@ export function Tasks() {
       await api.setTaskStatus(task.id, status);
       tasks.reload();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'The task was not updated.');
+      setError(e instanceof Error ? e.message : t('tasks.notUpdated'));
     } finally {
       setBusy(null);
     }
   }
 
-  if (tasks.loading) return <Loading what="your tasks" />;
+  if (tasks.loading) return <Loading what={t('tasks.what')} />;
   if (tasks.error) return <ErrorState message={tasks.error} onRetry={tasks.reload} />;
 
   return (
     <div>
       <PageHead
         icon={<IconTasks size={26} />}
-        title="Tasks"
-        subtitle="What is assigned to you, and what is waiting on somebody else."
+        title={t('tasks.title')}
+        subtitle={t('tasks.sub')}
       />
 
       <div className="tiles">
-        <Tile icon={<IconTasks size={22} />} value={num(counts.open)} label="Open" sub="Assigned to you" />
-        <Tile icon={<IconAlert size={22} />} tone="critical" value={num(counts.overdue)} label="Overdue" sub="Past the due date" />
-        <Tile icon={<IconCheckCircle size={22} />} tone="ok" value={num(counts.done)} label="Done" sub="Closed by you" />
+        <Tile icon={<IconTasks size={22} />} value={num(counts.open)} label={t('tasks.open')} sub={t('tasks.openSub')} />
+        <Tile icon={<IconAlert size={22} />} tone="critical" value={num(counts.overdue)} label={t('tasks.overdue')} sub={t('tasks.overdueSub')} />
+        <Tile icon={<IconCheckCircle size={22} />} tone="ok" value={num(counts.done)} label={t('tasks.done')} sub={t('tasks.doneSub')} />
       </div>
 
       {error ? <ErrorState message={error} /> : null}
 
       <div className="card" style={{ marginTop: 'var(--space-4)' }}>
         <div className="section-head">
-          <h2>My tasks</h2>
+          <h2>{t('dash.myTasks')}</h2>
           <span className="spacer" />
           <div className="row" style={{ gap: 6 }}>
             {(['OPEN', 'DONE', 'ALL'] as Filter[]).map((f) => (
@@ -89,7 +93,7 @@ export function Tasks() {
                 aria-pressed={filter === f}
                 onClick={() => setFilter(f)}
               >
-                {f === 'OPEN' ? 'Open' : f === 'DONE' ? 'Done' : 'All'}
+                {f === 'OPEN' ? t('tasks.open') : f === 'DONE' ? t('tasks.done') : t('common.all')}
               </button>
             ))}
           </div>
@@ -97,84 +101,82 @@ export function Tasks() {
 
         {rows.length === 0 ? (
           <EmptyState>
-            {filter === 'OPEN'
-              ? 'Nothing is assigned to you. That is an empty queue rather than nothing to do.'
-              : 'No tasks in this view.'}
+            {filter === 'OPEN' ? t('tasks.empty') : t('tasks.noneInView')}
           </EmptyState>
         ) : (
           <div className="table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th>Task</th>
-                  <th>Assigned by</th>
-                  <th>Due</th>
-                  <th>Status</th>
+                  <th>{t('tasks.colTask')}</th>
+                  <th>{t('tasks.colAssignedBy')}</th>
+                  <th>{t('tasks.colDue')}</th>
+                  <th>{t('tasks.colStatus')}</th>
                   <th />
                 </tr>
               </thead>
               <tbody>
-                {rows.map((t) => {
+                {rows.map((row) => {
                   const overdue =
-                    t.status !== 'DONE' && t.dueDate !== null && t.dueDate < new Date().toISOString().slice(0, 10);
+                    row.status !== 'DONE' && row.dueDate !== null && row.dueDate < new Date().toISOString().slice(0, 10);
                   return (
-                    <tr key={t.id}>
+                    <tr key={row.id}>
                       <td>
                         <strong style={{ display: 'block', color: 'var(--navy-ink)' }}>
-                          {t.title ?? 'Untitled task'}
+                          {row.title ?? t('tasks.untitled')}
                         </strong>
-                        {t.description ? (
-                          <span className="small muted">{t.description}</span>
+                        {row.description ? (
+                          <span className="small muted">{row.description}</span>
                         ) : null}
-                        {t.external ? (
+                        {row.external ? (
                           <span className="chip chip-muted" style={{ marginLeft: 6 }}>
-                            external
+                            {t('tasks.external')}
                           </span>
                         ) : null}
                       </td>
-                      <td className="small muted">{t.createdByName ?? 'not recorded'}</td>
+                      <td className="small muted">{row.createdByName ?? t('common.notRecorded')}</td>
                       <td className="small">
-                        {t.dueDate ? (
+                        {row.dueDate ? (
                           <span className={overdue ? 'row' : 'row muted'} style={{ gap: 5 }}>
                             <IconClock size={14} />
-                            {date(t.dueDate)}
+                            {date(row.dueDate)}
                           </span>
                         ) : (
-                          <em className="muted">no due date</em>
+                          <em className="muted">{t('tasks.noDueDate')}</em>
                         )}
                       </td>
                       <td>
                         <span
                           className={
                             'chip ' +
-                            (t.status === 'DONE'
+                            (row.status === 'DONE'
                               ? 'chip-ok'
                               : overdue
                                 ? 'chip-danger'
                                 : 'chip-muted')
                           }
                         >
-                          {statusLabel(t.status)}
+                          {L.status(row.status)}
                         </span>
                       </td>
                       <td>
-                        {t.status !== 'DONE' ? (
+                        {row.status !== 'DONE' ? (
                           <button
                             type="button"
-                            disabled={busy === t.id}
-                            onClick={() => void setStatus(t, 'DONE')}
+                            disabled={busy === row.id}
+                            onClick={() => void setStatus(row, 'DONE')}
                           >
-                            {busy === t.id ? <IconSpinner size={15} className="spin" /> : <IconCheck size={15} />}
-                            Mark done
+                            {busy === row.id ? <IconSpinner size={15} className="spin" /> : <IconCheck size={15} />}
+                            {t('tasks.markDone')}
                           </button>
                         ) : (
                           <button
                             type="button"
                             className="link"
-                            disabled={busy === t.id}
-                            onClick={() => void setStatus(t, 'OPEN')}
+                            disabled={busy === row.id}
+                            onClick={() => void setStatus(row, 'OPEN')}
                           >
-                            Reopen
+                            {t('tasks.reopen')}
                           </button>
                         )}
                       </td>

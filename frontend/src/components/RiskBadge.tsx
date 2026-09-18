@@ -11,7 +11,9 @@
  * not rendered at all rather than rendered as an error.
  */
 import type { RiskBand } from '../lib/types';
-import { bandColour, bandWord, num } from '../lib/format';
+import { bandColour, num } from '../lib/format';
+import { useI18n } from '../lib/i18n';
+import { useLabels } from '../lib/labels';
 import './RiskBadge.css';
 
 interface Props {
@@ -25,13 +27,14 @@ interface Props {
 }
 
 export function RiskBadge({ score, band, onExplain, size = 'md', movement }: Props) {
+  const { t } = useI18n();
+  const L = useLabels();
+
   const scored = score !== null && score !== undefined && band !== 'NOT_SCORED';
-  const word = bandWord(band);
+  const word = L.band(band);
   const colour = scored ? bandColour(band) : 'var(--band-none)';
 
-  const label = scored
-    ? 'Risk score ' + num(score) + ', band ' + word + '. Opens the five signals behind it.'
-    : 'Not yet scored for this period.';
+  const label = scored ? t('risk.badgeLabel', num(score) ?? '', word) : t('risk.notScoredLabel');
 
   const inner = (
     <>
@@ -41,14 +44,14 @@ export function RiskBadge({ score, band, onExplain, size = 'md', movement }: Pro
           <span className="risk-score">{num(score)}</span>
           <span className="risk-word">{word}</span>
           {movement !== null && movement !== undefined && movement !== 0 ? (
-            <span className="risk-move" title="Change since the previous period">
+            <span className="risk-move" title={t('risk.movement')}>
               {movement > 0 ? '+' : ''}
               {num(movement)}
             </span>
           ) : null}
         </>
       ) : (
-        <span className="risk-word">Not yet scored</span>
+        <span className="risk-word">{t('band.notScoredLong')}</span>
       )}
     </>
   );
@@ -91,10 +94,11 @@ export function RiskBadgeSkeleton({ size = 'md' }: { size?: 'sm' | 'md' }) {
  * signals may be readable even where the score is not.
  */
 export function RiskBadgeError({ onExplain }: { onExplain?: () => void }) {
+  const { t } = useI18n();
   return (
-    <span className="risk-badge risk-md risk-unscored" role="img" aria-label="Score unavailable.">
+    <span className="risk-badge risk-md risk-unscored" role="img" aria-label={t('risk.scoreUnavailable')}>
       <span className="risk-swatch" style={{ background: 'var(--band-none)' }} aria-hidden="true" />
-      <span className="risk-word">Score unavailable</span>
+      <span className="risk-word">{t('risk.scoreUnavailable')}</span>
       {onExplain ? (
         <button type="button" className="link" onClick={onExplain}>
           signals

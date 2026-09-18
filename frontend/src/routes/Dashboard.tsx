@@ -17,7 +17,10 @@ import { api } from '../lib/api';
 import { useAsync } from '../lib/useAsync';
 import { useAuth, canReview, isDsac } from '../lib/auth';
 import type { PortfolioRow } from '../lib/types';
-import { BAND_ORDER, bandColour, bandWord, num, randsShort, date, daysRemainingText } from '../lib/format';
+import { BAND_ORDER, bandColour, num, randsShort, date } from '../lib/format';
+import { useI18n } from '../lib/i18n';
+import type { I18n } from '../lib/i18n';
+import { useLabels } from '../lib/labels';
 import { PageHead } from '../components/AppShell';
 import { EmptyState, ErrorState, Loading, Tile } from '../components/Shell';
 import {
@@ -27,6 +30,8 @@ import {
 import './Dashboard.css';
 
 export function Dashboard() {
+  const { t } = useI18n();
+  const L = useLabels();
   const { me } = useAuth();
   const dsac = isDsac(me?.role);
 
@@ -66,12 +71,8 @@ export function Dashboard() {
       <div>
         <PageHead
           icon={<IconHome size={26} />}
-          title={greeting(me?.name ?? null)}
-          subtitle={
-            dsac
-              ? 'Where the portfolio stands this quarter, and what is waiting on the Department.'
-              : 'Where your reporting stands this quarter, and what is waiting on you.'
-          }
+          title={greeting(me?.name ?? null, t)}
+          subtitle={dsac ? t('dash.subDsac') : t('dash.subReporter')}
         />
 
         {dsac ? (
@@ -84,15 +85,15 @@ export function Dashboard() {
         {dsac ? (
           <section className="card dash-block">
             <div className="section-head">
-              <h2>Risk distribution</h2>
+              <h2>{t('dash.riskDistribution')}</h2>
               <span className="spacer" />
               <Link to="/risk" className="row" style={{ gap: 4, fontSize: '0.875rem', fontWeight: 600 }}>
-                Risk &amp; Alerts <IconChevronRight size={15} />
+                {t('nav.risk')} <IconChevronRight size={15} />
               </Link>
             </div>
 
             {portfolio.loading ? (
-              <Loading what="the portfolio" />
+              <Loading what={t('pf.what')} />
             ) : portfolio.error ? (
               <ErrorState message={portfolio.error} onRetry={portfolio.reload} />
             ) : (
@@ -104,34 +105,33 @@ export function Dashboard() {
         {/* Recent submissions, which is the closest real thing to the designs' activity table. */}
         <section className="card dash-block">
           <div className="section-head">
-            <h2>{dsac ? 'Recent submissions' : 'Your reporting periods'}</h2>
+            <h2>{dsac ? t('dash.recentSubmissions') : t('dash.yourPeriods')}</h2>
             <span className="spacer" />
             {canReview(me?.role) ? (
               <Link to="/review" style={{ fontSize: '0.875rem', fontWeight: 600 }}>
-                Open the review queue
+                {t('dash.openQueue')}
               </Link>
             ) : null}
           </div>
 
           {subs.loading ? (
-            <Loading what="submissions" />
+            <Loading what={t('dash.whatSubmissions')} />
           ) : subs.error ? (
             <ErrorState message={subs.error} onRetry={subs.reload} />
           ) : (subs.data ?? []).length === 0 ? (
             <EmptyState>
-              Nothing has been filed yet. That is an empty register rather than a portfolio with
-              nothing outstanding.
+              {t('dash.nothingFiled')}
             </EmptyState>
           ) : (
             <div className="table-wrap">
               <table>
                 <thead>
                   <tr>
-                    <th>Entity</th>
-                    <th>Period</th>
-                    <th className="num">Reported</th>
-                    <th>Status</th>
-                    <th>Submitted</th>
+                    <th>{t('entities.colEntity')}</th>
+                    <th>{t('dash.colPeriod')}</th>
+                    <th className="num">{t('dash.colReported')}</th>
+                    <th>{t('tasks.colStatus')}</th>
+                    <th>{t('dash.colSubmitted')}</th>
                     <th />
                   </tr>
                 </thead>
@@ -141,16 +141,16 @@ export function Dashboard() {
                       <td>{s.entityName}</td>
                       <td className="muted">{s.periodLabel}</td>
                       <td className="num">
-                        {num(s.confirmedCount)} of {num(s.targetCount)}
+                        {t('dash.reportedOf', num(s.confirmedCount) ?? '', num(s.targetCount) ?? '')}
                       </td>
                       <td>
                         <StatusChip status={s.status} />
                       </td>
                       <td className="muted small">
-                        {s.submittedAt ? date(s.submittedAt) : 'not submitted'}
+                        {s.submittedAt ? date(s.submittedAt) : t('riskScreen.notSubmitted')}
                         {s.daysLate !== null && s.daysLate > 0 ? (
                           <span className="chip chip-warn" style={{ marginLeft: 6 }}>
-                            {s.daysLate}d late
+                            {t('dash.daysLate', s.daysLate)}
                           </span>
                         ) : null}
                       </td>
@@ -158,7 +158,7 @@ export function Dashboard() {
                         <Link
                           to={canReview(me?.role) ? '/review/' + s.submissionId : '/entity/submission/' + s.submissionId + '/review'}
                         >
-                          Open
+                          {t('common.open')}
                         </Link>
                       </td>
                     </tr>
@@ -173,7 +173,7 @@ export function Dashboard() {
       {/* ---------------- right rail ---------------- */}
       <aside className="aside">
         <section className="card">
-          <h2 style={{ marginBottom: 'var(--space-3)' }}>Quick actions</h2>
+          <h2 style={{ marginBottom: 'var(--space-3)' }}>{t('dash.quickActions')}</h2>
           <div className="quick">
             {me?.role === 'ENTITY_REPORTER' ? (
               <Link to="/entity" className="quick-item">
@@ -181,8 +181,8 @@ export function Dashboard() {
                   <IconUpload size={18} />
                 </span>
                 <span>
-                  <strong>Report this quarter</strong>
-                  <em>Download the template, upload, confirm</em>
+                  <strong>{t('dash.reportQuarter')}</strong>
+                  <em>{t('dash.reportQuarterSub')}</em>
                 </span>
                 <IconChevronRight size={16} className="muted" />
               </Link>
@@ -193,8 +193,8 @@ export function Dashboard() {
                   <IconCitation size={18} />
                 </span>
                 <span>
-                  <strong>Work the review queue</strong>
-                  <em>Ranked by risk, not by date received</em>
+                  <strong>{t('dash.workQueue')}</strong>
+                  <em>{t('dash.workQueueSub')}</em>
                 </span>
                 <IconChevronRight size={16} className="muted" />
               </Link>
@@ -205,8 +205,8 @@ export function Dashboard() {
                   <IconLandmark size={18} />
                 </span>
                 <span>
-                  <strong>Browse entities</strong>
-                  <em>Every funded body and what it was allocated</em>
+                  <strong>{t('dash.browseEntities')}</strong>
+                  <em>{t('dash.browseEntitiesSub')}</em>
                 </span>
                 <IconChevronRight size={16} className="muted" />
               </Link>
@@ -216,8 +216,8 @@ export function Dashboard() {
                 <IconCheckCircle size={18} />
               </span>
               <span>
-                <strong>Open the citizen view</strong>
-                <em>What the public can see, no login</em>
+                <strong>{t('dash.openCitizen')}</strong>
+                <em>{t('dash.openCitizenSub')}</em>
               </span>
               <IconChevronRight size={16} className="muted" />
             </a>
@@ -226,28 +226,32 @@ export function Dashboard() {
 
         <section className="card">
           <div className="section-head">
-            <h2>My tasks</h2>
+            <h2>{t('dash.myTasks')}</h2>
             <span className="spacer" />
             <Link to="/tasks" style={{ fontSize: '0.8125rem', fontWeight: 600 }}>
-              View all
+              {t('common.viewAll')}
             </Link>
           </div>
           {tasks.loading ? (
-            <Loading what="your tasks" />
+            <Loading what={t('tasks.what')} />
           ) : tasks.error ? (
             <ErrorState message={tasks.error} onRetry={tasks.reload} />
           ) : openTasks.length === 0 ? (
             <p className="muted small" style={{ margin: 0 }}>
-              Nothing assigned to you.
+              {t('dash.nothingAssigned')}
             </p>
           ) : (
             <ul className="tasklist">
-              {openTasks.slice(0, 5).map((t) => (
-                <li key={t.id}>
+              {openTasks.slice(0, 5).map((row) => (
+                <li key={row.id}>
                   <IconTasks size={16} className="muted" />
                   <span>
-                    <strong>{t.title ?? 'Untitled task'}</strong>
-                    {t.dueDate ? <em>Due {date(t.dueDate)}</em> : <em>No due date</em>}
+                    <strong>{row.title ?? t('tasks.untitled')}</strong>
+                    {row.dueDate ? (
+                      <em>{t('dash.dueOn', date(row.dueDate) ?? '')}</em>
+                    ) : (
+                      <em>{t('tasks.noDueDate')}</em>
+                    )}
                   </span>
                 </li>
               ))}
@@ -261,14 +265,12 @@ export function Dashboard() {
             <p className="row small" style={{ margin: 0, gap: 6 }}>
               <IconClock size={15} />
               <span>
-                Due {date(period.dueDate) ?? 'not set'}
-                {period.daysRemaining !== null ? ', ' + daysRemainingText(period.daysRemaining) : null}
+                {t('dash.dueOn', date(period.dueDate) ?? t('common.notSet'))}
+                {period.daysRemaining !== null ? ', ' + L.daysRemaining(period.daysRemaining) : null}
               </span>
             </p>
             <p className="small muted" style={{ marginTop: 'var(--space-2)' }}>
-              {period.statutory
-                ? 'A statutory date under the PFMA.'
-                : 'Not a statutory date. It rests on a departmental instruction rather than on a regulation.'}
+              {period.statutory ? t('dash.statutoryPfma') : t('dash.notStatutoryPfma')}
             </p>
           </section>
         ) : null}
@@ -288,14 +290,15 @@ function DsacTiles({
   period: string | null;
   loading: boolean;
 }) {
-  if (loading) return <Loading what="the portfolio" />;
+  const { t } = useI18n();
+  if (loading) return <Loading what={t('pf.what')} />;
   return (
     <div className="tiles">
-      <Tile icon={<IconLandmark size={22} />} value={num(counts.entities)} label="Funded bodies" sub="Receiving an entity transfer" />
-      <Tile icon={<IconCheckCircle size={22} />} tone="ok" value={num(counts.submitted) + ' of ' + num(counts.entities)} label="Submitted" sub={period ?? 'no open period'} />
-      <Tile icon={<IconClock size={22} />} tone="warn" value={num(counts.outstanding)} label="Outstanding" sub="Nothing filed this period" />
-      <Tile icon={<IconAlert size={22} />} tone="critical" value={num(counts.critical)} label="Critical entities" sub="Score of 70 or above" />
-      <Tile icon={<IconCitation size={22} />} tone="purple" value={randsShort(counts.allocated)} label="Allocated this year" sub="Vote 37, Table 37.3" />
+      <Tile icon={<IconLandmark size={22} />} value={num(counts.entities)} label={t('dash.fundedBodies')} sub={t('dash.fundedBodiesSub2')} />
+      <Tile icon={<IconCheckCircle size={22} />} tone="ok" value={t('pf.countOf', num(counts.submitted) ?? '', num(counts.entities) ?? '')} label={t('dash.submitted')} sub={period ?? t('entities.noOpenPeriod')} />
+      <Tile icon={<IconClock size={22} />} tone="warn" value={num(counts.outstanding)} label={t('dash.outstanding')} sub={t('dash.outstandingSub2')} />
+      <Tile icon={<IconAlert size={22} />} tone="critical" value={num(counts.critical)} label={t('dash.critical')} sub={t('dash.criticalSub2')} />
+      <Tile icon={<IconCitation size={22} />} tone="purple" value={randsShort(counts.allocated)} label={t('dash.allocated')} sub={t('dash.allocatedSub')} />
     </div>
   );
 }
@@ -309,19 +312,25 @@ function ReporterTiles({
   subs: { periodId: string; targetCount: number; confirmedCount: number; evidenceCount: number }[];
   loading: boolean;
 }) {
-  if (loading) return <Loading what="your reporting" />;
+  const { t } = useI18n();
+  const L = useLabels();
+  if (loading) return <Loading what={t('dash.whatReporting')} />;
   const current = period ? subs.find((s) => s.periodId === period.periodId) : undefined;
   return (
     <div className="tiles">
-      <Tile icon={<IconCitation size={22} />} value={current ? num(current.targetCount) : null} label="Targets this year" sub="From your tabled plan" />
-      <Tile icon={<IconCheckCircle size={22} />} tone="ok" value={current ? num(current.confirmedCount) : null} label="Figures confirmed" sub="In your name, not editable" />
-      <Tile icon={<IconUpload size={22} />} tone="purple" value={current ? num(current.evidenceCount) : null} label="Evidence attached" sub="A figure with none is unverifiable" />
+      <Tile icon={<IconCitation size={22} />} value={current ? num(current.targetCount) : null} label={t('dash.targetsThisYear')} sub={t('dash.targetsThisYearSub')} />
+      <Tile icon={<IconCheckCircle size={22} />} tone="ok" value={current ? num(current.confirmedCount) : null} label={t('dash.figuresConfirmed')} sub={t('dash.confirmedSub2')} />
+      <Tile icon={<IconUpload size={22} />} tone="purple" value={current ? num(current.evidenceCount) : null} label={t('dash.evidenceAttached')} sub={t('dash.evidenceSub2')} />
       <Tile
         icon={<IconClock size={22} />}
         tone="warn"
-        value={period?.daysRemaining !== null && period?.daysRemaining !== undefined ? daysRemainingText(period.daysRemaining) : null}
-        label="Deadline"
-        sub={period ? period.label : 'no open period'}
+        value={
+          period?.daysRemaining !== null && period?.daysRemaining !== undefined
+            ? L.daysRemaining(period.daysRemaining)
+            : null
+        }
+        label={t('dash.deadline')}
+        sub={period ? period.label : t('entities.noOpenPeriod')}
       />
     </div>
   );
@@ -329,6 +338,7 @@ function ReporterTiles({
 
 /** Band distribution as proportional bars. Each carries its count and its word, not just colour. */
 function BandBars({ rows }: { rows: PortfolioRow[] }) {
+  const L = useLabels();
   const total = rows.length || 1;
   return (
     <div className="bands">
@@ -339,7 +349,7 @@ function BandBars({ rows }: { rows: PortfolioRow[] }) {
           <div className="band-row" key={band}>
             <span className="band-label">
               <span className="risk-swatch" style={{ background: bandColour(band) }} aria-hidden="true" />
-              {bandWord(band)}
+              {L.band(band)}
             </span>
             <span className="band-track" aria-hidden="true">
               <span style={{ width: (n / total) * 100 + '%', background: bandColour(band) }} />
@@ -355,19 +365,17 @@ function BandBars({ rows }: { rows: PortfolioRow[] }) {
 }
 
 export function StatusChip({ status }: { status: string }) {
+  const L = useLabels();
   const tone =
     status === 'APPROVED' ? 'chip-ok'
     : status === 'RETURNED' ? 'chip-danger'
     : status === 'DRAFT' ? 'chip-muted'
     : 'chip';
-  const label =
-    status === 'NOT_STARTED' ? 'No result reported'
-    : status.charAt(0) + status.slice(1).toLowerCase().replace(/_/g, ' ');
-  return <span className={'chip ' + tone}>{label}</span>;
+  return <span className={'chip ' + tone}>{L.status(status)}</span>;
 }
 
-function greeting(name: string | null): string {
+function greeting(name: string | null, t: I18n['t']): string {
   const h = new Date().getHours();
-  const part = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
-  return name ? part + ', ' + name.split(/[\s.]/)[0] : part;
+  const part = h < 12 ? t('dash.morning') : h < 17 ? t('dash.afternoon') : t('dash.evening');
+  return name ? t('dash.greetingNamed', part, name.split(/[\s.]/)[0]) : part;
 }

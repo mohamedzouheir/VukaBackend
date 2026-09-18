@@ -1,0 +1,311 @@
+/*
+ * The public face. A separate register from the dashboard: departmental green and gold, serif
+ * display type, generous space. Its own variables, so nothing here can drift into the working
+ * interface behind it.
+ */
+.land {
+  --land-green: #14332B;
+  --land-green-deep: #0C2019;
+  --land-gold: #B08D57;
+  --land-gold-light: #D4B587;
+  --land-cream: #F7F3EA;
+  --land-ink: #1C1A16;
+
+  min-height: 100vh;
+  background: var(--land-cream);
+  color: var(--land-ink);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------------------------------------------------------------- top */
+
+.land-top {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  z-index: 3;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-5) var(--space-6);
+}
+
+.land-dept { display: flex; gap: var(--space-3); align-items: flex-start; }
+.land-arms { flex: none; display: grid; place-items: center; }
+.land-dept-text {
+  font-size: 0.6875rem;
+  line-height: 1.4;
+  color: var(--land-ink);
+  letter-spacing: 0.01em;
+}
+.land-dept-text strong {
+  display: block;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  border-bottom: 1px solid var(--land-gold);
+  padding-bottom: 2px;
+  margin-bottom: 3px;
+}
+.land-dept-text b { font-weight: 700; }
+
+.land-lang {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 0.8125rem; font-weight: 600;
+  color: var(--land-ink);
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(28, 26, 22, 0.12);
+  border-radius: var(--radius-pill);
+  padding: 8px 14px;
+  text-decoration: none;
+  backdrop-filter: blur(6px);
+}
+.land-lang:hover { background: #fff; text-decoration: none; color: var(--land-green); }
+
+/* ---------------------------------------------------------------- hero */
+
+.land-hero {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 640px;
+  display: flex;
+  align-items: center;
+  /*
+   * The photograph, with a scrim over it. The scrim is not decoration: the display type sits on
+   * the left third of the image, and without it the contrast there depends on whatever the
+   * photograph happens to be doing at that point. The flat gradient underneath is the fallback
+   * while the image loads, or if it fails.
+   */
+  background:
+    linear-gradient(
+      100deg,
+      rgba(247, 243, 234, 0.97) 0%,
+      rgba(247, 243, 234, 0.92) 24%,
+      rgba(247, 243, 234, 0.60) 42%,
+      rgba(247, 243, 234, 0.14) 58%,
+      rgba(20, 51, 43, 0.12) 100%
+    ),
+    url("/img/landing-hero.jpeg"),
+    linear-gradient(180deg, #CFE0EA 0%, #E6DCC8 46%, #F0E4D0 68%, var(--land-cream) 100%);
+  background-size: cover, cover, cover;
+  background-position: center, center 20%, center;
+  background-repeat: no-repeat;
+  overflow: hidden;
+}
+
+/* The photograph runs into the cream band below rather than stopping on a hard edge. */
+.land-hero::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 20%;
+  background: linear-gradient(180deg, rgba(247, 243, 234, 0) 0%, var(--land-cream) 100%);
+  pointer-events: none;
+}
+
+.land-hero-inner {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 140px var(--space-6) var(--space-7);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  gap: var(--space-7);
+  align-items: center;
+}
+
+.land-eyebrow {
+  display: flex; align-items: center; gap: var(--space-3);
+  margin: 0 0 var(--space-4);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--land-green);
+}
+.land-rule { flex: 0 0 64px; height: 1px; background: var(--land-gold); }
+
+.land-display {
+  font-family: "Playfair Display", Georgia, "Times New Roman", serif;
+  font-size: clamp(2.75rem, 6.2vw, 5rem);
+  line-height: 1.02;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--land-ink);
+  margin: 0;
+}
+.land-display em {
+  display: block;
+  font-style: italic;
+  font-weight: 500;
+  color: var(--land-gold);
+}
+
+.land-lede {
+  max-width: 34rem;
+  margin: var(--space-5) 0 0;
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  color: #3A372F;
+}
+
+/* ---------------------------------------------------------------- the two cards */
+
+.land-actions { display: flex; flex-direction: column; gap: var(--space-3); }
+
+.land-card {
+  /* One of these is a button and one is a link, and they have to be indistinguishable. */
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  min-height: 0;
+  border: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  border-radius: var(--radius-lg);
+  text-decoration: none;
+  transition: transform 140ms ease, box-shadow 140ms ease;
+  box-shadow: 0 10px 30px rgba(20, 51, 43, 0.14);
+}
+.land-card:hover { transform: translateY(-2px); box-shadow: 0 16px 40px rgba(20, 51, 43, 0.2); text-decoration: none; }
+
+.land-card-dark { --btn-hover-bg: var(--land-green-deep); background: var(--land-green); color: #fff; }
+.land-card-dark:hover { color: #fff; background: var(--land-green-deep); }
+.land-card-light { --btn-hover-bg: #fff; background: #fff; color: var(--land-ink); }
+.land-card-light:hover { color: var(--land-ink); background: #fff; }
+
+.land-card:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: 0 10px 30px rgba(20, 51, 43, 0.1);
+}
+
+/* SSO is the word that matters on that card, so it is set as one. */
+.land-card-text em b {
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  font-size: 0.75rem;
+}
+
+.land-card-note {
+  margin: var(--space-2) 0 0;
+  font-size: 0.6875rem;
+  line-height: 1.5;
+  color: #5A564C;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(28, 26, 22, 0.08);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+}
+
+.land-card-icon {
+  width: 46px; height: 46px; flex: none;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  border: 1px solid currentColor;
+  opacity: 0.85;
+}
+.land-card-text { flex: 1 1 auto; min-width: 0; }
+.land-card-text strong {
+  display: block;
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.15;
+}
+.land-card-text em {
+  display: block;
+  font-style: normal;
+  font-size: 0.8125rem;
+  opacity: 0.8;
+  margin-top: 2px;
+}
+
+/* ---------------------------------------------------------------- pillars */
+
+.land-pillars {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  background: var(--land-cream);
+  border-top: 1px solid rgba(28, 26, 22, 0.08);
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+}
+.land-pillar {
+  display: flex;
+  gap: var(--space-4);
+  align-items: flex-start;
+  padding: var(--space-6) var(--space-5);
+  border-left: 1px solid rgba(28, 26, 22, 0.08);
+}
+.land-pillar:first-child { border-left: 0; }
+.land-pillar-icon { color: var(--land-gold); flex: none; }
+.land-pillar h2 {
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--land-ink);
+  margin: 0 0 4px;
+}
+.land-pillar p { margin: 0; font-size: 0.8125rem; line-height: 1.5; color: #555147; }
+
+/* ---------------------------------------------------------------- quote */
+
+.land-quote {
+  background: var(--land-green);
+  color: var(--land-cream);
+  padding: var(--space-6);
+}
+.land-quote blockquote { max-width: 1400px; margin: 0 auto; }
+.land-quote p {
+  font-family: "Playfair Display", Georgia, serif;
+  font-style: italic;
+  font-size: 1.375rem;
+  line-height: 1.35;
+  margin: 0;
+}
+.land-quote cite {
+  display: block;
+  margin-top: var(--space-3);
+  font-style: normal;
+  font-size: 0.6875rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--land-gold-light);
+}
+.land-quote cite::before { content: "— "; }
+
+/* ---------------------------------------------------------------- narrow */
+
+@media (max-width: 1040px) {
+  .land-hero-inner { grid-template-columns: minmax(0, 1fr); gap: var(--space-6); }
+  .land-actions { max-width: 460px; }
+  .land-pillars { grid-template-columns: repeat(2, 1fr); }
+  .land-pillar:nth-child(3) { border-left: 0; }
+}
+
+@media (max-width: 680px) {
+  .land-top { padding: var(--space-4); }
+  .land-hero-inner { padding: 130px var(--space-4) var(--space-6); }
+  .land-pillars { grid-template-columns: 1fr; }
+  .land-pillar { border-left: 0; border-top: 1px solid rgba(28, 26, 22, 0.08); padding: var(--space-5) var(--space-4); }
+  .land-pillar:first-child { border-top: 0; }
+  .land-quote { padding: var(--space-5) var(--space-4); }
+  .land-dept-text { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .land-card, .land-card:hover { transition: none; transform: none; }
+}
+
+/* The top right cluster: language picker plus the citizen view link. */
+.land-top-right { display: flex; align-items: center; gap: var(--space-4); }
+.land-top-right .lang select { color: var(--land-ink); }

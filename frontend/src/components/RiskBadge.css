@@ -11,7 +11,7 @@
   color: var(--ink);
   min-height: 0;
 }
-.risk-badge-button { cursor: pointer; }
+.risk-badge-button { --btn-hover-bg: var(--canvas-sunk); cursor: pointer; }
 .risk-badge-button:hover { background: var(--canvas-sunk); }
 
 .risk-swatch {

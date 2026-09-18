@@ -1,0 +1,47 @@
+/*
+ * A native select with a globe and a chevron drawn around it. The select keeps its own keyboard
+ * handling and the platform picker on a phone; only its chrome is replaced.
+ */
+.lang {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  color: inherit;
+}
+
+.lang-globe, .lang-chevron {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  pointer-events: none;
+  color: inherit;
+  opacity: 0.85;
+}
+.lang-globe { left: 0; }
+.lang-chevron { right: 0; }
+
+.lang select {
+  appearance: none;
+  -webkit-appearance: none;
+  height: 34px;
+  min-height: 34px;
+  padding: 0 22px 0 25px;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+.lang select:hover { opacity: 0.8; }
+.lang select:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+
+/* The options render in the platform's own colours, which on a dark bar would otherwise be
+   white text on white. */
+.lang select option { color: #1C1A16; background: #fff; }
+
+.lang-compact select { font-size: 0.8125rem; padding-right: 20px; }

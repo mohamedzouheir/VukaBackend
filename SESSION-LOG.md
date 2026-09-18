@@ -428,7 +428,7 @@ scenario, and the largest factor it reports for Robben Island on real data is th
 instruction". The inputs are simply thinner, because the seed has one prior period of history where
 the wireframes assume three.
 
-This has to be decided before the demo, and it is first in section 11.
+This has to be decided before the demo, and it is first in section 12.
 
 ---
 
@@ -568,7 +568,108 @@ the page.
 
 ---
 
-## 11. Still open
+## 11. Language, across all twenty one screens
+
+Until this point the language picker changed the landing page and the three auth screens and
+nothing else. A person could choose isiZulu, sign in, and land on an entirely English dashboard.
+That was a deliberate scope decision at the time, argued on quality: translating twenty dense
+screens of regulatory vocabulary badly would be worse than translating four well. The reasoning
+was sound about quality and wrong about scope. A reporting officer at a provincial museum is
+exactly the person most likely to want isiZulu, and they live in the dashboard, not on the
+landing page.
+
+So the scope grew and the quality caveat stayed, stated rather than quietly dropped.
+
+### 11.1 What is now translated
+
+Five languages: English, Afrikaans, isiZulu, isiXhosa, Sesotho. Nine hundred keys each, covering
+every screen, every empty state, every error message, every modal and every aria-label in the
+application. `lib/i18n/` replaces the single `lib/i18n.tsx` that came before it.
+
+Every dictionary is declared as `Record<Key, string>` against the English one, so a missing key is
+a compile error rather than a word that silently falls back on a screen nobody happened to open in
+isiXhosa. A script checks key parity on every batch as well, because a key added to four files out
+of five is the exact failure the arrangement exists to catch and catching it before `tsc` is
+cheaper.
+
+### 11.2 The vocabulary that must not drift
+
+Four phrases carry legal or audit meaning and are marked in `en.ts` so a reviewer knows not to
+smooth them over.
+
+- **unverifiable against unverified.** The Auditor-General's own distinction. A figure with no
+  evidence cannot be checked at all, which is a different and worse thing than a figure nobody has
+  got round to checking.
+- **statutory against departmental.** PFMA sections 55 and 65 are law. The thirty day quarterly
+  figure is a National Treasury guideline. A translation that renders all seven deadline bases as
+  "the rules say" destroys the only distinction that screen exists to draw.
+- **no result reported.** Never "zero". The difference between not done and not reported is the
+  subject of this product.
+- **arithmetic, not a prediction.** The sentence the risk engine is defensible on.
+
+### 11.3 Two bugs that only translation exposes
+
+**`StateLine` decided whether to show the "waiting on you" clock by testing whether its own
+sentence started with the words `Waiting on you`.** True in English, false in every other language,
+so the clock and the active styling would have quietly stopped appearing the moment anyone switched.
+The function now returns keys and a `waiting` flag rather than prose, and nothing reads meaning back
+out of a rendered sentence.
+
+**Karabo's suggestion chips matched English keywords.** Click the isiZulu chip and the matcher,
+reading isiZulu text for the substring "late", falls through to the generic reply. Chips now carry
+the answer they demonstrate, so they work in any language. Free text still matches English only,
+which is stated in the file rather than papered over: a real model would handle it and this design
+build cannot.
+
+### 11.4 Where the labels live
+
+`format.ts` turns numbers and dates into strings and has no opinion about language beyond the South
+African locale. Turning enum codes into words is a different job, because words have a language, so
+`lib/labels.ts` now does it: risk bands, statuses, sectors, audit outcomes, the Auditor-General's
+seven criteria, and the eight deadline bases. One hook, fifteen call sites, rather than threading a
+dictionary through every one of them and leaving half still in English.
+
+Every lookup falls through to the code itself, tidied up. If the backend adds an outcome before
+this file learns about it, the screen shows `Revision churn` rather than a blank cell or the word
+"Unknown", and the gap is visible to whoever is looking at it.
+
+### 11.5 What is not translated, and why
+
+- **Province names.** KwaZulu-Natal is KwaZulu-Natal in all five.
+- **PFMA schedule designations.** "Public entity, Schedule 3A" is a legal classification.
+- **Published citations.** `CitationLine` renders whatever the API supplies, and Estimates of
+  National Expenditure 2026, Vote 37, Table 37.3 is the published reference.
+- **The actor string in the audit trail.** The backend writes the literal `Not recorded` where no
+  actor is on the record, so the comparison stays in English and only the display translates.
+
+### 11.6 The page weight, which the first version got wrong
+
+Bundling all five dictionaries put three hundred and thirty kilobytes of text into every page load,
+and the main chunk went from a passing figure to 742 kB raw, 208 kB gzipped. Section 6 sets a two
+hundred and fifty kilobyte budget for the dashboard, and that budget is not arbitrary: it is a
+reporting officer on a provincial museum's connection paying for every byte. Most of those bytes
+were words the reader would never see, because somebody working in English was downloading the
+isiXhosa, isiZulu, Sesotho and Afrikaans copies too.
+
+The four other languages are now fetched when one is chosen. English stays in the bundle because it
+is both the default and the fallback, so there is always something to render while another language
+is in flight, and a failed fetch leaves the page in English rather than leaving it broken.
+
+    main chunk    742 kB -> 502 kB raw,  208 kB -> 137 kB gzipped
+    per language  about 60 kB raw, 19 kB gzipped, loaded only if chosen
+
+### 11.7 The caveat that belongs in the pitch
+
+South Africa has twelve official languages and this is five. These strings have not been reviewed
+by first-language speakers, exactly as this log already records for the citizen surface. The honest
+claim is that the interface is fully externalised, so translation is a content task rather than a
+rebuild, and that PanSALB, which is in the seeded portfolio, is the obvious partner to review it.
+Claiming twelve reviewed languages and demonstrating five machine-drafted ones would be worse than
+saying this.
+
+---
+
+## 12. Still open
 
 Ordered by how much it costs us if it is not done.
 
@@ -612,7 +713,7 @@ Ordered by how much it costs us if it is not done.
 
 ---
 
-## 12. Standing preferences and constraints
+## 13. Standing preferences and constraints
 
 - **No em dashes or dashes in written output.** Natural flowing prose. This applies to every
   message and document produced for this project.

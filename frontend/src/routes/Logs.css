@@ -1,0 +1,33 @@
+.log-filters {
+  display: flex;
+  gap: var(--space-4);
+  align-items: flex-end;
+  flex-wrap: wrap;
+  margin-top: var(--space-4);
+}
+.log-filter { display: flex; flex-direction: column; min-width: 9.5rem; }
+.log-filter-grow { flex: 1 1 16rem; min-width: 14rem; }
+.log-filter label { margin-bottom: 6px; }
+.log-filter input[type="date"], .log-filter select { min-width: 9.5rem; }
+
+.log-when { white-space: nowrap; color: var(--ink-muted); font-size: 0.75rem; }
+
+.log-kind { gap: 5px; }
+.log-kind svg { flex: none; }
+
+/* The detail is the evidence: the note, the reason, the receipt number. Set below the summary
+   rather than beside it, because it is often a whole sentence. */
+.log-detail {
+  display: block;
+  margin-top: 3px;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--ink-muted);
+  border-left: 2px solid var(--rule);
+  padding-left: var(--space-3);
+}
+
+@media (max-width: 720px) {
+  .log-filters { gap: var(--space-3); }
+  .log-filter, .log-filter-grow { flex: 1 1 100%; min-width: 0; }
+}

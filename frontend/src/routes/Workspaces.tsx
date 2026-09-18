@@ -15,7 +15,9 @@ import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useAsync } from '../lib/useAsync';
 import { useAuth, isDsac } from '../lib/auth';
-import { num, sectorLabel } from '../lib/format';
+import { num } from '../lib/format';
+import { useI18n } from '../lib/i18n';
+import { useLabels } from '../lib/labels';
 import { PageHead } from '../components/AppShell';
 import { EmptyState, ErrorState, Loading } from '../components/Shell';
 import { SearchField } from '../components/SearchField';
@@ -25,6 +27,8 @@ import {
 import './Workspaces.css';
 
 export function Workspaces() {
+  const { t } = useI18n();
+  const L = useLabels();
   const { me } = useAuth();
   const dsac = isDsac(me?.role);
 
@@ -37,7 +41,7 @@ export function Workspaces() {
   const entities = useMemo(() => {
     if (!dsac) {
       return me?.entityId
-        ? [{ entityId: me.entityId, name: me.entityName ?? 'Your entity', sector: '', shortName: null }]
+        ? [{ entityId: me.entityId, name: me.entityName ?? t('ws.yourEntity'), sector: '', shortName: null }]
         : [];
     }
     const q = query.trim().toLowerCase();
@@ -57,14 +61,14 @@ export function Workspaces() {
     <div>
       <PageHead
         icon={<IconWorkspaces size={26} />}
-        title="Workspaces"
-        subtitle="Where each entity's documents live, and whether the Microsoft mirror is bound."
+        title={t('ws.title')}
+        subtitle={t('ws.sub')}
       >
         {dsac ? (
           <div style={{ minWidth: '16rem' }}>
             <SearchField
-              label="Search workspaces by entity name"
-              placeholder="Search workspaces..."
+              label={t('ws.searchLabel')}
+              placeholder={t('ws.searchPlaceholder')}
               value={query}
               onChange={setQuery}
             />
@@ -78,30 +82,28 @@ export function Workspaces() {
         <div>
           <strong>
             {ms.loading
-              ? 'Checking the Microsoft 365 binding...'
+              ? t('ws.msChecking')
               : msConfigured === true
-                ? 'Microsoft 365 is configured.'
+                ? t('ws.msConfigured')
                 : msConfigured === false
-                  ? 'Microsoft 365 is not configured.'
-                  : 'Microsoft 365 status is not reported by this build.'}
+                  ? t('ws.msNotConfigured')
+                  : t('ws.msNotReported')}
           </strong>
           <p className="small muted" style={{ margin: '2px 0 0' }}>
-            A bound workspace mirrors documents to SharePoint and sends the deadline countdown to
-            Teams. Without a tenant, documents are still held here with their versions and
-            receipts, and nothing about the evidence chain depends on the mirror.
+            {t('ws.bindingNote')}
           </p>
         </div>
       </div>
 
       {dsac && portfolio.loading ? (
-        <Loading what="workspaces" />
+        <Loading what={t('ws.what')} />
       ) : dsac && portfolio.error ? (
         <ErrorState message={portfolio.error} onRetry={portfolio.reload} />
       ) : entities.length === 0 ? (
         <EmptyState>
           {dsac
-            ? 'No entity matches that search.'
-            : 'This account carries no entity id, so it has no workspace. An administrator sets the entityId claim on a reporter account.'}
+            ? t('ws.noMatch')
+            : t('ws.noEntityId')}
         </EmptyState>
       ) : (
         <div className="ws-grid">
@@ -114,7 +116,7 @@ export function Workspaces() {
                 <div style={{ minWidth: 0 }}>
                   <h3>{e.name}</h3>
                   {e.sector ? (
-                    <span className="chip chip-muted">{sectorLabel(String(e.sector))}</span>
+                    <span className="chip chip-muted">{L.sector(String(e.sector))}</span>
                   ) : null}
                 </div>
               </div>
@@ -122,17 +124,17 @@ export function Workspaces() {
               <div className="ws-links">
                 <Link to={'/documents?entity=' + e.entityId} className="ws-link">
                   <IconFolder size={16} />
-                  <span>Documents</span>
+                  <span>{t('nav.documents')}</span>
                   <IconChevronRight size={15} className="muted" />
                 </Link>
                 <Link to={'/tasks'} className="ws-link">
                   <IconTasks size={16} />
-                  <span>Tasks</span>
+                  <span>{t('nav.tasks')}</span>
                   <IconChevronRight size={15} className="muted" />
                 </Link>
                 <Link to={'/portfolio/entity/' + e.entityId} className="ws-link">
                   <IconExternal size={16} />
-                  <span>Entity profile</span>
+                  <span>{t('ws.entityProfile')}</span>
                   <IconChevronRight size={15} className="muted" />
                 </Link>
               </div>
@@ -142,10 +144,12 @@ export function Workspaces() {
       )}
 
       <p className="small muted" style={{ marginTop: 'var(--space-5)' }}>
-        The design for this screen shows workspace templates, member counts and last-accessed
-        times. A workspace here is the binding between an entity and where its documents live, and
-        the schema records no membership, no template and no access time, so {num(entities.length)}{' '}
-        {entities.length === 1 ? 'workspace is' : 'workspaces are'} shown as what they actually are.
+        {t(
+          'ws.designNote',
+          entities.length === 1
+            ? t('ws.oneWorkspace')
+            : t('ws.nWorkspaces', num(entities.length) ?? String(entities.length)),
+        )}
       </p>
     </div>
   );

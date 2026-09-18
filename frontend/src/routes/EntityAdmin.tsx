@@ -16,11 +16,15 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useAsync } from '../lib/useAsync';
-import { num, sectorLabel } from '../lib/format';
+import { num } from '../lib/format';
+import { useI18n } from '../lib/i18n';
+import { useLabels } from '../lib/labels';
 import { EmptyState, ErrorState, Loading } from '../components/Shell';
 import { IconAlert, IconExternal, IconEye, IconEyeOff, IconSpinner } from '../icons';
 
 export function EntityAdmin() {
+  const { t } = useI18n();
+  const L = useLabels();
   const entities = useAsync(() => api.adminEntities(), []);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -32,13 +36,13 @@ export function EntityAdmin() {
       await api.setPublished(entityId, next);
       entities.reload();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'The publication flag was not changed.');
+      setError(e instanceof Error ? e.message : t('admin.flagNotChanged'));
     } finally {
       setBusy(null);
     }
   }
 
-  if (entities.loading) return <Loading what="the entity register" />;
+  if (entities.loading) return <Loading what={t('admin.what')} />;
   if (entities.error) return <ErrorState message={entities.error} onRetry={entities.reload} />;
 
   const rows = entities.data ?? [];
@@ -48,23 +52,21 @@ export function EntityAdmin() {
     <div className="stack">
       <div className="section-head">
         <div>
-          <h1>Entities</h1>
+          <h1>{t('admin.title')}</h1>
           <p className="muted">
-            {num(published)} of {num(rows.length)} published to the citizen view
+            {t('admin.publishedCount', num(published) ?? '', num(rows.length) ?? '')}
           </p>
         </div>
         <span className="spacer" />
         <a className="btn" href="/public" target="_blank" rel="noreferrer">
-          <IconExternal size={16} /> Open the citizen view
+          <IconExternal size={16} /> {t('admin.openCitizenView')}
         </a>
       </div>
 
       <p className="ind-note ind-note-plain">
         <IconAlert size={16} />
         <span>
-          Publication is a departmental decision and this system does not make it. Nothing reaches
-          the citizen view unless it is switched on here, every seeded entity ships with it off, and
-          every change is written to the audit log with the actor on it.
+          {t('admin.publicationNoteLong')}
         </span>
       </p>
 
@@ -72,18 +74,17 @@ export function EntityAdmin() {
 
       {rows.length === 0 ? (
         <EmptyState>
-          No entities are registered. Seeding loads the funded bodies from published Estimates of
-          National Expenditure figures on first start.
+          {t('admin.noEntities')}
         </EmptyState>
       ) : (
         <div className="card table-wrap">
           <table>
             <thead>
               <tr>
-                <th>Entity</th>
-                <th>Sector</th>
-                <th className="num">Targets</th>
-                <th>Citizen view</th>
+                <th>{t('entities.colEntity')}</th>
+                <th>{t('entities.colSector')}</th>
+                <th className="num">{t('admin.colTargets')}</th>
+                <th>{t('admin.citizenView')}</th>
                 <th />
               </tr>
             </thead>
@@ -95,10 +96,10 @@ export function EntityAdmin() {
                     <br />
                     <span className="mono small muted">{r.entityId}</span>
                   </td>
-                  <td>{sectorLabel(r.sector)}</td>
+                  <td>{L.sector(r.sector)}</td>
                   <td className="num">
                     {r.targetCount === 0 ? (
-                      <em className="muted">none registered</em>
+                      <em className="muted">{t('admin.noneRegistered')}</em>
                     ) : (
                       num(r.targetCount)
                     )}
@@ -106,11 +107,11 @@ export function EntityAdmin() {
                   <td>
                     {r.publiclyVisible ? (
                       <span className="row" style={{ gap: 6, color: 'var(--band-low)' }}>
-                        <IconEye size={15} /> published
+                        <IconEye size={15} /> {t('admin.published')}
                       </span>
                     ) : (
                       <span className="row muted" style={{ gap: 6 }}>
-                        <IconEyeOff size={15} /> not published
+                        <IconEyeOff size={15} /> {t('admin.notPublished')}
                       </span>
                     )}
                   </td>
@@ -121,7 +122,7 @@ export function EntityAdmin() {
                       onClick={() => void toggle(r.entityId, !r.publiclyVisible)}
                     >
                       {busy === r.entityId ? <IconSpinner size={16} className="spin" /> : null}
-                      {r.publiclyVisible ? 'Unpublish' : 'Publish'}
+                      {r.publiclyVisible ? t('admin.unpublish') : t('admin.publish')}
                     </button>
                   </td>
                 </tr>

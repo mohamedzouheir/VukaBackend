@@ -20,58 +20,49 @@
  */
 import { Link } from 'react-router-dom';
 import { PageHead } from '../components/AppShell';
+import { useI18n } from '../lib/i18n';
 import { IconChart, IconChevronRight, IconInfo } from '../icons';
 
 export function Analytics() {
+  const { t } = useI18n();
   return (
     <div>
       <PageHead
         icon={<IconChart size={26} />}
-        title="Analytics & Insights"
-        subtitle="Not built, and the reason is worth reading."
+        title={t('nav.analytics')}
+        subtitle={t('an.subtitle')}
       />
 
       <div className="card">
         <p className="row" style={{ gap: 10, margin: 0 }}>
           <IconInfo size={20} />
-          <strong>There is no data behind this screen yet.</strong>
+          <strong>{t('an.noData')}</strong>
         </p>
 
         <p style={{ marginTop: 'var(--space-3)' }}>
-          The design for Analytics &amp; Insights shows a performance trend by month, an on-track
-          rate by sector, a quarter-on-quarter comparison, and document view and download counts.
-          None of those exist in the schema. Performance is stored per reporting period against a
-          target, not per month; there is no sector rate; and nothing counts a view or a download.
+          {t('an.body1')}
         </p>
 
         <p>
-          Every figure on that mockup would therefore have to be invented. This product's whole
-          claim is that a reported number carries the cell it came from and the person who
-          confirmed it, so a screen of plausible trends would be the most persuasive thing in the
-          build and the only part that could not survive being clicked into.
+          {t('an.body2')}
         </p>
 
-        <h3 style={{ marginTop: 'var(--space-5)' }}>What it would take</h3>
+        <h3 style={{ marginTop: 'var(--space-5)' }}>{t('an.whatItTakes')}</h3>
         <ul className="an-list">
           <li>
-            <strong>Trend over time.</strong> Scores and results are already stored per reporting
-            period, so a quarter-by-quarter series is real and buildable today. A monthly one is
-            not, and would stay unavailable.
+            <strong>{t('an.trendHead')}</strong> {t('an.trendBody')}
           </li>
           <li>
-            <strong>Sector comparison.</strong> Targets achieved against targets set, grouped by
-            sector, is computable from data already held. Worth doing, and honest.
+            <strong>{t('an.sectorHead')}</strong> {t('an.sectorBody')}
           </li>
           <li>
-            <strong>Document analytics.</strong> Needs an access log that does not exist. It is
-            also the least valuable of the three and carries a POPIA question, because a log of who
-            read what is personal information where the other reporting data is not.
+            <strong>{t('an.docsHead')}</strong> {t('an.docsBody')}
           </li>
         </ul>
 
         <div className="row" style={{ marginTop: 'var(--space-5)' }}>
           <Link className="btn btn-primary" to="/risk">
-            Risk &amp; Alerts, which is real <IconChevronRight size={15} />
+            {t('an.goRisk')} <IconChevronRight size={15} />
           </Link>
           <Link className="btn" to="/portfolio">
             Portfolio
