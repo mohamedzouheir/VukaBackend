@@ -105,7 +105,8 @@ public class SubmissionController {
                                     @AuthenticationPrincipal VukaPrincipal who) throws Exception {
         Submission s = submissions.findById(submissionId).orElse(null);
         if (s == null) return ResponseEntity.notFound().build();
-        if (!who.canRead(s.getEntity().getId().toString())) return ResponseEntity.status(403).build();
+        // 404, not 403: a refusal confirms the submission exists, which is a disclosure about another entity.
+        if (!who.canRead(s.getEntity().getId().toString())) return ResponseEntity.notFound().build();
 
         var report = service.ingestTemplate(submissionId, file, who);
         return ResponseEntity.ok(report);
@@ -129,7 +130,7 @@ public class SubmissionController {
                                                             @AuthenticationPrincipal VukaPrincipal who) {
         Submission s = submissions.findById(submissionId).orElse(null);
         if (s == null) return ResponseEntity.notFound().build();
-        if (!who.canRead(s.getEntity().getId().toString())) return ResponseEntity.status(403).build();
+        if (!who.canRead(s.getEntity().getId().toString())) return ResponseEntity.notFound().build();
 
         List<ExtractionView> views = extractions.findBySubmissionId(submissionId).stream()
                 .map(e -> new ExtractionView(
@@ -161,7 +162,7 @@ public class SubmissionController {
                                      @AuthenticationPrincipal VukaPrincipal who) {
         Submission s = submissions.findById(submissionId).orElse(null);
         if (s == null) return ResponseEntity.notFound().build();
-        if (!who.canRead(s.getEntity().getId().toString())) return ResponseEntity.status(403).build();
+        if (!who.canRead(s.getEntity().getId().toString())) return ResponseEntity.notFound().build();
 
         List<SubmissionService.ConfirmedRow> rows = req.rows().stream()
                 .map(r -> new SubmissionService.ConfirmedRow(
@@ -180,7 +181,7 @@ public class SubmissionController {
                                     @AuthenticationPrincipal VukaPrincipal who) {
         Submission s = submissions.findById(submissionId).orElse(null);
         if (s == null) return ResponseEntity.notFound().build();
-        if (!who.canRead(s.getEntity().getId().toString())) return ResponseEntity.status(403).build();
+        if (!who.canRead(s.getEntity().getId().toString())) return ResponseEntity.notFound().build();
         // Not the entity itself: its lazy entity and period proxies cannot be serialised once the
         // service transaction has closed, which answered 500 to a submission that had succeeded.
         Submission done = service.submit(submissionId, who);
