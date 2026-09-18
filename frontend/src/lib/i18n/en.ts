@@ -27,6 +27,10 @@
 export const en = {
   /* ---------------------------------------------------------------- chrome */
   'nav.dashboard': 'Dashboard',
+  'nav.today': 'Today',
+  'nav.portfolio': 'Portfolio',
+  'nav.reviewQueue': 'Review queue',
+  'nav.administration': 'Administration',
   'nav.entities': 'Entities',
   'nav.reports': 'Reports',
   'nav.myReporting': 'My reporting',
@@ -386,6 +390,8 @@ export const en = {
   'signin.or': 'or',
   'signin.employee': 'Sign in as employee',
   'signin.noAccount': 'Don’t have an admin account?',
+  'signin.phoneNote': 'Reporting on a phone? The low bandwidth surface, which needs no JavaScript, is at',
+  'signin.citizenNote': 'The citizen view, which needs no account at all, is at',
   'signin.contact': 'Contact DSAC support',
   'signin.popia':
     'Your information is protected and handled in accordance with the Protection of Personal Information Act (POPIA).',
@@ -915,6 +921,7 @@ export const en = {
     '1 reported figure has no evidence attached and will stay on the record as unverifiable. Approving does not change that, and the export carries it.',
 
   'pf.title': 'Portfolio',
+  'pf.sub': 'How many, then which ones, then why. Read only: nothing on this screen changes a figure.',
   'pf.what': 'the portfolio',
   'pf.allocatedThisYear': 'Allocated this year',
   'pf.noAllocationRows': '{0} bodies carry no allocation row',
@@ -955,6 +962,7 @@ export const en = {
   'er.noFileParsed':
     'No file has been parsed for this period. Figures entered here are marked as entered by hand.',
   'er.confirmedOf': '{0} of {1} confirmed',
+  'er.withEvidence': '{0} with evidence',
   'er.warning':
     'Nothing here is saved as a reported result yet. Confirming writes these figures in your name, and they cannot be edited afterwards. A correction happens by the Department returning the submission.',
   'er.returnedForCorrection': '{0} figures were returned for correction.',

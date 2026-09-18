@@ -282,6 +282,13 @@ export function SignIn() {
           <a href="/public">{t('signin.contact')}</a>
         </div>
 
+        {/* The two surfaces their work added. Neither is reachable from the rail, because
+            neither is for the person signing in here, so this is the only place they are named. */}
+        <p className="si-surfaces">
+          {t('signin.phoneNote')} <a href="/m">/m</a>. {t('signin.citizenNote')}{' '}
+          <a href="/public">/public</a>.
+        </p>
+
         <p className="si-popia">
           <IconShield size={18} />
           <span>

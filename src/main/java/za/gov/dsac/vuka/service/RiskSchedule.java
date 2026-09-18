@@ -6,16 +6,13 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import za.gov.dsac.vuka.domain.FinancialYear;
 import za.gov.dsac.vuka.domain.PublicEntity;
-import za.gov.dsac.vuka.domain.ReportingPeriod;
-import za.gov.dsac.vuka.repository.FinancialYearRepository;
 import za.gov.dsac.vuka.repository.PublicEntityRepository;
-import za.gov.dsac.vuka.repository.ReportingPeriodRepository;
 
 import java.time.Instant;
-import java.time.LocalDate;
+import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -26,6 +23,11 @@ import java.util.UUID;
  * button, saw twenty eight tiles reading "not scored". The endpoint's own comment said it also ran
  * nightly, and nothing did. Now it runs once the seed has loaded, every night, and from the button,
  * all through this one method.
+ *
+ * <p>With no period named it scores two: the quarter that has fallen due, which the Department's
+ * screens open on, and the quarter that is open, which the reporter's screens open on. For most
+ * of a quarter those are different periods, and scoring only one left the other reading "not
+ * scored".
  */
 @Component
 public class RiskSchedule {
@@ -34,15 +36,13 @@ public class RiskSchedule {
 
     private final RiskService riskService;
     private final PublicEntityRepository entities;
-    private final FinancialYearRepository years;
-    private final ReportingPeriodRepository periods;
+    private final ReportingViewService views;
 
     public RiskSchedule(RiskService riskService, PublicEntityRepository entities,
-                        FinancialYearRepository years, ReportingPeriodRepository periods) {
+                        ReportingViewService views) {
         this.riskService = riskService;
         this.entities = entities;
-        this.years = years;
-        this.periods = periods;
+        this.views = views;
     }
 
     /** After every ApplicationRunner, the seed included, has finished. */
@@ -56,27 +56,26 @@ public class RiskSchedule {
         log.info("Risk scores computed nightly: {}", recompute(null));
     }
 
-    /** Scores every entity for one period, or for the current one where none is named. */
+    /** Scores every entity for one period, or for the review and open periods where none is named. */
     public Map<String, Object> recompute(UUID periodId) {
-        UUID period = periodId != null ? periodId : currentPeriodId();
-        if (period == null) return Map.of("computed", 0, "reason", "no current reporting period");
+        Set<UUID> targets = new LinkedHashSet<>();
+        if (periodId != null) {
+            targets.add(periodId);
+        } else {
+            UUID review = views.reviewPeriodId();
+            UUID open = views.currentPeriodId();
+            if (review != null) targets.add(review);
+            if (open != null) targets.add(open);
+        }
+        if (targets.isEmpty()) return Map.of("computed", 0, "reason", "no current reporting period");
 
         int n = 0;
-        for (PublicEntity e : entities.findAll()) {
-            riskService.computeAndStore(e.getId(), period);
-            n++;
+        for (UUID period : targets) {
+            for (PublicEntity e : entities.findAll()) {
+                riskService.computeAndStore(e.getId(), period);
+                n++;
+            }
         }
-        return Map.of("computed", n, "periodId", period, "at", Instant.now().toString());
-    }
-
-    /** The most recent period whose window has opened. */
-    private UUID currentPeriodId() {
-        FinancialYear fy = years.findByCurrentTrue().orElse(null);
-        if (fy == null) return null;
-        return periods.findByFinancialYearIdOrderByQuarterAsc(fy.getId()).stream()
-                .filter(p -> p.getPeriodStart() != null && !p.getPeriodStart().isAfter(LocalDate.now()))
-                .reduce((a, b) -> b)
-                .map(ReportingPeriod::getId)
-                .orElse(null);
+        return Map.of("computed", n, "periodIds", targets, "at", Instant.now().toString());
     }
 }

@@ -10,8 +10,10 @@
 import type {
   ChainView, CommentView, EntityDetail, ExtractionView, IndicatorRowView, MeView,
   ParseReport, PeerComparison, PeriodView, PortfolioRow, SubmissionDetail, SubmissionRow,
-  AuditPage, UnitCostView, WorkspaceDocument, WorkspaceTask,
+  AuditPage, UnitCostView, WorkspaceDocument, WorkspaceTask, TaskPerson, NewTask, AdminEntityRow,
+  IssuedReporter, AnalyticsView,
 } from './types';
+import { copyOf, enqueue, keep, reachable, registerSender, type Queued } from './offline';
 
 export class ApiError extends Error {
   constructor(
@@ -35,7 +37,47 @@ export function setTokenSource(source: TokenSource) {
 }
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const token = await getToken();
+  const read = (init.method ?? 'GET') === 'GET';
+  try {
+    const value = await network<T>(path, init);
+    if (read) void keep(path, value);
+    return value;
+  } catch (e) {
+    // No answer at all, as distinct from an answer that said no. Only then is a kept copy
+    // offered, and only this person's: see offline.ts.
+    if (read && e instanceof ApiError && e.status === 0) {
+      const copy = await copyOf<T>(path);
+      if (copy !== null) return copy;
+    }
+    throw e;
+  }
+}
+
+/**
+ * A change that is safe to send late. Sent now where the network answers; kept in the outbox
+ * where it does not, which resolves as Queued rather than throwing, so a sequence of changes (a
+ * reviewer's disputes and then the return) is kept whole and in order rather than cut off after
+ * the first. The outbox bar says what is waiting. See offline.ts for which changes qualify.
+ */
+async function change<T>(description: string, path: string, init: RequestInit & { body?: string }): Promise<T | Queued> {
+  try {
+    return await request<T>(path, init);
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 0) {
+      return enqueue(path, init.method ?? 'POST', init.body ?? null, description);
+    }
+    throw e;
+  }
+}
+
+async function network<T>(path: string, init: RequestInit): Promise<T> {
+  let token: string | null = null;
+  try {
+    token = await getToken();
+  } catch {
+    // Firebase refreshes an expiring token over the network. With no network the request goes
+    // without one and fails to connect, which is the answer the caller should get.
+  }
   const headers = new Headers(init.headers);
   if (token) headers.set('Authorization', 'Bearer ' + token);
   if (init.body && !(init.body instanceof FormData)) {
@@ -47,8 +89,10 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     res = await fetch(path, { ...init, headers });
   } catch {
     // A network failure is not a permission problem and must not read like one.
-    throw new ApiError(0, 'Could not reach the server. Check that the backend is running.');
+    reachable(false);
+    throw new ApiError(0, 'Could not reach the server. Check your connection.');
   }
+  reachable(true);
 
   if (res.status === 401) {
     throw new ApiError(401, 'Your session has expired. Sign in again.');
@@ -100,15 +144,38 @@ async function failureMessage(res: Response): Promise<string> {
     : 'The request was refused (' + res.status + ').';
 }
 
+/** Files a browser can show itself. Anything else, a workbook in particular, is saved instead. */
+const VIEWABLE = /\.(pdf|png|jpe?g|gif|webp|txt)$/i;
+
 /**
  * The click handler for a link to a stored file. The link keeps a real href so it still reads
- * and behaves as a link to assistive technology, but the click fetches with the token.
+ * and behaves as a link to assistive technology, but the click fetches with the token. A plain
+ * link, or one opened in a new tab, carries no token and lands on a 401.
+ *
+ * A PDF or an image opens in a new tab, because a reviewer checking evidence wants to read it,
+ * not to find it in a downloads folder. The tab is opened inside the click and pointed at the
+ * file once it arrives: a window opened after the fetch resolves is no longer a user gesture, and
+ * the popup blocker would swallow it.
  */
 export function openFile(e: { preventDefault: () => void }, url: string, name: string) {
   e.preventDefault();
-  api.download(url, name).catch((err: unknown) => {
+  const tab = VIEWABLE.test(name) ? window.open('', '_blank') : null;
+  const fail = (err: unknown) => {
+    tab?.close();
     window.alert(err instanceof Error ? err.message : 'The file could not be opened.');
-  });
+  };
+  if (!tab) {
+    api.download(url, name).catch(fail);
+    return;
+  }
+  api.fetchFile(url)
+    .then(({ blob }) => {
+      const href = URL.createObjectURL(blob);
+      tab.location.href = href;
+      // Long enough for the viewer to have read the whole file.
+      setTimeout(() => URL.revokeObjectURL(href), 60_000);
+    })
+    .catch(fail);
 }
 
 /** One answer to the comment poll: either nothing moved, or here is the whole list again. */
@@ -138,6 +205,8 @@ export const api = {
 
   portfolio: (periodId?: string) =>
     request<PortfolioRow[]>('/api/dashboard/portfolio' + qs({ periodId })),
+
+  analytics: () => request<AnalyticsView>('/api/dashboard/analytics'),
 
   entity: (entityId: string, periodId?: string) =>
     request<EntityDetail>('/api/dashboard/entity/' + entityId + qs({ periodId })),
@@ -192,16 +261,18 @@ export const api = {
       varianceExplanation?: string | null;
     }[],
   ) =>
-    request<{ confirmed: number; by: string }>('/api/submissions/' + submissionId + '/confirm', {
+    change<{ confirmed: number; by: string }>(
+      'Confirm ' + rows.length + (rows.length === 1 ? ' figure' : ' figures'),
+      '/api/submissions/' + submissionId + '/confirm', {
       method: 'POST',
       body: JSON.stringify({ rows }),
     }),
 
   submit: (submissionId: string) =>
-    request<unknown>('/api/submissions/' + submissionId + '/submit', { method: 'POST' }),
+    change<unknown>('Submit the period to the Department', '/api/submissions/' + submissionId + '/submit', { method: 'POST' }),
 
   review: (submissionId: string, approve: boolean, returnReason?: string) =>
-    request<unknown>('/api/submissions/' + submissionId + '/review', {
+    change<unknown>(approve ? 'Approve a submission' : 'Return a submission to the entity', '/api/submissions/' + submissionId + '/review', {
       method: 'POST',
       body: JSON.stringify({ approve, returnReason: returnReason ?? null }),
     }),
@@ -233,7 +304,7 @@ export const api = {
    * whole filing tells the entity nothing it can correct.
    */
   addComment: (submissionId: string, body: string, targetId: string, parentId?: string) =>
-    request<CommentView>('/api/submissions/' + submissionId + '/comments', {
+    change<CommentView>(parentId ? 'Reply to a comment' : 'Comment on a figure', '/api/submissions/' + submissionId + '/comments', {
       method: 'POST',
       body: JSON.stringify({ body, targetId, parentId: parentId ?? null }),
     }),
@@ -252,16 +323,29 @@ export const api = {
     if (token) headers.set('Authorization', 'Bearer ' + token);
     if (etag) headers.set('If-None-Match', etag);
 
-    const res = await fetch('/api/submissions/' + submissionId + '/comments', { headers });
+    const path = '/api/submissions/' + submissionId + '/comments';
+    let res: Response;
+    try {
+      res = await fetch(path, { headers });
+    } catch {
+      reachable(false);
+      // The first poll with no connection answers from this person's kept copy, once. The
+      // placeholder validator makes every poll after it a failure until the server can answer,
+      // and the server treats it as stale, so the first real answer replaces the copy whole.
+      if (etag === null) {
+        const copy = await copyOf<CommentView[]>(path);
+        if (copy !== null) return { changed: true, etag: 'W/"offline-copy"', comments: copy };
+      }
+      throw new ApiError(0, 'Comments could not be refreshed.');
+    }
+    reachable(true);
     if (res.status === 304) return { changed: false };
     if (res.status === 401) throw new ApiError(401, 'Your session has expired. Sign in again.');
     if (res.status === 403 || res.status === 404) throw new ApiError(res.status, 'Not found.', true);
     if (!res.ok) throw new ApiError(res.status, 'Comments could not be refreshed.');
-    return {
-      changed: true,
-      etag: res.headers.get('ETag'),
-      comments: (await res.json()) as CommentView[],
-    };
+    const comments = (await res.json()) as CommentView[];
+    void keep(path, comments);
+    return { changed: true, etag: res.headers.get('ETag'), comments };
   },
 
   /* ---------- export ---------- */
@@ -273,7 +357,7 @@ export const api = {
    * Every file the office surface hands over goes through here, so the bearer token travels with
    * it. A plain link cannot carry the token, and one that tried landed the user on a JSON 401.
    */
-  download: async (url: string, fallbackName: string) => {
+  fetchFile: async (url: string): Promise<{ blob: Blob; fileName: string | null }> => {
     const token = await getToken();
     const res = await fetch(url, {
       headers: token ? { Authorization: 'Bearer ' + token } : undefined,
@@ -283,12 +367,16 @@ export const api = {
         ? 'That file could not be found.'
         : await failureMessage(res));
     }
-    const blob = await res.blob();
     const disposition = res.headers.get('content-disposition') ?? '';
     const match = /filename="?([^"]+)"?/.exec(disposition);
+    return { blob: await res.blob(), fileName: match ? match[1] : null };
+  },
+
+  download: async (url: string, fallbackName: string) => {
+    const { blob, fileName } = await api.fetchFile(url);
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = match ? match[1] : fallbackName;
+    a.download = fileName ?? fallbackName;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -313,19 +401,29 @@ export const api = {
     '/api/workspace/document/' + documentId + '/content',
 
   decideDocument: (documentId: string, approve: boolean, note: string) =>
-    request<unknown>('/api/workspace/document/' + documentId + '/decision', {
+    change<unknown>(approve ? 'Approve a document' : 'Return a document', '/api/workspace/document/' + documentId + '/decision', {
       method: 'POST',
       body: JSON.stringify({ approve, note }),
     }),
 
-  /** The caller's own open work. What the rail badge counts. */
+  /** Work assigned to the caller, open first. The rail badge counts the ones not done. */
   myTasks: () => request<WorkspaceTask[]>('/api/workspace/tasks/mine'),
 
   entityTasks: (entityId: string) =>
     request<WorkspaceTask[]>('/api/workspace/entity/' + entityId + '/tasks'),
 
+  /** Who a task on this entity can go to: the Department, and this entity's own reporters. */
+  taskPeople: (entityId: string) =>
+    request<TaskPerson[]>('/api/workspace/entity/' + entityId + '/people'),
+
+  createTask: (entityId: string, task: NewTask) =>
+    request<WorkspaceTask>('/api/workspace/entity/' + entityId + '/tasks', {
+      method: 'POST',
+      body: JSON.stringify(task),
+    }),
+
   setTaskStatus: (taskId: string, status: string) =>
-    request<unknown>('/api/workspace/task/' + taskId + '/status', {
+    change<unknown>('Mark a task ' + status.toLowerCase().replace('_', ' '), '/api/workspace/task/' + taskId + '/status', {
       method: 'POST',
       body: JSON.stringify({ status }),
     }),
@@ -350,8 +448,43 @@ export const api = {
       { method: 'POST', body: JSON.stringify({ publiclyVisible }) },
     ),
 
-  adminEntities: () =>
-    request<
-      { entityId: string; name: string; sector: string; publiclyVisible: boolean; targetCount: number }[]
-    >('/api/admin/entities'),
+  adminEntities: () => request<AdminEntityRow[]>('/api/admin/entities'),
+
+  /** Registers a funded body. No targets and no reporter yet, and unpublished. */
+  createEntity: (body: {
+    name: string;
+    shortName: string;
+    sector: string;
+    pfmaSchedule: string;
+    contactName: string;
+    contactEmail: string;
+  }) =>
+    request<{ entityId: string; name: string }>('/api/admin/entities', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+
+  /** The only way a reporter account comes to exist. There is no sign up. */
+  issueReporter: (entityId: string, name: string, email: string) =>
+    request<IssuedReporter>('/api/admin/entities/' + entityId + '/reporters', {
+      method: 'POST',
+      body: JSON.stringify({ name, email }),
+    }),
+
+  adminPeriods: () => request<PeriodView[]>('/api/admin/periods'),
+
+  setDueDate: (periodId: string, dueDate: string) =>
+    request<PeriodView>('/api/admin/periods/' + periodId + '/due-date', {
+      method: 'POST',
+      body: JSON.stringify({ dueDate }),
+    }),
 };
+
+// Replay goes through the same client, with the same token and the same error rules.
+registerSender(
+  (path, method, body) => request<unknown>(path, { method, body: body ?? undefined }),
+  (e) => ({
+    status: e instanceof ApiError ? e.status : -1,
+    message: e instanceof Error ? e.message : 'The change was not accepted.',
+  }),
+);

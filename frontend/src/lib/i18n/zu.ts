@@ -10,6 +10,10 @@ import type { Key } from './en';
 
 export const zu: Record<Key, string> = {
   'nav.dashboard': 'Ideshibhodi',
+  'nav.today': 'Namuhla',
+  'nav.portfolio': 'Iphothifoliyo',
+  'nav.reviewQueue': 'Ulayini wokubuyekeza',
+  'nav.administration': 'Ukuphatha',
   'nav.entities': 'Izinhlangano',
   'nav.reports': 'Imibiko',
   'nav.myReporting': 'Ukubika kwami',
@@ -347,6 +351,8 @@ export const zu: Record<Key, string> = {
   'signin.or': 'noma',
   'signin.employee': 'Ngena njengesisebenzi',
   'signin.noAccount': 'Awunayo i-akhawunti yomlawuli?',
+  'signin.phoneNote': 'Ubika ngefoni? Ubuso obusebenzisa i-bandwidth encane, obungadingi i-JavaScript, buse-',
+  'signin.citizenNote': 'Ukubuka kwesakhamuzi, okungadingi i-akhawunti nhlobo, kuse-',
   'signin.contact': 'Xhumana nosizo lwe-DSAC',
   'signin.popia':
     'Imininingwane yakho ivikelekile futhi iphathwa ngokuvumelana noMthetho Wokuvikelwa Kwemininingwane Yomuntu Siqu (POPIA).',
@@ -883,6 +889,7 @@ export const zu: Record<Key, string> = {
     'Isibalo esi-1 esibikiwe asinabo ubufakazi obunamathiselwe futhi sizohlala sisemrekhodini njengesingeke siqinisekiswe. Ukugunyaza akukushintshi lokho, futhi okukhishwayo kuyakuphetha.',
 
   'pf.title': 'Iphothifoliyo',
+  'pf.sub': 'Zingaki, bese yiziphi, bese kungani. Ukufunda kuphela: akukho lutho kulesi sikrini olushintsha inani.',
   'pf.what': 'iphothifoliyo',
   'pf.allocatedThisYear': 'Okwabiwe kulo nyaka',
   'pf.noAllocationRows': 'izinhlangano ezingu-{0} azinayo irekhodi yokwabiwa',
@@ -924,6 +931,7 @@ export const zu: Record<Key, string> = {
   'er.noFileParsed':
     'Alikho ifayela elihlaziyiwe kulesi sikhathi. Izibalo ezifakwa lapha zimakwa njengezifakwe ngesandla.',
   'er.confirmedOf': 'kuqinisekiswe {0} kwangu-{1}',
+  'er.withEvidence': '{0} nobufakazi',
   'er.warning':
     'Alukho okulapha olusagcinwe njengomphumela obikiwe. Ukuqinisekisa kubhala lezi zibalo egameni lakho, futhi ngeke zilungiseke emva kwalokho. Ukulungiswa kwenzeka ngokuthi uMnyango ubuyisele okuthunyelwe.',
   'er.returnedForCorrection': 'Izibalo ezingu-{0} zibuyiselwe ukuze zilungiswe.',

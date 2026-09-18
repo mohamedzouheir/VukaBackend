@@ -137,8 +137,23 @@ public final class RiskEngine {
             int auditFindings,
             int repeatAuditFindings,
             boolean auditOutstanding,
-            int revisionCount
-    ) {}
+            int revisionCount,
+            // Quarterly reports that fell due and were never filed. They are already inside
+            // administrativeDaysLate and periodsObserved, counted late up to today; this says how
+            // many of the observed periods are that, so the panel can say so.
+            int periodsUnfiled
+    ) {
+        /** Every report that fell due was filed. */
+        public Inputs(BigDecimal administrativeDaysLate, int periodsObserved, int statutoryDaysLate,
+                      int targetsTotal, int targetsWithNoResult, BigDecimal yearElapsedFraction,
+                      BigDecimal allocationDrawnFraction, BigDecimal deliveryFraction,
+                      int auditFindings, int repeatAuditFindings, boolean auditOutstanding,
+                      int revisionCount) {
+            this(administrativeDaysLate, periodsObserved, statutoryDaysLate, targetsTotal,
+                    targetsWithNoResult, yearElapsedFraction, allocationDrawnFraction, deliveryFraction,
+                    auditFindings, repeatAuditFindings, auditOutstanding, revisionCount, 0);
+        }
+    }
 
     /**
      * One contributing factor, with its working shown.
@@ -189,6 +204,10 @@ public final class RiskEngine {
      * than being penalised for being new. A missed statutory date stands on its own and does
      * not need history behind it, because one breach of the Act is already the finding.
      *
+     * <p>A quarterly report that fell due and was never filed counts as late by the days since
+     * its due date, still growing. Averaging only the reports that arrived would score an entity
+     * that stops reporting better than one that reports a week late.
+     *
      * <p>The raw value reported on the signal is whichever measure won, so a reviewer reading
      * the panel sees the number that actually drove the score.
      */
@@ -217,6 +236,12 @@ public final class RiskEngine {
                    + "This is a breach of the Act, not of a departmental instruction.";
         } else if (in.periodsObserved() == 0) {
             desc = "No prior reporting history to judge against.";
+        } else if (in.periodsUnfiled() > 0) {
+            desc = in.periodsUnfiled() + (in.periodsUnfiled() == 1 ? " quarterly report has" : " quarterly reports have")
+                   + " fallen due and not been filed, and each counts as late until it is. "
+                   + "Averaging " + adminDays.setScale(0, RoundingMode.HALF_UP)
+                   + " days past the departmental due date across " + in.periodsObserved()
+                   + " periods, measured against the department's own instruction.";
         } else if (adminDays.compareTo(BigDecimal.ZERO) <= 0) {
             desc = "Submitted on time in every prior period.";
         } else {

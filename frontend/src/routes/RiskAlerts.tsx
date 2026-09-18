@@ -27,8 +27,9 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useAsync } from '../lib/useAsync';
+import { can, useAuth } from '../lib/auth';
 import type { PortfolioRow, SubmissionRow } from '../lib/types';
-import { BAND_ORDER, bandColour, num, rands } from '../lib/format';
+import { BAND_ORDER, bandColour, num, rands, reviewPeriod } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { useLabels } from '../lib/labels';
 import { PageHead } from '../components/AppShell';
@@ -43,6 +44,7 @@ import './RiskAlerts.css';
 type BandFilter = 'ALL' | 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
 
 export function RiskAlerts() {
+  const { me } = useAuth();
   const { t } = useI18n();
   const L = useLabels();
   const portfolio = useAsync(() => api.portfolio(), []);
@@ -54,7 +56,7 @@ export function RiskAlerts() {
   const [explain, setExplain] = useState<PortfolioRow | null>(null);
   const [recomputing, setRecomputing] = useState(false);
 
-  const period = useMemo(() => (periods.data ?? []).filter((p) => p.open).at(-1) ?? null, [periods.data]);
+  const period = useMemo(() => reviewPeriod(periods.data), [periods.data]);
 
   const subByEntity = useMemo(() => {
     const map = new Map<string, SubmissionRow>();
@@ -97,10 +99,14 @@ export function RiskAlerts() {
           title={t('riskScreen.title')}
           subtitle={t('riskScreen.sub')}
         >
-          <button type="button" onClick={() => void recompute()} disabled={recomputing}>
-            {recomputing ? <IconSpinner size={16} className="spin" /> : <IconGauge size={16} />}
-            Recompute scores
-          </button>
+          {/* Offered only where the API accepts it. An executive reaching this screen by address
+              reads the scores and is not shown a control that would be refused. */}
+          {can(me, 'REVIEW_SUBMISSIONS') ? (
+            <button type="button" onClick={() => void recompute()} disabled={recomputing}>
+              {recomputing ? <IconSpinner size={16} className="spin" /> : <IconGauge size={16} />}
+              Recompute scores
+            </button>
+          ) : null}
         </PageHead>
 
         {portfolio.loading ? (

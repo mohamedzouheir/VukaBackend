@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en-ZA">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="description" content="What each body funded by the Department of Sport, Arts and Culture received, what it committed to deliver, and what it reported." />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>Public entity performance</title>
+    <!-- No script at all, as on a feature phone or Opera Mini's extreme mode: straight to the light view. -->
+    <noscript><meta http-equiv="refresh" content="0; url=?view=lite" /></noscript>
+    <!--
+      The full view's own bandwidth check, before the bundle is requested.
+
+      The server chooses this view only when it has no reason not to, and on a first visit, or
+      in a browser that sends no client hints, it has no information either way. So the browser
+      checks again here, synchronously, before the module script below can run: a phone that
+      reports Save-Data or a 2G or 3G connection is moved to the light view at once, and whatever
+      part of the bundle the browser had started to fetch is abandoned. Where the browser reports
+      nothing (Safari, Firefox), a watchdog offers the light view after three seconds and moves there after ten, unless the
+      reader chose this view explicitly with ?view=rich. See web/CitizenSurface.java.
+    -->
+    <script>
+      (function () {
+        var q = new URLSearchParams(location.search);
+        var chosen = q.get('view') === 'rich';
+        q.set('view', 'lite');
+        var lite = location.pathname + '?' + q.toString();
+        window.__vukaLite = lite;
+        var c = navigator.connection;
+        var slow = c && (c.saveData || /^(slow-2g|2g|3g)$/.test(c.effectiveType || '') ||
+          (typeof c.downlink === 'number' && c.downlink > 0 && c.downlink < 1));
+        if (!chosen && slow) {
+          location.replace(lite);
+          return;
+        }
+        document.addEventListener('DOMContentLoaded', function () {
+          var a = document.getElementById('boot-lite');
+          if (a) a.href = lite;
+        });
+        setTimeout(function () {
+          var n = document.getElementById('boot-slow');
+          if (!window.__vukaBooted && n) n.hidden = false;
+        }, 3000);
+        if (!chosen) {
+          setTimeout(function () {
+            if (!window.__vukaBooted && navigator.onLine) location.replace(lite);
+          }, 10000);
+        }
+      })();
+    </script>
+    <style>
+      /* Enough to read the loading line in either theme before the stylesheet arrives. */
+      body { margin: 0; background: #f6f8f7; color: #16211c; font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+      @media (prefers-color-scheme: dark) { body { background: #0f1512; color: #e6ece9; } }
+      .boot { max-width: 640px; margin: 0 auto; padding: 32px 16px; }
+      .boot a { color: inherit; }
+    </style>
+    <script type="module" src="/src/citizen/main.tsx"></script>
+  </head>
+  <body>
+    <div id="root">
+      <main class="boot">
+        <p>Loading the published records.</p>
+        <p id="boot-slow" hidden>
+          This is taking a while on your connection.
+          <a id="boot-lite" href="?view=lite">Open the light version, which uses less data.</a>
+        </p>
+      </main>
+    </div>
+  </body>
+</html>

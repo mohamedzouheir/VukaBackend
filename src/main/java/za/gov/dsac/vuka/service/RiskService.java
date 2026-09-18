@@ -120,6 +120,24 @@ public class RiskService {
                 observed++;
             }
         }
+        // --- quarterly reports that fell due and were never filed ---
+        // Counted late up to today, and only where the entity has targets registered for the year,
+        // because a report is only due against a plan. Without this an entity that stops filing
+        // averages better than one that files a week late.
+        int unfiled = 0;
+        if (targets.countByEntityIdAndFinancialYearId(entityId, fyId) > 0) {
+            java.util.Set<UUID> filed = new java.util.HashSet<>();
+            prior.forEach(s -> filed.add(s.getReportingPeriod().getId()));
+            LocalDate today = LocalDate.now(java.time.ZoneId.of("Africa/Johannesburg"));
+            for (ReportingPeriod rp : periods.findByFinancialYearIdOrderByQuarterAsc(fyId)) {
+                if (rp.isStatutory() || rp.getSubmissionDueDate() == null) continue;
+                if (!rp.getSubmissionDueDate().isBefore(today) || filed.contains(rp.getId())) continue;
+                totalDaysLate += ChronoUnit.DAYS.between(rp.getSubmissionDueDate(), today);
+                observed++;
+                unfiled++;
+            }
+        }
+
         BigDecimal avgLate = observed == 0
                 ? BigDecimal.ZERO
                 : BigDecimal.valueOf(totalDaysLate).divide(BigDecimal.valueOf(observed), 4, RoundingMode.HALF_UP);
@@ -195,7 +213,7 @@ public class RiskService {
         return new RiskEngine.Inputs(
                 avgLate, observed, worstStatutoryLate, targetsTotal, withNoResult,
                 elapsed, drawnFraction, deliveryFraction,
-                findingCount, repeatCount, auditOutstanding, revisions);
+                findingCount, repeatCount, auditOutstanding, revisions, unfiled);
     }
 
     /** 0..1 through the financial year, clamped. Defaults to mid-year if dates are missing. */

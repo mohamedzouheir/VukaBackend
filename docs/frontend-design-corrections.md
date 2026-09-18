@@ -24,6 +24,9 @@ from the templates in `src/main/resources/templates/`.
 | §11 | "We do not claim multilingual support" | **Superseded.** Five languages ship on the citizen surface |
 | §11 | Contrast figures | **Understated, and one pair failed.** Corrected below, dark mode added |
 | §12 | Demo path step 5, "Submit on a phone" | **Blocked.** See the blocker below |
+| §5, Surface A | The citizen view is one server-rendered surface | **Superseded.** Two views at one address, light and full, chosen by connection or by the reader. See "Two citizen views and offline" below |
+| §11 | Every low-bandwidth page under 5KB | **No longer true for two pages.** `mobile-step.html` and `public-entity.html` render at 5.8KB and 6.0KB. Both gzip to 2.3KB |
+| (none) | Offline behaviour | **New.** Every surface works with no connection within stated limits. See below |
 
 ---
 
@@ -111,22 +114,33 @@ is what is actually served, and gzip is on in `application.yml` with a 512 byte 
 | Surface | Budget | Rendered | Gzipped | What is in it |
 |---|---|---|---|---|
 | `mobile-message.html` | 5KB | **694 B** | 465 B | one sentence, announced as a status |
-| `mobile-done.html` | 5KB | **2 072 B** | 992 B | submission summary, before the irreversible click |
+| `mobile-done.html` | 5KB | **2 236 B** | 1 188 B | submission summary, before the irreversible click |
 | `mobile-submitted.html` | 5KB | **2 121 B** | 1 053 B | the receipt. New |
-| `mobile-home.html` | 5KB | **2 926 B** | 1 196 B | period, indicator list, progress, sign out |
-| `mobile-signin.html` | 5KB | **3 210 B** | 1 349 B | one email field, one password field. New |
-| `public-index.html` | 5KB | **3 224 B** | 1 380 B | every published entity, plus the language switcher |
-| `public-entity.html` | 5KB | **4 810 B** | 1 877 B | the full accountability chain, plus the language switcher |
-| `mobile-step.html` | 5KB | **4 942 B** | 1 888 B | one indicator, input, note |
-| `mobile-workspace.html` | 5KB | **4 870 B** | 1 591 B | upload form, five documents, three tasks, the receipt. New |
+| `mobile-home.html` | 5KB | **3 846 B** | 1 530 B | period, indicator list, progress, documents and comments cards, sign out |
+| `mobile-signin.html` | 5KB | **3 290 B** | 1 490 B | one email field, one password field. New |
+| `public-index.html` | 5KB | **4 086 B** | 1 715 B | every published entity, the language switcher, the link to the full view |
+| `public-entity.html` | 5KB | **6 001 B, over** | 2 259 B | the full accountability chain, the language switcher, the link to the full view |
+| `mobile-step.html` | 5KB | **5 832 B, over** | 2 303 B | one indicator, input, note |
+| `mobile-workspace.html` | 5KB | **4 490 B** | 1 816 B | upload form, documents, tasks, the receipt. New |
 | `mobile-document.html` | 5KB | **4 912 B** | 1 762 B | receipt, hash, decision, Microsoft state, three versions. New |
-| `mobile-comments.html` | 5KB | **3 391 B** | 1 273 B | every comment thread for the entity, open ones first. New |
+| `mobile-comments.html` | 5KB | **2 357 B** | 1 061 B | every comment thread for the entity, open ones first. New |
 | `mobile-thread.html` | 5KB | **4 908 B** | 2 092 B | one thread of three comments, reply form, inline poller. New |
-| React dashboard | 250KB gzipped | to build | | office users only, never on the reporter path |
+| React dashboard | 250KB gzipped | 137KB | | office users only, never on the reporter path |
+| Full citizen view | not in the document | 55KB | | served only where the connection can carry it; the light view is the budgeted page |
 
 Eight surfaces now, not six. Figures include the hidden CSRF field injected into every form, which
-costs about 96 bytes. `mobile-step.html` has 178 bytes of headroom left against the budget, so the
-next thing added to it needs measuring rather than assuming.
+costs about 96 bytes.
+
+The eight rows marked in bold with a new figure were remeasured on 18 September 2026 against the
+seeded demo data, before and after the offline layer, rendering the pre-change templates and the
+current ones through the same engine. The offline layer added 54 B to every phone page (the script
+tag), 170 B to `mobile-step.html` (the step addresses it prefetches), and 350 B and 510 B to the two
+citizen pages (the translated offline notice, the link to the full view, and `view=lite` on every
+link). The rest of the growth since the first table came from earlier work that was never
+remeasured, and **`mobile-step.html` and `public-entity.html` were already over 5KB rendered before
+the offline layer**, at 5 662 B and 5 647 B. Gzipped, which is what reaches the phone, the heaviest
+page is 2.3KB. The rows not remeasured (`mobile-message`, `mobile-submitted`, `mobile-document`,
+`mobile-thread`) each carry the same extra 54 B.
 
 The two workspace pages were measured with the data in the row, rendered through the same
 Spring Thymeleaf engine, and the workspace figure includes the 96 byte CSRF field for its one form.
@@ -137,7 +151,8 @@ before and after, they add 442 bytes, which leaves it near 3.4KB.
 
 No web fonts, no icon fonts, no framework, no images on any low-bandwidth surface. Inline CSS,
 because a separate stylesheet is a second request and on a bad connection the second request is
-the one that fails.
+the one that fails. The full citizen view is React, and is not a low-bandwidth surface: it is only
+served where the connection can carry it, and the light view is always one link away.
 
 The two citizen pages grew when the language switcher landed, `public-index.html` by about a
 kilobyte. Both are still comfortably inside budget and both gzip under 2KB. Room was made by
@@ -290,8 +305,9 @@ cut.** On the phone at `/m/comments`, and on the office dashboard as a tenth com
 panel adds about 1.5KB gzipped to the dashboard bundle.
 
 **"Visible in real time" is a five second poll, as the PRD said.** Every read carries an ETag, and an
-unchanged poll is a 304 with no body that reads no comment rows. The thread page is the only page
-on the low-bandwidth surfaces that carries script, and it is correct without it.
+unchanged poll is a 304 with no body that reads no comment rows. The thread page carries the poller,
+and it is correct without it. Every page on these surfaces now also carries the offline layer's
+script (see below), and is equally correct without that.
 
 **`mobile-thread.html` is the one page whose weight depends on the conversation.** The row above
 is three comments of realistic length. Empty, it is 4 007 B and 1 811 B gzipped. Each comment adds
@@ -304,3 +320,30 @@ that rule became wrong: a reporter's "corrected" would have been shown back to t
 Department disputing the figure. A dispute is now an open comment, written by a DSAC role, that
 opened a thread on a target.
 
+
+---
+
+## Two citizen views and offline
+
+Added after the language pass. The full description, including the rules that make offline safe, is
+in the top-level README under "Two citizen views" and "Offline". What changes in this document:
+
+**§5, Surface A is two views at one address.** `/public` and `/public/entity/{id}` serve either the
+light view (these templates) or the full view (React, `frontend/citizen.html`). `CitizenSurface`
+chooses: `?view=lite` or `?view=rich` if the reader chose, then `Save-Data`, then the `ECT` and
+`Downlink` client hints, else the full view, which checks `navigator.connection` again in the
+browser and falls back after ten seconds if its bundle has not started. The choice is a query
+parameter, like `lang`, and never a cookie. Both views read the same `PublicationService`
+projection and the same five translation files, and both 404 an unpublished entity.
+
+**§11, "no JavaScript" on the low-bandwidth surfaces is now "no required JavaScript".** Each page
+registers a service worker, the citizen pages with one inline line and the phone pages through
+`/offline/mobile.js` (2.9KB gzipped, fetched once). With scripts off every page behaves as before.
+
+**Offline is new, and scoped per audience.** A citizen reads any page already read on the device,
+dated. A reporter on the phone keeps answering with no signal, including indicators never opened,
+and the answers are sent in order when the signal returns, under the same reporter's session or not
+at all. On the dashboard, DSAC staff and entity reporters open every screen already visited, and
+comments, reviews, confirmations, submissions, task moves and document decisions made offline are
+kept, listed and sent later. Uploads, opening a period, setting a task, publication and recompute
+are never kept. Sign-out deletes what was kept for that person.

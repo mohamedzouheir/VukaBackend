@@ -4,9 +4,23 @@ Surface B of `docs/Vuka-Frontend-Design.pdf`: the reporter's desktop path, the D
 and the executive portfolio. Vite, React and TypeScript, talking to the Spring Boot API in the
 parent directory.
 
-The low bandwidth surfaces are not here. `/m` and `/public` are server rendered Thymeleaf in the
-backend, they carry no JavaScript at all, and that is deliberate: a small NPO reporting from a
-phone on mobile data is the primary user of those pages, not a fallback for them.
+Two more things live here, and neither is part of the dashboard bundle:
+
+- **The full citizen view**, `citizen.html` and `src/citizen/`. A second Vite entry, so a member of
+  the public loads React and one small page (about 55KB gzipped), never the dashboard, its router or
+  Firebase. It is served at `/public` when the connection can carry it; the light view is the
+  server-rendered Thymeleaf page in the backend. See `web/CitizenSurface.java` for the choice. In
+  development, `npm run dev` serves it for any `/public` page request unless `?view=lite` is asked
+  for, so both can be compared side by side.
+- **The offline layer.** `public/sw.js` is the service worker for every surface, `public/offline/
+  mobile.js` is the reporter phone pages' half of it, and `src/lib/offline.ts` keeps the dashboard's
+  data per signed-in person and holds changes made with no connection. See "Offline" in the top
+  level README for what each audience gets and the four rules that make it safe. The worker is only
+  registered in production builds, so test offline against the built jar, not the dev server.
+
+The reporter's phone surface, `/m`, is not here. It is server-rendered Thymeleaf in the backend,
+with no framework, and that is deliberate: a small NPO reporting from a phone on mobile data is the
+primary user of those pages, not a fallback for them. It carries one optional script, for offline.
 
 ---
 
@@ -31,7 +45,8 @@ npm run dev
 
 The dashboard needs an identity. If you have a Firebase project, copy `.env.example` to `.env` and
 fill in the three `VITE_FIREBASE_*` values, and set the `role` and `entityId` custom claims on a
-user through the Admin SDK.
+DSAC user through the Admin SDK. Reporter accounts are issued from the Administration screen
+instead; there is no sign up.
 
 If you do not, both sides have a development sign in. It must never be enabled anywhere real.
 
@@ -43,8 +58,9 @@ VUKA_DEV_AUTH=true mvn spring-boot:run
 VITE_DEV_AUTH=true
 ```
 
-Sign in as a **DSAC reviewer** first. Open the portfolio, copy an entity uuid from any row, then
-sign out and sign back in as an **entity reporter** with that uuid. That order matters: a reporter
+With the entity field blank, the reporter button signs in as the demo reporter at Iziko, whose Q1
+submission the reviewer returns in the demonstration. For any other entity, sign in as a **DSAC
+admin** first; the Administration screen prints every entity's uuid under its name. That order matters: a reporter
 with no entity id can reach nothing, which is correct behaviour and looks exactly like a bug.
 
 With development sign in on, the application carries a banner on every page and the backend logs a

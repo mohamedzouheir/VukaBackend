@@ -1,381 +1,284 @@
 /*
- * Dashboard, the landing screen for every signed-in role.
+ * Dashboard, the reviewer's landing screen.
+ *
+ * Nobody else comes here. The executive lands on the portfolio, the admin on the publication
+ * register and the reporter on their own reporting screen (see Home in App.tsx), because a
+ * dashboard that restated those is how every role came to open on the same screen.
  *
  * Modelled on the overview screens in docs/Front End designs/: a greeting, a row of stat tiles,
- * the substance, and a right rail of quick actions and recent activity.
+ * the substance, and a right rail of quick actions and tasks.
  *
  * What it does not copy from those screens is the charting. The designs carry a "Progress Over
- * Time" line from January to December and a "Performance by Sector" bar row, and nothing in the
- * schema records a figure per month or a sector rate. Drawing either would mean inventing the
- * numbers, in a product whose entire argument is that a figure carries the cell it came from.
- * So the same space is given to the risk band distribution, which is real, stored, and explains
- * itself on click.
+ * Time" line from January to December and a "Performance by Sector" bar row. Nothing records a
+ * figure per month, so that line would be invented. The sector rate is real, computed from
+ * confirmed figures, and lives on Analytics with the other trends rather than being repeated here.
  */
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useAsync } from '../lib/useAsync';
-import { useAuth, canReview, isDsac } from '../lib/auth';
-import type { PortfolioRow } from '../lib/types';
-import { BAND_ORDER, bandColour, num, randsShort, date } from '../lib/format';
-import { useI18n } from '../lib/i18n';
-import type { I18n } from '../lib/i18n';
-import { useLabels } from '../lib/labels';
+import { useAuth } from '../lib/auth';
+import type { PortfolioRow, SubmissionRow } from '../lib/types';
+import { num, date, daysRemainingText, reviewPeriod } from '../lib/format';
 import { PageHead } from '../components/AppShell';
+import { RiskPanel } from '../components/RiskPanel';
 import { EmptyState, ErrorState, Loading, Tile } from '../components/Shell';
+import { QueueRow } from './ReviewQueue';
 import {
-  IconAlert, IconCheckCircle, IconChevronRight, IconClock, IconHome, IconLandmark,
-  IconTasks, IconUpload, IconCitation,
+  IconAlert, IconCheckCircle, IconChevronRight, IconClock, IconFolder, IconHome, IconList,
+  IconReturn, IconTasks, IconCitation,
 } from '../icons';
+import './ReviewQueue.css';
 import './Dashboard.css';
 
 export function Dashboard() {
-  const { t } = useI18n();
-  const L = useLabels();
+  return <ReviewerToday />;
+}
+
+/* ------------------------------------------------------------------ */
+/* The reviewer's day. Journey J3.                                     */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Lerato's question every morning is which three things to look at today. So the screen answers
+ * it: four counts of what is waiting on whom, then the top three of the queue in the same risk
+ * order and the same row the queue itself uses, each carrying its largest factor in words.
+ *
+ * It deliberately carries no portfolio totals and no rand figures. Those are the executive's, on
+ * the executive's home, and repeating them here is how every DSAC screen came to look the same.
+ */
+function ReviewerToday() {
   const { me } = useAuth();
-  const dsac = isDsac(me?.role);
-
-  const portfolio = useAsync(() => api.portfolio(), [], dsac);
+  const portfolio = useAsync(() => api.portfolio(), []);
   const periods = useAsync(() => api.periods(), []);
-  const subs = useAsync(
-    () => (dsac ? api.submissions() : api.submissions({ entityId: me!.entityId! })),
-    [dsac, me?.entityId],
-    dsac || Boolean(me?.entityId),
-  );
+  const subs = useAsync(() => api.submissions(), []);
   const tasks = useAsync(() => api.myTasks(), []);
+  const [explain, setExplain] = useState<PortfolioRow | null>(null);
 
-  const period = useMemo(() => (periods.data ?? []).filter((p) => p.open).at(-1) ?? null, [periods.data]);
+  const period = useMemo(() => reviewPeriod(periods.data), [periods.data]);
+
+  const byEntity = useMemo(() => {
+    const map = new Map<string, SubmissionRow>();
+    for (const s of subs.data ?? []) {
+      if (period && s.periodId !== period.periodId) continue;
+      map.set(s.entityId, s);
+    }
+    return map;
+  }, [subs.data, period]);
 
   const counts = useMemo(() => {
-    const rows = portfolio.data ?? [];
-    const relevant = period ? (subs.data ?? []).filter((s) => s.periodId === period.periodId) : [];
-    const submitted = relevant.filter(
-      (s) => s.status === 'SUBMITTED' || s.status === 'UNDER_REVIEW' || s.status === 'APPROVED',
-    );
-    const withAllocation = rows.filter((r) => r.totalAllocation !== null);
-    return {
-      entities: rows.length,
-      allocated: withAllocation.length ? withAllocation.reduce((n, r) => n + (r.totalAllocation ?? 0), 0) : null,
-      submitted: submitted.length,
-      outstanding: rows.length - submitted.length,
-      critical: rows.filter((r) => r.band === 'CRITICAL').length,
-      targets: relevant.reduce((n, s) => n + s.targetCount, 0),
-      reported: relevant.reduce((n, s) => n + s.confirmedCount, 0),
-    };
-  }, [portfolio.data, subs.data, period]);
+    let awaiting = 0;
+    let returned = 0;
+    let approved = 0;
+    let notFiled = 0;
+    for (const e of portfolio.data ?? []) {
+      const status = byEntity.get(e.entityId)?.status;
+      if (status === 'SUBMITTED' || status === 'UNDER_REVIEW') awaiting++;
+      else if (status === 'RETURNED') returned++;
+      else if (status === 'APPROVED') approved++;
+      else notFiled++;
+    }
+    return { total: (portfolio.data ?? []).length, awaiting, returned, approved, notFiled };
+  }, [portfolio.data, byEntity]);
 
+  // The API returns the portfolio in risk order, which is the queue's default order.
+  const topThree = (portfolio.data ?? []).slice(0, 3);
   const openTasks = (tasks.data ?? []).filter((t) => t.status !== 'DONE');
+  const ready = !portfolio.loading && !subs.loading;
 
   return (
     <div className="with-aside">
       <div>
         <PageHead
           icon={<IconHome size={26} />}
-          title={greeting(me?.name ?? null, t)}
-          subtitle={dsac ? t('dash.subDsac') : t('dash.subReporter')}
+          title={greeting(me?.name ?? null)}
+          subtitle={
+            'Which three entities to look at first' +
+            (period ? ' for ' + period.label : '') +
+            ', and what is waiting on your decision.'
+          }
         />
 
-        {dsac ? (
-          <DsacTiles counts={counts} period={period?.label ?? null} loading={portfolio.loading} />
+        {!ready ? (
+          <Loading what="the queue" />
+        ) : portfolio.error ? (
+          <ErrorState message={portfolio.error} onRetry={portfolio.reload} />
         ) : (
-          <ReporterTiles period={period} subs={subs.data ?? []} loading={subs.loading} />
-        )}
-
-        {/* Risk band distribution. Real, stored, and the same signals the panel explains. */}
-        {dsac ? (
-          <section className="card dash-block">
-            <div className="section-head">
-              <h2>{t('dash.riskDistribution')}</h2>
-              <span className="spacer" />
-              <Link to="/risk" className="row" style={{ gap: 4, fontSize: '0.875rem', fontWeight: 600 }}>
-                {t('nav.risk')} <IconChevronRight size={15} />
-              </Link>
+          <>
+            <div className="tiles">
+              <Tile icon={<IconCitation size={22} />} tone="purple" value={num(counts.awaiting)} label="Awaiting your decision" sub="Submitted, not yet approved or returned" />
+              <Tile icon={<IconReturn size={22} />} tone="warn" value={num(counts.returned)} label="Returned" sub="With the entity, disputed figures reopened" />
+              <Tile icon={<IconClock size={22} />} tone="critical" value={num(counts.notFiled)} label="Nothing filed" sub="Ranked in the queue all the same" />
+              <Tile icon={<IconCheckCircle size={22} />} tone="ok" value={num(counts.approved) + ' of ' + num(counts.total)} label="Approved" sub="Each in a reviewer's name" />
             </div>
 
-            {portfolio.loading ? (
-              <Loading what={t('pf.what')} />
-            ) : portfolio.error ? (
-              <ErrorState message={portfolio.error} onRetry={portfolio.reload} />
-            ) : (
-              <BandBars rows={portfolio.data ?? []} />
-            )}
-          </section>
-        ) : null}
+            <section className="dash-block">
+              <div className="section-head">
+                <h2>Start with these three</h2>
+                <span className="spacer" />
+                <Link to="/review" className="row" style={{ gap: 4, fontSize: '0.875rem', fontWeight: 600 }}>
+                  The whole queue, ranked <IconChevronRight size={15} />
+                </Link>
+              </div>
+              <p className="small muted" style={{ marginTop: 0 }}>
+                Ranked by risk, not by date received. Click a score for the five signals behind it.
+              </p>
 
-        {/* Recent submissions, which is the closest real thing to the designs' activity table. */}
-        <section className="card dash-block">
-          <div className="section-head">
-            <h2>{dsac ? t('dash.recentSubmissions') : t('dash.yourPeriods')}</h2>
-            <span className="spacer" />
-            {canReview(me?.role) ? (
-              <Link to="/review" style={{ fontSize: '0.875rem', fontWeight: 600 }}>
-                {t('dash.openQueue')}
-              </Link>
-            ) : null}
-          </div>
-
-          {subs.loading ? (
-            <Loading what={t('dash.whatSubmissions')} />
-          ) : subs.error ? (
-            <ErrorState message={subs.error} onRetry={subs.reload} />
-          ) : (subs.data ?? []).length === 0 ? (
-            <EmptyState>
-              {t('dash.nothingFiled')}
-            </EmptyState>
-          ) : (
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>{t('entities.colEntity')}</th>
-                    <th>{t('dash.colPeriod')}</th>
-                    <th className="num">{t('dash.colReported')}</th>
-                    <th>{t('tasks.colStatus')}</th>
-                    <th>{t('dash.colSubmitted')}</th>
-                    <th />
-                  </tr>
-                </thead>
-                <tbody>
-                  {(subs.data ?? []).slice(0, 8).map((s) => (
-                    <tr key={s.submissionId}>
-                      <td>{s.entityName}</td>
-                      <td className="muted">{s.periodLabel}</td>
-                      <td className="num">
-                        {t('dash.reportedOf', num(s.confirmedCount) ?? '', num(s.targetCount) ?? '')}
-                      </td>
-                      <td>
-                        <StatusChip status={s.status} />
-                      </td>
-                      <td className="muted small">
-                        {s.submittedAt ? date(s.submittedAt) : t('riskScreen.notSubmitted')}
-                        {s.daysLate !== null && s.daysLate > 0 ? (
-                          <span className="chip chip-warn" style={{ marginLeft: 6 }}>
-                            {t('dash.daysLate', s.daysLate)}
-                          </span>
-                        ) : null}
-                      </td>
-                      <td>
-                        <Link
-                          to={canReview(me?.role) ? '/review/' + s.submissionId : '/entity/submission/' + s.submissionId + '/review'}
-                        >
-                          {t('common.open')}
-                        </Link>
-                      </td>
-                    </tr>
+              {topThree.length === 0 ? (
+                <EmptyState>
+                  No entities are registered. This is an empty register rather than a clean portfolio.
+                </EmptyState>
+              ) : (
+                <ol className="queue">
+                  {topThree.map((e) => (
+                    <QueueRow key={e.entityId} entity={e} sub={byEntity.get(e.entityId) ?? null} onExplain={() => setExplain(e)} />
                   ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
+                </ol>
+              )}
+
+              {subs.error ? (
+                <ErrorState
+                  message={'The ranking is shown, but submission states could not be read. ' + subs.error}
+                  onRetry={subs.reload}
+                />
+              ) : null}
+            </section>
+          </>
+        )}
       </div>
 
-      {/* ---------------- right rail ---------------- */}
       <aside className="aside">
         <section className="card">
-          <h2 style={{ marginBottom: 'var(--space-3)' }}>{t('dash.quickActions')}</h2>
+          <h2 style={{ marginBottom: 'var(--space-3)' }}>Quick actions</h2>
           <div className="quick">
-            {me?.role === 'ENTITY_REPORTER' ? (
-              <Link to="/entity" className="quick-item">
-                <span className="quick-icon" style={{ background: 'var(--brand-wash)', color: 'var(--brand)' }}>
-                  <IconUpload size={18} />
-                </span>
-                <span>
-                  <strong>{t('dash.reportQuarter')}</strong>
-                  <em>{t('dash.reportQuarterSub')}</em>
-                </span>
-                <IconChevronRight size={16} className="muted" />
-              </Link>
-            ) : null}
-            {canReview(me?.role) ? (
-              <Link to="/review" className="quick-item">
-                <span className="quick-icon" style={{ background: 'var(--purple-wash)', color: 'var(--purple)' }}>
-                  <IconCitation size={18} />
-                </span>
-                <span>
-                  <strong>{t('dash.workQueue')}</strong>
-                  <em>{t('dash.workQueueSub')}</em>
-                </span>
-                <IconChevronRight size={16} className="muted" />
-              </Link>
-            ) : null}
-            {dsac ? (
-              <Link to="/entities" className="quick-item">
-                <span className="quick-icon" style={{ background: 'var(--teal-wash)', color: 'var(--teal)' }}>
-                  <IconLandmark size={18} />
-                </span>
-                <span>
-                  <strong>{t('dash.browseEntities')}</strong>
-                  <em>{t('dash.browseEntitiesSub')}</em>
-                </span>
-                <IconChevronRight size={16} className="muted" />
-              </Link>
-            ) : null}
-            <a href="/public" target="_blank" rel="noreferrer" className="quick-item">
-              <span className="quick-icon" style={{ background: 'var(--ok-wash)', color: 'var(--ok)' }}>
-                <IconCheckCircle size={18} />
-              </span>
-              <span>
-                <strong>{t('dash.openCitizen')}</strong>
-                <em>{t('dash.openCitizenSub')}</em>
-              </span>
-              <IconChevronRight size={16} className="muted" />
-            </a>
+            <QuickLink to="/review" icon={<IconList size={18} />} tone="purple" title="Work the review queue" note="Every entity, including those that filed nothing" />
+            <QuickLink to="/risk" icon={<IconAlert size={18} />} tone="danger" title="Risk & Alerts" note="Recompute scores after a submission lands" />
+            <QuickLink to="/documents" icon={<IconFolder size={18} />} tone="teal" title="Decide on documents" note="Receipts and approvals, per entity" />
           </div>
         </section>
 
-        <section className="card">
-          <div className="section-head">
-            <h2>{t('dash.myTasks')}</h2>
-            <span className="spacer" />
-            <Link to="/tasks" style={{ fontSize: '0.8125rem', fontWeight: 600 }}>
-              {t('common.viewAll')}
-            </Link>
-          </div>
-          {tasks.loading ? (
-            <Loading what={t('tasks.what')} />
-          ) : tasks.error ? (
-            <ErrorState message={tasks.error} onRetry={tasks.reload} />
-          ) : openTasks.length === 0 ? (
-            <p className="muted small" style={{ margin: 0 }}>
-              {t('dash.nothingAssigned')}
-            </p>
-          ) : (
-            <ul className="tasklist">
-              {openTasks.slice(0, 5).map((row) => (
-                <li key={row.id}>
-                  <IconTasks size={16} className="muted" />
-                  <span>
-                    <strong>{row.title ?? t('tasks.untitled')}</strong>
-                    {row.dueDate ? (
-                      <em>{t('dash.dueOn', date(row.dueDate) ?? '')}</em>
-                    ) : (
-                      <em>{t('tasks.noDueDate')}</em>
-                    )}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-
-        {period ? (
-          <section className="card card-sunk">
-            <h4 style={{ marginBottom: 6 }}>{period.label}</h4>
-            <p className="row small" style={{ margin: 0, gap: 6 }}>
-              <IconClock size={15} />
-              <span>
-                {t('dash.dueOn', date(period.dueDate) ?? t('common.notSet'))}
-                {period.daysRemaining !== null ? ', ' + L.daysRemaining(period.daysRemaining) : null}
-              </span>
-            </p>
-            <p className="small muted" style={{ marginTop: 'var(--space-2)' }}>
-              {period.statutory ? t('dash.statutoryPfma') : t('dash.notStatutoryPfma')}
-            </p>
-          </section>
-        ) : null}
+        <TaskCard tasks={tasks} openTasks={openTasks} />
+        <PeriodCard period={period} />
       </aside>
+
+      {explain ? (
+        <RiskPanel risk={explain} entityName={explain.name} onClose={() => setExplain(null)} />
+      ) : null}
     </div>
   );
 }
 
 /* ------------------------------------------------------------------ */
+/* Right rail pieces.                                                  */
+/* ------------------------------------------------------------------ */
 
-function DsacTiles({
-  counts,
-  period,
-  loading,
+const QUICK_TONES = {
+  brand: { background: 'var(--brand-wash)', color: 'var(--brand)' },
+  purple: { background: 'var(--purple-wash)', color: 'var(--purple)' },
+  teal: { background: 'var(--teal-wash)', color: 'var(--teal)' },
+  danger: { background: 'var(--danger-wash)', color: 'var(--band-critical)' },
+} as const;
+
+function QuickLink({
+  to,
+  icon,
+  tone,
+  title,
+  note,
 }: {
-  counts: { entities: number; allocated: number | null; submitted: number; outstanding: number; critical: number; targets: number; reported: number };
-  period: string | null;
-  loading: boolean;
+  to: string;
+  icon: ReactNode;
+  tone: keyof typeof QUICK_TONES;
+  title: string;
+  note: string;
 }) {
-  const { t } = useI18n();
-  if (loading) return <Loading what={t('pf.what')} />;
   return (
-    <div className="tiles">
-      <Tile icon={<IconLandmark size={22} />} value={num(counts.entities)} label={t('dash.fundedBodies')} sub={t('dash.fundedBodiesSub2')} />
-      <Tile icon={<IconCheckCircle size={22} />} tone="ok" value={t('pf.countOf', num(counts.submitted) ?? '', num(counts.entities) ?? '')} label={t('dash.submitted')} sub={period ?? t('entities.noOpenPeriod')} />
-      <Tile icon={<IconClock size={22} />} tone="warn" value={num(counts.outstanding)} label={t('dash.outstanding')} sub={t('dash.outstandingSub2')} />
-      <Tile icon={<IconAlert size={22} />} tone="critical" value={num(counts.critical)} label={t('dash.critical')} sub={t('dash.criticalSub2')} />
-      <Tile icon={<IconCitation size={22} />} tone="purple" value={randsShort(counts.allocated)} label={t('dash.allocated')} sub={t('dash.allocatedSub')} />
-    </div>
+    <Link to={to} className="quick-item">
+      <span className="quick-icon" style={QUICK_TONES[tone]}>
+        {icon}
+      </span>
+      <span>
+        <strong>{title}</strong>
+        <em>{note}</em>
+      </span>
+      <IconChevronRight size={16} className="muted" />
+    </Link>
   );
 }
 
-function ReporterTiles({
-  period,
-  subs,
-  loading,
+function TaskCard({
+  tasks,
+  openTasks,
 }: {
-  period: { periodId: string; label: string; dueDate: string | null; daysRemaining: number | null } | null;
-  subs: { periodId: string; targetCount: number; confirmedCount: number; evidenceCount: number }[];
-  loading: boolean;
+  tasks: { loading: boolean; error: string | null; reload: () => void };
+  openTasks: { id: string; title: string | null; dueDate: string | null }[];
 }) {
-  const { t } = useI18n();
-  const L = useLabels();
-  if (loading) return <Loading what={t('dash.whatReporting')} />;
-  const current = period ? subs.find((s) => s.periodId === period.periodId) : undefined;
   return (
-    <div className="tiles">
-      <Tile icon={<IconCitation size={22} />} value={current ? num(current.targetCount) : null} label={t('dash.targetsThisYear')} sub={t('dash.targetsThisYearSub')} />
-      <Tile icon={<IconCheckCircle size={22} />} tone="ok" value={current ? num(current.confirmedCount) : null} label={t('dash.figuresConfirmed')} sub={t('dash.confirmedSub2')} />
-      <Tile icon={<IconUpload size={22} />} tone="purple" value={current ? num(current.evidenceCount) : null} label={t('dash.evidenceAttached')} sub={t('dash.evidenceSub2')} />
-      <Tile
-        icon={<IconClock size={22} />}
-        tone="warn"
-        value={
-          period?.daysRemaining !== null && period?.daysRemaining !== undefined
-            ? L.daysRemaining(period.daysRemaining)
-            : null
-        }
-        label={t('dash.deadline')}
-        sub={period ? period.label : t('entities.noOpenPeriod')}
-      />
-    </div>
+    <section className="card">
+      <div className="section-head">
+        <h2>My tasks</h2>
+        <span className="spacer" />
+        <Link to="/tasks" style={{ fontSize: '0.8125rem', fontWeight: 600 }}>
+          View all
+        </Link>
+      </div>
+      {tasks.loading ? (
+        <Loading what="your tasks" />
+      ) : tasks.error ? (
+        <ErrorState message={tasks.error} onRetry={tasks.reload} />
+      ) : openTasks.length === 0 ? (
+        <p className="muted small" style={{ margin: 0 }}>
+          Nothing assigned to you.
+        </p>
+      ) : (
+        <ul className="tasklist">
+          {openTasks.slice(0, 5).map((t) => (
+            <li key={t.id}>
+              <IconTasks size={16} className="muted" />
+              <span>
+                <strong>{t.title ?? 'Untitled task'}</strong>
+                {t.dueDate ? <em>Due {date(t.dueDate)}</em> : <em>No due date</em>}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 
-/** Band distribution as proportional bars. Each carries its count and its word, not just colour. */
-function BandBars({ rows }: { rows: PortfolioRow[] }) {
-  const L = useLabels();
-  const total = rows.length || 1;
+function PeriodCard({
+  period,
+}: {
+  period: { label: string; dueDate: string | null; daysRemaining: number | null; statutory: boolean } | null;
+}) {
+  if (!period) return null;
   return (
-    <div className="bands">
-      {BAND_ORDER.map((band) => {
-        const n = rows.filter((r) => r.band === band).length;
-        if (n === 0) return null;
-        return (
-          <div className="band-row" key={band}>
-            <span className="band-label">
-              <span className="risk-swatch" style={{ background: bandColour(band) }} aria-hidden="true" />
-              {L.band(band)}
-            </span>
-            <span className="band-track" aria-hidden="true">
-              <span style={{ width: (n / total) * 100 + '%', background: bandColour(band) }} />
-            </span>
-            <span className="band-count">
-              {num(n)} <span className="muted small">({Math.round((n / total) * 100)}%)</span>
-            </span>
-          </div>
-        );
-      })}
-    </div>
+    <section className="card card-sunk">
+      <h4 style={{ marginBottom: 6 }}>{period.label}</h4>
+      <p className="row small" style={{ margin: 0, gap: 6 }}>
+        <IconClock size={15} />
+        <span>
+          Due {date(period.dueDate) ?? 'not set'}
+          {period.daysRemaining !== null ? ', ' + daysRemainingText(period.daysRemaining) : null}
+        </span>
+      </p>
+      <p className="small muted" style={{ marginTop: 'var(--space-2)' }}>
+        {period.statutory
+          ? 'A statutory date under the PFMA.'
+          : 'Not a statutory date. It rests on a departmental instruction rather than on a regulation.'}
+      </p>
+    </section>
   );
 }
 
-export function StatusChip({ status }: { status: string }) {
-  const L = useLabels();
-  const tone =
-    status === 'APPROVED' ? 'chip-ok'
-    : status === 'RETURNED' ? 'chip-danger'
-    : status === 'DRAFT' ? 'chip-muted'
-    : 'chip';
-  return <span className={'chip ' + tone}>{L.status(status)}</span>;
-}
-
-function greeting(name: string | null, t: I18n['t']): string {
+function greeting(name: string | null): string {
   const h = new Date().getHours();
-  const part = h < 12 ? t('dash.morning') : h < 17 ? t('dash.afternoon') : t('dash.evening');
-  return name ? t('dash.greetingNamed', part, name.split(/[\s.]/)[0]) : part;
+  const part = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+  if (!name) return part;
+  // "N. Mabaso" greeted as "N" read as a glitch. Where the first word is only an initial, use
+  // the whole name as it was given.
+  const first = name.trim().split(/\s+/)[0];
+  return part + ', ' + (/^[A-Za-z]\.?$/.test(first) ? name.trim() : first);
 }

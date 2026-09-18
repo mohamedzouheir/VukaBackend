@@ -48,11 +48,15 @@
     .skip:focus { position:fixed; left:8px; top:8px; z-index:10; padding:10px 14px;
                   background:var(--ink); color:var(--bg); border-radius:6px; }
   </style>
+  <!--/* Offline: keeps pages and answers on the phone when the signal drops. See static/offline/mobile.js. */-->
+  <script src="/offline/mobile.js" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to the main content</a>
 <div class="wrap">
-  <main id="main">
+  <!--/* The step addresses, for the offline layer: it fetches every indicator of this report once
+       while there is signal, so a reporter who loses it can still move forward. */-->
+  <main id="main" th:attr="data-step-base=@{'/m/submission/' + ${submission.getId()} + '/step/'},data-step-count=${total}">
     <p class="progress">
       Indicator <span th:text="${index + 1}">1</span> of <span th:text="${total}">10</span>,
       <span th:text="${submission.getReportingPeriod().getLabel()}">Q2</span>
@@ -105,7 +109,7 @@
       </div>
     </form>
 
-    <p class="saved">Your answers are saved as you go. If you lose signal, open this page again and continue.</p>
+    <p class="saved" data-offline-hint>Your answers are saved as you go. If you lose signal, open this page again and continue.</p>
   </main>
 </div>
 </body>

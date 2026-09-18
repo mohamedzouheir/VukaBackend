@@ -10,27 +10,28 @@
  * which is the one thing this product exists not to do, so an unknown count renders as no badge
  * rather than as a zero or a guess.
  *
- * The designs also carry Analytics & Insights in the rail. It is present and it says plainly that
- * it is not built, because the trends it shows have no source: nothing in the schema records a
- * figure per month, and inventing one to fill a chart would undo the argument the rest of the
- * product makes.
+ * Analytics & Insights is in the reviewer's and the executive's rails. It shows the trends the
+ * data can actually carry: allocation and audited results per year, the same entities across two
+ * audited years, and the current year quarter by quarter and by sector. The monthly series and
+ * document counts in the designs are not there, because nothing records them.
  */
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth, canReview, isDsac } from '../lib/auth';
+import { useAuth } from '../lib/auth';
 import { useI18n } from '../lib/i18n';
 import type { Key } from '../lib/i18n';
 import type { MeView, Role } from '../lib/types';
 import {
   IconAlert, IconBell, IconChart, IconChevronDown, IconChevronRight, IconCitation,
   IconExternal,
-  IconFolder, IconHome, IconLandmark, IconList, IconMenu, IconSettings, IconSignOut,
+  IconFolder, IconGauge, IconHome, IconLandmark, IconList, IconMenu, IconSettings, IconSignOut,
   IconTasks, IconWorkspaces,
 } from '../icons';
 import { SearchField } from './SearchField';
 import { LanguagePicker } from './LanguagePicker';
 import { Arms } from './Arms';
+import { ConnectionBar } from './ConnectionBar';
 import './AppShell.css';
 
 interface NavItem {
@@ -43,7 +44,79 @@ interface NavItem {
   badge?: number | null;
   /** External to the single page application. */
   external?: boolean;
-  visible: (role: Role) => boolean;
+}
+
+/**
+ * The rail, one list per role.
+ *
+ * Written out whole rather than filtered from one shared list, because the shared list is how
+ * three DSAC roles ended up with the same eight entries. Each role gets the screens its job is
+ * made of and nothing else (frontend design section 2 and journeys J3 and J4):
+ *
+ *   reporter   reports for one entity, taken from the token. Their home is the reporting screen
+ *              itself (J1: no generic landing page), with anything the Department returned at
+ *              the top. Documents, workspace and tasks are their side of the conversation.
+ *   reviewer   works the risk-ranked queue and decides. Today, queue, risk, analytics, documents
+ *              to decide on, the workspaces and tasks where the conversation with an entity happens.
+ *   executive  reads the portfolio and never changes anything. Portfolio, the register to find
+ *              one entity by name, analytics for whether it is improving, and the citizen
+ *              view. No tasks, no workspaces, no recompute,
+ *              because nothing there is theirs to act on.
+ *   admin      sets quarter deadlines, registers entities, issues reporter accounts (there is no
+ *              sign up), decides what the public sees, and binds workspaces to Microsoft 365. No
+ *              queue and no risk screen: the admin holds no review capability at all, so that
+ *              publication and approval always take two people. Tasks stay, because the reviewer
+ *              hands the publication decision over as one.
+ *
+ * A route left out of a rail is still reachable by address where the capability allows it, so a
+ * link from inside a screen keeps working. The rail is what each person is for, not the fence.
+ */
+function railFor(
+  role: Role,
+  { criticalCount, openTaskCount }: { criticalCount?: number | null; openTaskCount?: number | null },
+): NavItem[] {
+  const citizen: NavItem = { to: '/public', label: 'nav.citizenView', icon: <IconExternal size={19} />, external: true };
+  const workspaces: NavItem = { to: '/workspaces', label: 'nav.workspaces', icon: <IconWorkspaces size={19} /> };
+  const documents: NavItem = { to: '/documents', label: 'nav.documents', icon: <IconFolder size={19} /> };
+  const analytics: NavItem = { to: '/analytics', label: 'nav.analytics', icon: <IconChart size={19} /> };
+  const tasks: NavItem = { to: '/tasks', label: 'nav.tasks', icon: <IconTasks size={19} />, badge: openTaskCount ?? null };
+
+  switch (role) {
+    case 'ENTITY_REPORTER':
+      return [
+        { to: '/', label: 'nav.myReporting', icon: <IconCitation size={19} /> },
+        documents,
+        workspaces,
+        tasks,
+        citizen,
+      ];
+    case 'DSAC_REVIEWER':
+      return [
+        { to: '/', label: 'nav.today', icon: <IconHome size={19} /> },
+        { to: '/review', label: 'nav.reviewQueue', icon: <IconList size={19} /> },
+        { to: '/risk', label: 'nav.risk', icon: <IconAlert size={19} />, badge: criticalCount ?? null },
+        analytics,
+        documents,
+        workspaces,
+        tasks,
+      ];
+    case 'DSAC_EXECUTIVE':
+      return [
+        { to: '/', label: 'nav.portfolio', icon: <IconGauge size={19} /> },
+        { to: '/entities', label: 'nav.entities', icon: <IconLandmark size={19} /> },
+        analytics,
+        citizen,
+      ];
+    case 'ADMIN':
+      return [
+        { to: '/', label: 'nav.administration', icon: <IconSettings size={19} /> },
+        workspaces,
+        tasks,
+        citizen,
+      ];
+    default:
+      return [];
+  }
 }
 
 export function AppShell({
@@ -90,32 +163,7 @@ export function AppShell({
   if (!me) return <>{children}</>;
   const role = me.role;
 
-  const items: NavItem[] = [
-    { to: '/', label: 'nav.dashboard', icon: <IconHome size={19} />, visible: () => true },
-    { to: '/entities', label: 'nav.entities', icon: <IconLandmark size={19} />, visible: isDsac },
-    { to: '/review', label: 'nav.reports', icon: <IconCitation size={19} />, visible: (r) => canReview(r) },
-    { to: '/entity', label: 'nav.myReporting', icon: <IconCitation size={19} />, visible: (r) => r === 'ENTITY_REPORTER' },
-    { to: '/documents', label: 'nav.documents', icon: <IconFolder size={19} />, visible: () => true },
-    { to: '/analytics', label: 'nav.analytics', icon: <IconChart size={19} />, visible: isDsac },
-    {
-      to: '/risk',
-      label: 'nav.risk',
-      icon: <IconAlert size={19} />,
-      badge: criticalCount ?? null,
-      visible: isDsac,
-    },
-    { to: '/workspaces', label: 'nav.workspaces', icon: <IconWorkspaces size={19} />, visible: () => true },
-    {
-      to: '/tasks',
-      label: 'nav.tasks',
-      icon: <IconTasks size={19} />,
-      badge: openTaskCount ?? null,
-      visible: () => true,
-    },
-    { to: '/logs', label: 'nav.audit', icon: <IconList size={19} />, visible: () => true },
-    { to: '/public', label: 'nav.citizenView', icon: <IconExternal size={19} />, external: true, visible: () => true },
-    { to: '/admin/entities', label: 'nav.settings', icon: <IconSettings size={19} />, visible: (r) => r === 'ADMIN' },
-  ];
+  const items = railFor(role, { criticalCount, openTaskCount });
 
   return (
     <div className={'shell' + (railOpen ? ' rail-open' : '') + (collapsed ? ' shell-collapsed' : '')}>
@@ -142,9 +190,7 @@ export function AppShell({
         </div>
 
         <div className="rail-nav">
-          {items
-            .filter((i) => i.visible(role))
-            .map((i) =>
+          {items.map((i) =>
               i.external ? (
                 <a key={i.to} href={i.to} target="_blank" rel="noreferrer" title={t(i.label)}>
                   {i.icon}
@@ -163,7 +209,7 @@ export function AppShell({
                   ) : null}
                 </NavLink>
               ),
-            )}
+          )}
         </div>
 
         <div className="rail-foot rail-label">
@@ -249,7 +295,11 @@ export function AppShell({
 
         {devAuth ? <p className="dev-banner">{t('nav.devBanner')}</p> : null}
 
-        <main className="shell-content">{children}</main>
+        <main className="shell-content">
+          {/* Offline, copies on screen, and changes kept on this device. Absent when none apply. */}
+          <ConnectionBar />
+          {children}
+        </main>
       </div>
     </div>
   );

@@ -16,7 +16,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useAsync } from '../lib/useAsync';
 import type { PortfolioRow, Sector } from '../lib/types';
-import { num, rands } from '../lib/format';
+import { num, rands, reviewPeriod } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { useLabels } from '../lib/labels';
 import { PageHead } from '../components/AppShell';
@@ -42,7 +42,7 @@ export function Entities() {
   const subs = useAsync(() => api.submissions(), []);
   const periods = useAsync(() => api.periods(), []);
 
-  const period = useMemo(() => (periods.data ?? []).filter((p) => p.open).at(-1) ?? null, [periods.data]);
+  const period = useMemo(() => reviewPeriod(periods.data), [periods.data]);
 
   const submissionByEntity = useMemo(() => {
     const map = new Map<string, { status: string; confirmed: number; targets: number }>();

@@ -16,3 +16,11 @@
 .returned { border-left: 3px solid var(--band-high); }
 .returned > * + * { margin-top: var(--space-2); }
 .returned p { margin: 0; }
+.returned-disputes { list-style: none; margin: var(--space-3) 0 0; padding: 0; }
+.returned-disputes li {
+  display: flex; gap: var(--space-2); align-items: flex-start;
+  padding: var(--space-2) 0;
+  border-top: 1px solid var(--rule);
+}
+.returned-disputes li:first-child { border-top: 0; }
+.returned-disputes .mono { margin-right: 4px; }

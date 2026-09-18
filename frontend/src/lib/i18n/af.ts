@@ -10,6 +10,10 @@ import type { Key } from './en';
 
 export const af: Record<Key, string> = {
   'nav.dashboard': 'Paneelbord',
+  'nav.today': 'Vandag',
+  'nav.portfolio': 'Portefeulje',
+  'nav.reviewQueue': 'Hersieningslys',
+  'nav.administration': 'Administrasie',
   'nav.entities': 'Entiteite',
   'nav.reports': 'Verslae',
   'nav.myReporting': 'My verslagdoening',
@@ -347,6 +351,8 @@ export const af: Record<Key, string> = {
   'signin.or': 'of',
   'signin.employee': 'Meld aan as werknemer',
   'signin.noAccount': 'Het jy nie ’n administrateurrekening nie?',
+  'signin.phoneNote': 'Rapporteer jy op ’n selfoon? Die lae bandwydte weergawe, wat geen JavaScript nodig het nie, is by',
+  'signin.citizenNote': 'Die burgeraansig, wat glad geen rekening nodig het nie, is by',
   'signin.contact': 'Kontak DSAC-ondersteuning',
   'signin.popia':
     'Jou inligting word beskerm en hanteer ooreenkomstig die Wet op die Beskerming van Persoonlike Inligting (POPIA).',
@@ -884,6 +890,7 @@ export const af: Record<Key, string> = {
     '1 gerapporteerde syfer het geen bewys aangeheg nie en sal as onverifieerbaar op rekord bly. Goedkeuring verander dit nie, en die uitvoer dra dit.',
 
   'pf.title': 'Portefeulje',
+  'pf.sub': 'Hoeveel, dan watter, dan hoekom. Slegs lees: niks op hierdie skerm verander ’n syfer nie.',
   'pf.what': 'die portefeulje',
   'pf.allocatedThisYear': 'Vanjaar toegewys',
   'pf.noAllocationRows': '{0} liggame dra geen toewysingsrekord nie',
@@ -925,6 +932,7 @@ export const af: Record<Key, string> = {
   'er.noFileParsed':
     'Geen l\u00eaer is vir hierdie tydperk ontleed nie. Syfers wat hier ingevoer word, word as met die hand ingevoer gemerk.',
   'er.confirmedOf': '{0} van {1} bevestig',
+  'er.withEvidence': '{0} met bewyse',
   'er.warning':
     'Niks hier is nog as \u2019n gerapporteerde resultaat gestoor nie. Bevestiging skryf hierdie syfers in jou naam, en hulle kan daarna nie geredigeer word nie. \u2019n Regstelling gebeur deurdat die Departement die indiening terugstuur.',
   'er.returnedForCorrection': '{0} syfers is vir regstelling teruggestuur.',

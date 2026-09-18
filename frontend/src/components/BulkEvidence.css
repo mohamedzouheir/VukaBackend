@@ -1,0 +1,27 @@
+.be-drop {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  padding: var(--space-4);
+  border: 2px dashed var(--rule-strong);
+  border-radius: var(--radius);
+  background: var(--surface-sunk);
+  color: var(--ink);
+  cursor: pointer;
+}
+.be-drop svg { flex: none; color: var(--brand); margin-top: 2px; }
+.be-drop-over, .be-drop:hover { border-color: var(--brand); }
+.be-drop:focus-within { outline: 2px solid var(--brand); outline-offset: 2px; }
+.be-hint { display: block; margin-top: var(--space-1); }
+
+.be-table { width: 100%; }
+.be-table td { vertical-align: top; }
+.be-table select { width: 100%; min-width: 9rem; }
+.be-name { display: block; word-break: break-word; color: var(--navy-ink); font-weight: 600; }
+.be-why { display: block; margin-top: var(--space-1); color: var(--band-critical); }
+.be-state { white-space: nowrap; text-align: right; }
+.be-ok { display: inline-flex; gap: 4px; align-items: center; color: var(--ok); }
+.be-fail { display: inline-flex; gap: 4px; align-items: center; color: var(--band-critical); white-space: normal; text-align: left; }
+.be-remove { padding: 4px; margin-left: var(--space-1); }
+.be-done { opacity: 0.7; }
+.be-tally { margin-right: auto; }

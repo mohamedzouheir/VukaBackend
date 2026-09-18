@@ -198,6 +198,16 @@
 }
 .si-popia svg { flex: none; margin-top: 1px; color: var(--au-gold); }
 
+/* The phone and citizen pointers. Quieter than the POPIA line above it, which is a legal
+   notice, where this is a signpost for somebody who is on the wrong screen. */
+.si-surfaces {
+  margin: var(--space-5) 0 0;
+  font-size: 0.75rem;
+  line-height: 1.55;
+  color: var(--au-ink-soft);
+}
+.si-surfaces a { color: inherit; text-decoration: underline; }
+
 /* ---------------------------------------------------------------- demo accounts */
 
 .si-demo {

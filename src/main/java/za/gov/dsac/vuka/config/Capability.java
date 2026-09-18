@@ -29,13 +29,18 @@ import java.util.Set;
  *   PARTICIPATE            x         x                   x     comment, set and move tasks
  *   DOWNLOAD_TEMPLATE      x         x                   x
  *   VIEW_PORTFOLIO                   x          x        x     across entities
- *   REVIEW_SUBMISSIONS               x                   x     approve, return, decide, recompute
+ *   REVIEW_SUBMISSIONS               x                         approve, return, decide, recompute
  *   ADMINISTER                                           x     publication, Microsoft binding
  * </pre>
  *
  * The executive column is the point of the design: it reads everything and changes nothing. The
  * reporter column is the other point: only the entity puts figures and evidence on the record,
  * and nobody at DSAC can do it on the entity's behalf.
+ *
+ * <p>The admin does not review. Whoever decides what the public sees is not the person who
+ * approves the figures it will see, so publication and approval need two different people. This
+ * narrows the PRD's "nothing is fully barred" for the administrator: approval is the one thing
+ * that is.
  */
 public enum Capability {
 
@@ -44,7 +49,7 @@ public enum Capability {
     PARTICIPATE("ENTITY_REPORTER", "DSAC_REVIEWER", "ADMIN"),
     DOWNLOAD_TEMPLATE("ENTITY_REPORTER", "DSAC_REVIEWER", "ADMIN"),
     VIEW_PORTFOLIO("DSAC_REVIEWER", "DSAC_EXECUTIVE", "ADMIN"),
-    REVIEW_SUBMISSIONS("DSAC_REVIEWER", "ADMIN"),
+    REVIEW_SUBMISSIONS("DSAC_REVIEWER"),
     ADMINISTER("ADMIN");
 
     private final Set<String> roles;

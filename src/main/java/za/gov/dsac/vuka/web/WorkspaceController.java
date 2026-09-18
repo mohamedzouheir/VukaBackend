@@ -224,11 +224,21 @@ public class WorkspaceController {
         return ResponseEntity.ok(workspace.tasksFor(entityId).stream().map(TaskView::of).toList());
     }
 
-    /** Open work assigned to the caller, across every entity they can see. */
+    /** Work assigned to the caller, across every entity they can see, open first. */
     @GetMapping("/tasks/mine")
     @PreAuthorize("@can.has('READ_OWN_REPORTING')")
     public ResponseEntity<List<TaskView>> myTasks(@AuthenticationPrincipal VukaPrincipal who) {
-        return ResponseEntity.ok(workspace.myOpenTasks(who).stream().map(TaskView::of).toList());
+        return ResponseEntity.ok(workspace.myTasks(who).stream().map(TaskView::of).toList());
+    }
+
+    /** Who a task on this entity can be assigned to. The picker on the Tasks screen reads this. */
+    @GetMapping("/entity/{entityId}/people")
+    @PreAuthorize("@can.has('PARTICIPATE')")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public ResponseEntity<List<WorkspaceService.Person>> people(@PathVariable("entityId") UUID entityId,
+                                                                @AuthenticationPrincipal VukaPrincipal who) {
+        if (!who.canRead(entityId.toString())) return ResponseEntity.status(403).build();
+        return ResponseEntity.ok(workspace.assignableFor(entityId));
     }
 
     public record TaskRequest(String title, String description, String assignedToUid,
@@ -308,9 +318,12 @@ public class WorkspaceController {
         return ResponseEntity.ok(Map.of("status", request.webhookUrl() == null ? "cleared" : "set"));
     }
 
-    /** Runs a delta poll now rather than waiting for the timer. Useful on stage. */
+    /**
+     * Runs a delta poll now rather than waiting for the timer. Useful on stage. Open to the admin
+     * who binds the library as well as to the reviewer, since pulling versions decides nothing.
+     */
     @PostMapping("/entity/{entityId}/microsoft/sync")
-    @PreAuthorize("@can.has('REVIEW_SUBMISSIONS')")
+    @PreAuthorize("@can.has('REVIEW_SUBMISSIONS') or @can.has('ADMINISTER')")
     public ResponseEntity<?> syncNow(@PathVariable("entityId") UUID entityId) {
         EntityWorkspace workspaceRow = microsoft.workspaceFor(entityId);
         if (!workspaceRow.isBoundToMicrosoft()) {

@@ -10,6 +10,10 @@ import type { Key } from './en';
 
 export const xh: Record<Key, string> = {
   'nav.dashboard': 'Ideshbhodi',
+  'nav.today': 'Namhlanje',
+  'nav.portfolio': 'Iphothifoliyo',
+  'nav.reviewQueue': 'Umgca wokuhlolwa',
+  'nav.administration': 'Ulawulo',
   'nav.entities': 'Amaziko',
   'nav.reports': 'Iingxelo',
   'nav.myReporting': 'Ukunika kwam ingxelo',
@@ -347,6 +351,8 @@ export const xh: Record<Key, string> = {
   'signin.or': 'okanye',
   'signin.employee': 'Ngena njengomsebenzi',
   'signin.noAccount': 'Awunayo i-akhawunti yomlawuli?',
+  'signin.phoneNote': 'Unika ingxelo ngomnxeba? Ubuso obusebenzisa i-bandwidth ephantsi, obungafuni i-JavaScript, bukwi-',
+  'signin.citizenNote': 'Imbono yommi, engafuni akhawunti kwaphela, ikwi-',
   'signin.contact': 'Qhagamshelana noncedo lwe-DSAC',
   'signin.popia':
     'Iinkcukacha zakho zikhuselekile kwaye ziphathwa ngokuhambelana noMthetho woKhuselo lweNkcazelo yoBuqu (POPIA).',
@@ -883,6 +889,7 @@ export const xh: Record<Key, string> = {
     'Inani eli-1 elinikwe ingxelo alinabungqina buqhotyoshelweyo kwaye liya kuhlala kwirekhodi njengelingenakuqinisekiswa. Ukuvuma akukutshintshi oko, kwaye ukuthumela kuyakuphatha.',
 
   'pf.title': 'Iphothifoliyo',
+  'pf.sub': 'Zingaphi, zeziphi, kwaye kutheni. Ukufunda kuphela: akukho nto kwesi sikrini itshintsha inani.',
   'pf.what': 'iphothifoliyo',
   'pf.allocatedThisYear': 'Okwabiweyo kulo nyaka',
   'pf.noAllocationRows': 'amaziko angu-{0} akanayo irekhodi yokwabiwa',
@@ -924,6 +931,7 @@ export const xh: Record<Key, string> = {
   'er.noFileParsed':
     'Akukho fayile ihlalutyiweyo kweli xesha. Amanani afakwa apha aphawulwa njengafakwe ngesandla.',
   'er.confirmedOf': 'kuqinisekiswe {0} kwezingu-{1}',
+  'er.withEvidence': '{0} nobungqina',
   'er.warning':
     'Akukho nto apha esele igciniwe njengesiphumo esinikwe ingxelo. Ukuqinisekisa kubhala la manani egameni lakho, kwaye akanakuhlelwa emva koko. Ulungiso lwenzeka ngokuba iSebe libuyisele okungenisiweyo.',
   'er.returnedForCorrection': 'Amanani angu-{0} abuyiselwe ukuze alungiswe.',

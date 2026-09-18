@@ -428,7 +428,7 @@ scenario, and the largest factor it reports for Robben Island on real data is th
 instruction". The inputs are simply thinner, because the seed has one prior period of history where
 the wireframes assume three.
 
-This has to be decided before the demo, and it is first in section 12.
+This has to be decided before the demo, and it is first in section 13.
 
 ---
 
@@ -555,10 +555,11 @@ So the look was taken and the invented figures were not:
 | Predicted impact, recommended actions | The five stored signals with their contributions |
 | Province, acronym, registration number | Absent, and the footnote says so |
 | Document views and downloads | Absent. Nothing counts either |
-| Analytics and Insights, whole screen | A screen saying what is missing and what it would take |
+| Analytics and Insights, whole screen | At first a screen saying what was missing; since 10.6, the trends the data can carry |
 
 The Analytics screen is the one to defend out loud. Built as designed it would have been the most
-persuasive thing in the product and the only part that could not survive being clicked into.
+persuasive thing in the product and the only part that could not survive being clicked into. It
+was later built from the series that do exist; see 10.6.
 
 **Tasks and Documents turned out to be real.** They were going to be honest empty states until
 reading the branch showed `/api/workspace/tasks/mine` and
@@ -568,7 +569,201 @@ the page.
 
 ---
 
-## 11. Language, across all twenty one screens
+### 10.4 Demo data, and which quarter the demo is in
+
+Section 8.5 left this open. It is now decided by role rather than by date. A reporter's screens
+open on the open period, which in September is Q2. The Department's screens open on the last
+period that has fallen due, which is Q1, through `ReportingViewService.reviewPeriodId()` and the
+matching `reviewPeriod()` in `frontend/src/lib/format.ts`. `RiskSchedule` scores both. The real
+date is kept, so nothing in the demo is dated before the quarter it reports on.
+
+`DemoDataService` then adds workflow data on top of the reference seed, once, on a database with
+no comments or tasks. Every row of it is invented and says so. Q1 carries every review state; the
+demo reporter's entity (Iziko, the one Firebase reporter account) is submitted and waiting so a
+reviewer can return it live; the National Library is returned with two open disputes; tasks are
+assigned to the four Firebase accounts by uid; and a completed Q2 template for Iziko is written to
+`var/demo/`, with a figure typed as words, a figure typed as text, a missing figure with its
+reason, a shortfall with no reason and an unregistered indicator code.
+
+One cost worth stating. The reference seed reported only 12 of Iziko's 20 Q1 indicators. The demo
+answers the other 8, because a returned period reopens every unanswered target, and a live return
+would otherwise hand the reporter ten rows instead of one. That lowers Iziko's evidence gap signal.
+
+Found on the way and fixed: a quarterly report that fell due and was never filed added nothing to
+the lateness signal, which averaged only the reports that arrived, so an entity that stopped
+filing scored better than one filing a week late. `RiskService` now counts each such report as
+late up to today, where the entity has targets registered for the year, and the panel says how
+many are unfiled. It changes nothing in the seeded demo, because every entity with targets filed
+Q1. It does not move Robben Island either: its lateness is already at the ceiling from the
+seventy day statutory breach, and it has no targets registered, so no quarterly report is due
+from it in the system. The 45 against the wireframes' 74 is thin history, as section 8.5 says.
+
+---
+
+### 10.5 Setting tasks, and a demo database that outlives a session
+
+**Tasks can be set from the screen.** Requirement (d) asks for tasks set internally and externally,
+and until now the endpoint existed with nothing calling it. The Tasks screen has a Set a task form
+for every role holding `PARTICIPATE`: reporter, reviewer, administrator, not the executive. The
+assignee list is `GET /api/workspace/entity/{id}/people`, which is the Department plus that
+entity's own reporters and nobody from another entity. Whether a task is external is still derived
+by the server, never ticked. Anyone who signs in is recorded in `user_profile` by `/api/me`, which is
+what makes them assignable.
+
+**My tasks returned only OPEN.** Work marked in progress vanished from its owner's list and the Done
+filter could never show anything. It now returns everything assigned to the caller, open first; the
+badge and the dashboard already filtered out done work on the client.
+
+**Seeded tasks no longer claim the Director-General set them.** The executive has no `PARTICIPATE`,
+so a task "set by the Director-General" was something the product would not have let happen.
+
+**The demo database.** The Postgres that was running on 5432 lived in another Claude session's
+scratch directory and goes when that session is cleaned up. `run-local.sh` now runs a portable
+Postgres 16 from `~/.vuka` on 5433, seeded from scratch with the demo data. Its Iziko id is new, so
+the Firebase reporter account's `entityId` claim has to be reset to it before Nomsa can sign in.
+
+### One home and one rail per role
+
+Before this pass the reviewer, the executive and the admin all landed on the same dashboard and
+saw nearly the same eight rail entries, which is the opposite of block 2 in the build order
+("four roles land in four different places") and the first thing a judge switching accounts would
+notice. `homeFor` in `lib/auth.tsx` described the intended routing and was never called.
+
+Now `/` renders a different home per role and each role has its own rail, written out whole in
+`railFor` rather than filtered from one shared list:
+
+- **Reviewer, J3.** Lands on Today: awaiting decision, returned, nothing filed, approved, then the
+  top three of the risk-ranked queue using the queue's own row component. No portfolio totals and
+  no rand figures, which are the executive's.
+- **Executive, J4.** Lands on the portfolio (W9). Rail is Portfolio, Entities, Citizen View. No
+  tasks, workspaces or recompute button, because the role changes nothing.
+- **Admin, UC-21.** Lands on Administration, the publication switch, with published, unpublished
+  and no-targets counts. Rail is Administration, Workspaces, Tasks, Citizen View. No queue and no
+  risk screen.
+
+The risk band bars on the old shared dashboard are gone; the same distribution is the executive's
+heatmap. Analytics & Insights was in no rail then; 10.6 put it in the reviewer's and executive's. The recompute buttons on the queue and on Risk &
+Alerts are now shown only to a role holding `REVIEW_SUBMISSIONS`, where before an executive
+reaching Risk & Alerts was offered one the API refused.
+
+The capability table changed once, on purpose: `REVIEW_SUBMISSIONS` is the reviewer's alone, so
+publication and approval take two people. `CapabilityTest.adminDoesNotReview` holds it. The
+Microsoft sync endpoint, which was reviewer only, now also admits `ADMINISTER`, because the admin
+binds the library and pulling versions decides nothing. This departs from the PRD's "nothing is
+fully barred" for the administrator, and the pitch should say so as a governance choice.
+
+### The reporter, and the return round trip
+
+The reporter had two homes, a Dashboard and My reporting, showing the same tiles and the same
+deadline. Their home is now the reporting screen itself (J1: no generic landing page).
+
+The bigger fault was the return. The reporter's screen showed a returned card only for the open
+quarter, but the Department reviews the quarter that has fallen due, so in September the reviewer
+returns Q1 while the reporter's screen is on Q2. A live return left nothing on the reporter's
+screen but a chip in the prior periods list, with no link. Now every returned period sits at the
+top: who returned it (the name now resolved from the user directory rather than left null), the
+reason, each open dispute in the reviewer's words, and one button into the confirmation screen,
+which already opens on the disputed rows only. Disputes are read on the five second comment poll
+and the submission list every ten seconds, so a return made on stage appears without a reload.
+Prior periods now link to their submissions.
+
+Demo plumbing: a dev reporter with no entity id is the demo reporter at Iziko, so nobody pastes a
+uuid mid-demonstration. The local database had never received the demo seed (it already held
+comments, so the seed stepped aside) and the demo uids pointed at Firebase accounts; `run-demo.sh`
+runs against a separate `vuka_demo` database with the dev uids, and `--reset` restores it.
+
+### The demonstration journey: deadline, warning, account
+
+The journey the demo now shows, end to end and each step real:
+
+1. **Admin sets the deadline.** Administration, Submission deadlines. For Schedule 3A the date is
+   a departmental instruction, so the Department sets it here. A passed deadline is locked; a new
+   one cannot be past, before the quarter ends, or later than a statutory date
+   (`DeadlineRulesTest`). Audit logged.
+2. **Reporter signs in and is warned.** `DeadlineAlert`: late (due date passed, nothing filed) or
+   approaching (open quarter due within thirty days, not filed), the same thirty days at which the
+   reminders begin. Once per sign in for a given set of warnings. A returned quarter is not called
+   late; the returned card handles it. In the seeded demo Q2 is due 30 October, 42 days out, so
+   the warning appears only after the admin brings it forward, which is the point to show.
+3. **Admin registers an entity and issues its reporter account.** There is no sign up anywhere.
+   With Firebase the account is created with claims and a set-password link; without it the person
+   is recorded in the directory and the screen says no credential was issued. A new entity appears
+   in the queue as not scored with nothing filed, and its reporter is warned that Q1 is late.
+
+This departs from the PRD, which cut entity creation and user administration (section 12, cuts 1
+and 3). The brief's emphasis on who may report and by when made them the demonstration rather than
+admin screens nobody watches. Targets are still not entered by form: they are versioned against a
+tabled plan.
+
+### 10.6 Analytics built from what is actually stored
+
+The placeholder said what a real Analytics screen would need, and most of it was already in the
+database: allocations for 2023/24 to 2026/27, published audit outcomes with targets achieved for
+2023/24 and 2024/25, and confirmed quarterly results with their stored risk scores. The screen is
+now built on those, through `GET /api/dashboard/analytics` (`AnalyticsService`), and sits in the
+reviewer's and the executive's rails. It is the only screen that answers "is it getting better"
+rather than "where does it stand this quarter", so it does not repeat the portfolio or the risk
+screen.
+
+Four sections: year on year, who moved (the same entities in both audited years, largest fall
+first), quarter by quarter, and by sector. Three decisions worth defending:
+
+- **Like for like.** The portfolio rate covers six entities in 2023/24 and twelve in 2024/25, so the
+  screen says the rows are different populations and computes movement only over the four entities
+  with counts in both years.
+- **Every funded entity is expected to file**, the same population the register and the queue
+  count, so "not filed" on this screen agrees with "nothing filed" on the Entities screen. The
+  sixteen with no registered targets are named as such rather than dropped.
+- **Met is computed, not read.** A figure meets its quarter target when the latest confirmed actual
+  is at least the quarter value, so the rate can be reproduced from the two numbers on the review
+  screen, and a figure corrected after a return counts once.
+
+Still absent, on purpose: any monthly series, document views and downloads, and cost per outcome
+across sectors. The in-year quarterly figures in the demonstration are the illustrative seed, and
+the footnote says so.
+
+---
+
+## 11. Two citizen views, and offline for every audience
+
+Asked for: the citizen view in React where the bandwidth allows, the Thymeleaf page where it does
+not, chosen automatically or by the reader; and offline working for citizens, DSAC users and
+entities alike.
+
+**Two views, one address.** `/public` serves the light Thymeleaf view or the full React view
+(`frontend/citizen.html`, `src/citizen/`), chosen by `CitizenSurface`: the reader's `?view=` first,
+then `Save-Data`, then the `ECT` and `Downlink` client hints, else the full view, which rechecks
+`navigator.connection` in the browser and falls back after ten seconds if its bundle has not
+started. The choice lives in the URL like `lang`, never a cookie, per `LocaleConfig`'s reasoning.
+The full view is its own Vite entry so it never loads Firebase or the dashboard: about 55KB gzipped.
+It reads `/public/api/entities` and `/public/api/messages`, so it renders in the same five languages
+from the same files. New citizen strings were added to all five bundles; the four translations are
+unreviewed like the rest.
+
+**Offline.** One service worker (`frontend/public/sw.js`), a phone script (`public/offline/
+mobile.js`) and a dashboard layer (`src/lib/offline.ts`). Citizens read pages already read, dated.
+Reporters on the phone keep answering with no signal, including indicators never opened, and
+answers go in order when the signal returns. Dashboard users open screens already visited and can
+comment, review, confirm, submit, move tasks and decide documents offline; each is listed until
+sent. The safety rules: never a copy when the network answered; a kept change goes under the same
+person's session or not at all (`OfflineIdentity` puts a digest of the uid on every `/m` page, and
+the worker fetches the form again before sending, which also refreshes the CSRF token); the server's
+state checks still decide, and a refusal blocks what was kept after it; sign-out deletes it all.
+
+**Faults found by running it rather than by reading it.** Kept assets failed offline because the
+server varies on Origin and a module script sends one, so every cache lookup now ignores Vary. On a
+phone's first visit the worker took over after the page loaded, so it knew neither the page nor the
+reporter; the page now asks it to fetch itself once. Comments were missing offline because the
+live poll bypassed the cache. Six dashboard routes (`/entities`, `/risk`, `/analytics`,
+`/workspaces`, `/documents`, `/tasks`) answered 401 on reload; they are now forwarded and permitted.
+`/favicon.svg` answered 401 too.
+
+**Verified** in headless Chrome against a running backend, listed in the README under Offline. Not
+run: an accepted replay end to end, because it writes to the append-only record.
+
+---
+
+## 12. Language, across all twenty one screens
 
 Until this point the language picker changed the landing page and the three auth screens and
 nothing else. A person could choose isiZulu, sign in, and land on an entirely English dashboard.
@@ -580,7 +775,7 @@ landing page.
 
 So the scope grew and the quality caveat stayed, stated rather than quietly dropped.
 
-### 11.1 What is now translated
+### 12.1 What is now translated
 
 Five languages: English, Afrikaans, isiZulu, isiXhosa, Sesotho. Nine hundred keys each, covering
 every screen, every empty state, every error message, every modal and every aria-label in the
@@ -592,7 +787,7 @@ isiXhosa. A script checks key parity on every batch as well, because a key added
 of five is the exact failure the arrangement exists to catch and catching it before `tsc` is
 cheaper.
 
-### 11.2 The vocabulary that must not drift
+### 12.2 The vocabulary that must not drift
 
 Four phrases carry legal or audit meaning and are marked in `en.ts` so a reviewer knows not to
 smooth them over.
@@ -607,7 +802,7 @@ smooth them over.
   subject of this product.
 - **arithmetic, not a prediction.** The sentence the risk engine is defensible on.
 
-### 11.3 Two bugs that only translation exposes
+### 12.3 Two bugs that only translation exposes
 
 **`StateLine` decided whether to show the "waiting on you" clock by testing whether its own
 sentence started with the words `Waiting on you`.** True in English, false in every other language,
@@ -621,7 +816,7 @@ the answer they demonstrate, so they work in any language. Free text still match
 which is stated in the file rather than papered over: a real model would handle it and this design
 build cannot.
 
-### 11.4 Where the labels live
+### 12.4 Where the labels live
 
 `format.ts` turns numbers and dates into strings and has no opinion about language beyond the South
 African locale. Turning enum codes into words is a different job, because words have a language, so
@@ -633,7 +828,7 @@ Every lookup falls through to the code itself, tidied up. If the backend adds an
 this file learns about it, the screen shows `Revision churn` rather than a blank cell or the word
 "Unknown", and the gap is visible to whoever is looking at it.
 
-### 11.5 What is not translated, and why
+### 12.5 What is not translated, and why
 
 - **Province names.** KwaZulu-Natal is KwaZulu-Natal in all five.
 - **PFMA schedule designations.** "Public entity, Schedule 3A" is a legal classification.
@@ -642,7 +837,7 @@ this file learns about it, the screen shows `Revision churn` rather than a blank
 - **The actor string in the audit trail.** The backend writes the literal `Not recorded` where no
   actor is on the record, so the comparison stays in English and only the display translates.
 
-### 11.6 The page weight, which the first version got wrong
+### 12.6 The page weight, which the first version got wrong
 
 Bundling all five dictionaries put three hundred and thirty kilobytes of text into every page load,
 and the main chunk went from a passing figure to 742 kB raw, 208 kB gzipped. Section 6 sets a two
@@ -658,7 +853,7 @@ is in flight, and a failed fetch leaves the page in English rather than leaving 
     main chunk    742 kB -> 502 kB raw,  208 kB -> 137 kB gzipped
     per language  about 60 kB raw, 19 kB gzipped, loaded only if chosen
 
-### 11.7 The caveat that belongs in the pitch
+### 12.7 The caveat that belongs in the pitch
 
 South Africa has twelve official languages and this is five. These strings have not been reviewed
 by first-language speakers, exactly as this log already records for the citizen surface. The honest
@@ -669,16 +864,13 @@ saying this.
 
 ---
 
-## 12. Still open
+## 13. Still open
 
 Ordered by how much it costs us if it is not done.
 
-1. **Decide which quarter the demo is in.** Section 8.5. Either seed Q2 submission history so the
-   lateness and evidence gap signals have real inputs, or present Q1 as current. As it stands the
-   demo script says Robben Island is critical at 74 and the running system says medium at 45, and
-   somebody in the room will have the wireframes open. Seeding Q2 means writing more illustrative
-   quarterly figures, which section 4 is careful to label as the only invented numbers in the seed,
-   so whichever way this goes it has to be said out loud.
+1. **Decided: the quarter depends on who is looking.** Section 10.4. Reporters open on Q2, the
+   Department on Q1. Robben Island still reads medium at 45 rather than critical at 74; say so if
+   the wireframes are on the table.
 2. **Finish Firebase.** The web API key from the console into `frontend/.env`, and Email/Password
    enabled as a sign in method. Four accounts already exist with correct claims. Until this is done
    the browser cannot sign in at all and `VUKA_DEV_AUTH` is carrying the demo, which must not be
@@ -710,10 +902,18 @@ Ordered by how much it costs us if it is not done.
    entity, a real missed statutory deadline, a documented cause, a committee that had flagged it,
    and an audit excluded from portfolio outcomes. Our system surfaces exactly that pattern, and
    the risk engine reproduces it from published facts.
+11. **Run one accepted offline replay before relying on it in a demonstration.** Answer an indicator
+   on a phone with no signal, reconnect, and check the figure lands with the reporter's name on it.
+   Every step up to the send was verified; the accepted send was not, to keep the demo record clean.
+12. **Two pages are over the 5KB rendered budget.** `mobile-step.html` (5.8KB) and
+   `public-entity.html` (6.0KB) were both over before the offline layer. Gzipped they are 2.3KB.
+   Either trim them or restate the budget as gzipped bytes, which is what a phone downloads.
+13. **Background sync is Chrome only.** Elsewhere, kept answers go when the reporter next opens a
+   page with signal, not by themselves.
 
 ---
 
-## 13. Standing preferences and constraints
+## 14. Standing preferences and constraints
 
 - **No em dashes or dashes in written output.** Natural flowing prose. This applies to every
   message and document produced for this project.

@@ -64,6 +64,13 @@ export function useAsync<T>(fn: () => Promise<T>, deps: unknown[], enabled = tru
 
   const reload = useCallback(() => setNonce((n) => n + 1), []);
 
+  // The connection came back, or kept changes were sent: what is on screen may be a copy or out of
+  // date, so every mounted screen loads again. See offline.ts.
+  useEffect(() => {
+    window.addEventListener('vuka:synced', reload);
+    return () => window.removeEventListener('vuka:synced', reload);
+  }, [reload]);
+
   return { data, loading, error, notFound, reload };
 }
 

@@ -19,8 +19,9 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useAsync } from '../lib/useAsync';
+import { can, useAuth } from '../lib/auth';
 import type { PortfolioRow, SubmissionRow } from '../lib/types';
-import { BAND_ORDER, num } from '../lib/format';
+import { BAND_ORDER, num, reviewPeriod } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { useLabels } from '../lib/labels';
 import { RiskBadge, RiskBadgeSkeleton } from '../components/RiskBadge';
@@ -32,6 +33,7 @@ import './ReviewQueue.css';
 type Sort = 'risk' | 'entity' | 'received';
 
 export function ReviewQueue() {
+  const { me } = useAuth();
   const { t } = useI18n();
   const portfolio = useAsync(() => api.portfolio(), []);
   const subs = useAsync(() => api.submissions(), []);
@@ -42,7 +44,7 @@ export function ReviewQueue() {
   const [recomputing, setRecomputing] = useState(false);
   const [limit, setLimit] = useState(5);
 
-  const period = useMemo(() => (periods.data ?? []).filter((p) => p.open).at(-1) ?? null, [periods.data]);
+  const period = useMemo(() => reviewPeriod(periods.data), [periods.data]);
 
   /* One row per entity, carrying whichever submission exists for the current period. An
      entity with no submission still gets a row, which is the point of the screen. */
@@ -100,10 +102,14 @@ export function ReviewQueue() {
           <p className="muted">{period ? period.label : t('review.noOpenPeriod')}</p>
         </div>
         <span className="spacer" />
-        <button type="button" onClick={() => void recompute()} disabled={recomputing}>
-          {recomputing ? <IconSpinner size={16} className="spin" /> : <IconGauge size={16} />}
-          {t('risk.recompute')}
-        </button>
+        {/* Offered only where the API accepts it. An executive reaching this screen by address
+            reads the scores and is not shown a control that would be refused. */}
+        {can(me, 'REVIEW_SUBMISSIONS') ? (
+          <button type="button" onClick={() => void recompute()} disabled={recomputing}>
+            {recomputing ? <IconSpinner size={16} className="spin" /> : <IconGauge size={16} />}
+            {t('risk.recompute')}
+          </button>
+        ) : null}
       </div>
 
       {portfolio.loading ? (
@@ -186,7 +192,7 @@ export function ReviewQueue() {
   );
 }
 
-function QueueRow({
+export function QueueRow({
   entity,
   sub,
   onExplain,

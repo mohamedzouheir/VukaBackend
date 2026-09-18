@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import za.gov.dsac.vuka.config.VukaPrincipal;
 import za.gov.dsac.vuka.domain.*;
 import za.gov.dsac.vuka.repository.*;
+import za.gov.dsac.vuka.service.AnalyticsService;
 import za.gov.dsac.vuka.service.ReportingViewService;
 import za.gov.dsac.vuka.service.RiskSchedule;
 import za.gov.dsac.vuka.service.RiskService;
@@ -40,14 +41,17 @@ public class DashboardController {
     private final UnitCostService unitCost;
     private final ReportingViewService views;
     private final RiskSchedule riskSchedule;
+    private final AnalyticsService analytics;
 
     public DashboardController(PublicEntityRepository entities, RiskScoreRepository riskScores,
                                ReportingPeriodRepository periods, FinancialYearRepository years,
                                TargetRepository targets, TargetResultRepository results,
                                AllocationRepository allocations, AuditFindingRepository findings,
                                RiskService riskService, UnitCostService unitCost,
-                               ReportingViewService views, RiskSchedule riskSchedule) {
+                               ReportingViewService views, RiskSchedule riskSchedule,
+                               AnalyticsService analytics) {
         this.riskSchedule = riskSchedule;
+        this.analytics = analytics;
         this.entities = entities;
         this.riskScores = riskScores;
         this.periods = periods;
@@ -87,7 +91,7 @@ public class DashboardController {
     /** Every funded body, ranked by risk, each carrying the signals behind its score. */
     @GetMapping("/portfolio")
     public List<PortfolioRow> portfolio(@RequestParam(name = "periodId", required = false) UUID periodId) {
-        UUID period = periodId != null ? periodId : currentPeriodId();
+        UUID period = periodId != null ? periodId : views.reviewPeriodId();
         if (period == null) return List.of();
 
         // One pass over allocations for the whole portfolio rather than one query per row.
@@ -181,7 +185,7 @@ public class DashboardController {
         if (fy == null) return ResponseEntity.ok(new EntityDetail(entityId, e.getName(),
                 String.valueOf(e.getSector()), e.getMandate(), BigDecimal.ZERO, null, List.of(), List.of()));
 
-        UUID period = periodId != null ? periodId : currentPeriodId();
+        UUID period = periodId != null ? periodId : views.reviewPeriodId();
         RiskScore rs = period == null ? null
                 : riskScores.findByEntityAndPeriodWithSignals(entityId, period).orElse(null);
 
@@ -303,6 +307,17 @@ public class DashboardController {
         return ResponseEntity.ok(views.unitCostsFor(entityId, targetId, unitCost));
     }
 
+    // ---------- analytics ----------
+
+    /**
+     * How the portfolio is moving: year on year, the same entities across two audited years,
+     * quarter by quarter, and by sector. See {@link AnalyticsService} for what it refuses to show.
+     */
+    @GetMapping("/analytics")
+    public AnalyticsService.AnalyticsView analytics() {
+        return analytics.analytics();
+    }
+
     // ---------- recompute ----------
 
     /** Recomputes scores for every entity. Also runs at start and nightly, in RiskSchedule. */
@@ -311,17 +326,5 @@ public class DashboardController {
     public Map<String, Object> recompute(@RequestParam(name = "periodId", required = false) UUID periodId,
                                          @AuthenticationPrincipal VukaPrincipal who) {
         return riskSchedule.recompute(periodId);
-    }
-
-    /** The most recent period whose window has opened. */
-    private UUID currentPeriodId() {
-        FinancialYear fy = years.findByCurrentTrue().orElse(null);
-        if (fy == null) return null;
-        return periods.findByFinancialYearIdOrderByQuarterAsc(fy.getId()).stream()
-                .filter(p -> p.getPeriodStart() != null
-                        && !p.getPeriodStart().isAfter(java.time.LocalDate.now()))
-                .reduce((a, b) -> b)
-                .map(ReportingPeriod::getId)
-                .orElse(null);
     }
 }

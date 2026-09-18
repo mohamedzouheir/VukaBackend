@@ -229,3 +229,20 @@ export function splitSourceCell(location: string | null | undefined): { sheet: s
   if (i < 0) return { sheet: null, cell: location };
   return { sheet: location.slice(0, i), cell: location.slice(i + 1) };
 }
+
+/**
+ * The period the Department's screens open on: the most recent one whose due date has passed,
+ * or the open one before the first due date of the year. The reporter's screens open on the
+ * open period instead. In September a reviewer is working on Q1 and a reporter on Q2, and one
+ * default would be wrong for one of them. Mirrors ReportingViewService.reviewPeriodId.
+ */
+export function reviewPeriod<P extends { open: boolean; daysRemaining: number | null }>(
+  periods: P[] | null | undefined,
+): P | null {
+  const list = periods ?? [];
+  return (
+    list.filter((p) => p.daysRemaining !== null && p.daysRemaining < 0).at(-1) ??
+    list.filter((p) => p.open).at(-1) ??
+    null
+  );
+}

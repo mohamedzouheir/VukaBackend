@@ -14,12 +14,13 @@ import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useAsync } from '../lib/useAsync';
 import type { PortfolioRow, Sector } from '../lib/types';
-import { BAND_ORDER, bandColour, num, randsShort } from '../lib/format';
+import { BAND_ORDER, bandColour, num, randsShort, reviewPeriod } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { useLabels } from '../lib/labels';
 import { RiskPanel } from '../components/RiskPanel';
 import { EmptyState, ErrorState, Loading, Tile } from '../components/Shell';
-import { IconFilter, IconInfo } from '../icons';
+import { PageHead } from '../components/AppShell';
+import { IconFilter, IconGauge, IconInfo } from '../icons';
 import './Portfolio.css';
 
 const SECTORS: Sector[] = ['ARTS', 'HERITAGE', 'LIBRARIES', 'SPORT', 'LANGUAGE', 'OTHER'];
@@ -34,7 +35,7 @@ export function Portfolio() {
   const [sector, setSector] = useState<Sector | null>(null);
   const [explain, setExplain] = useState<PortfolioRow | null>(null);
 
-  const period = useMemo(() => (periods.data ?? []).filter((p) => p.open).at(-1) ?? null, [periods.data]);
+  const period = useMemo(() => reviewPeriod(periods.data), [periods.data]);
 
   const rows = useMemo(
     () => (portfolio.data ?? []).filter((r) => (sector ? r.sector === sector : true)),
@@ -87,12 +88,11 @@ export function Portfolio() {
 
   return (
     <div className="stack">
-      <div className="section-head">
-        <div>
-          <h1>{t('pf.title')}</h1>
-          <p className="muted">{period ? period.label : t('review.noOpenPeriod')}</p>
-        </div>
-      </div>
+      <PageHead
+        icon={<IconGauge size={26} />}
+        title={t('pf.title')}
+        subtitle={(period ? period.label : t('review.noOpenPeriod')) + '. ' + t('pf.sub')}
+      />
 
       {/* Counts first. */}
       <div className="tiles">

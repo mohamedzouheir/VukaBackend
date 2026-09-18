@@ -47,6 +47,15 @@ class CapabilityTest {
     }
 
     @Test
+    @DisplayName("The admin publishes and does not approve: two people, not one")
+    void adminDoesNotReview() {
+        assertTrue(ADMINISTER.grantedTo("ADMIN"));
+        assertFalse(REVIEW_SUBMISSIONS.grantedTo("ADMIN"), "publication and approval need two people");
+        assertEquals(EnumSet.of(READ_OWN_REPORTING, PARTICIPATE, DOWNLOAD_TEMPLATE, VIEW_PORTFOLIO,
+                ADMINISTER), Capability.setOf("ADMIN"));
+    }
+
+    @Test
     @DisplayName("An unknown or missing role can do nothing at all")
     void unknownRoleHasNothing() {
         assertTrue(Capability.of(null).isEmpty());

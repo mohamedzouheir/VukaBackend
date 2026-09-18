@@ -10,14 +10,17 @@ import za.gov.dsac.vuka.repository.*;
 import za.gov.dsac.vuka.service.microsoft.TeamsNotifier;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 /**
- * Deadline countdowns at 30 days, 15 days, and hourly inside the final day.
+ * Deadline countdowns at 30 days, 15 days, the day before and the day itself.
  *
  * <h2>Why the message names specific targets</h2>
  *
@@ -27,10 +30,14 @@ import java.util.UUID;
  *
  * <h2>Where it lands</h2>
  *
- * Into the entity's Microsoft Teams channel where one has been bound, and into the log either
- * way. A countdown that arrives in the channel the finance officer already has open is worth
- * several that arrive in an inbox beside everything else, and it is the point at which the
- * early warning requirement and the workspace requirement stop being two separate features.
+ * By email to the entity's contact address and its registered reporters, because every entity
+ * has a mailbox and many departments restrict Teams workflows. Email goes once, at 08:00, on
+ * each of those four days: a reminder every hour in an inbox is how a sender gets filtered.
+ *
+ * <p>Where an administrator has also bound a Teams channel workflow, the same countdown is
+ * posted there, hourly on the last two days, since a channel post is cheaper to ignore than an
+ * email. Teams is optional; email is the channel that is expected to work everywhere. Every
+ * reminder is logged either way.
  */
 @Service
 public class NotificationService {
@@ -43,11 +50,20 @@ public class NotificationService {
     private final TargetResultRepository results;
     private final SubmissionRepository submissions;
     private final EntityWorkspaceRepository workspaces;
+    private final UserProfileRepository users;
+    private final EmailNotifier email;
     private final TeamsNotifier teams;
+
+    /** The deadlines are South African dates, whatever zone the server runs in. */
+    private static final ZoneId SAST = ZoneId.of("Africa/Johannesburg");
+
+    /** The one run a day that sends email and the 30 and 15 day posts. */
+    static final int MORNING_HOUR = 8;
 
     public NotificationService(ReportingPeriodRepository periods, PublicEntityRepository entities,
                                TargetRepository targets, TargetResultRepository results,
                                SubmissionRepository submissions, EntityWorkspaceRepository workspaces,
+                               UserProfileRepository users, EmailNotifier email,
                                TeamsNotifier teams) {
         this.periods = periods;
         this.entities = entities;
@@ -55,30 +71,49 @@ public class NotificationService {
         this.results = results;
         this.submissions = submissions;
         this.workspaces = workspaces;
+        this.users = users;
+        this.email = email;
         this.teams = teams;
     }
 
-    /** Runs hourly. The hourly cadence is what makes the final-day countdown possible. */
+    /**
+     * Runs hourly, which is what the final-day Teams countdown needs. Everything else is gated
+     * to the morning run, so a 30 day reminder goes once rather than on every run that day.
+     */
     @Scheduled(cron = "0 0 * * * *", zone = "Africa/Johannesburg")
     public void fireCountdowns() {
-        LocalDate today = LocalDate.now();
+        ZonedDateTime now = ZonedDateTime.now(SAST);
+        LocalDate today = now.toLocalDate();
         List<ReportingPeriod> upcoming =
                 periods.findByRegulatoryDeadlineBetween(today, today.plusDays(31));
 
         for (ReportingPeriod period : upcoming) {
             long daysOut = ChronoUnit.DAYS.between(today, period.getRegulatoryDeadline());
             Enums.NotificationOffset offset = offsetFor(daysOut);
-            if (offset == null) continue;
+            boolean sendEmail = emailDue(offset, now.getHour());
+            boolean postTeams = teamsDue(offset, now.getHour());
+            if (!sendEmail && !postTeams) continue;
 
             for (PublicEntity entity : entities.findAll()) {
                 if (hasSubmitted(entity.getId(), period.getId())) continue;
-                notifyEntity(entity, period, offset, daysOut);
+                notifyEntity(entity, period, offset, daysOut, sendEmail, postTeams);
             }
         }
     }
 
-    /** 30 and 15 days exactly, then every hour on the final day. Nothing in between. */
-    private Enums.NotificationOffset offsetFor(long daysOut) {
+    /** Email goes once a day, on the morning run, whatever the offset. */
+    static boolean emailDue(Enums.NotificationOffset offset, int hour) {
+        return offset != null && hour == MORNING_HOUR;
+    }
+
+    /** Teams gets the morning run too, and every hour on the last two days. */
+    static boolean teamsDue(Enums.NotificationOffset offset, int hour) {
+        if (offset == null) return false;
+        return offset == Enums.NotificationOffset.HOURLY || hour == MORNING_HOUR;
+    }
+
+    /** 30 and 15 days exactly, then the day before and the day itself. Nothing in between. */
+    static Enums.NotificationOffset offsetFor(long daysOut) {
         if (daysOut == 30) return Enums.NotificationOffset.THIRTY_DAYS;
         if (daysOut == 15) return Enums.NotificationOffset.FIFTEEN_DAYS;
         if (daysOut <= 1 && daysOut >= 0) return Enums.NotificationOffset.HOURLY;
@@ -94,14 +129,12 @@ public class NotificationService {
     }
 
     /**
-     * Builds and sends the message.
-     *
-     * <p>Delivered to the entity's Teams channel where one is bound, and logged in every case.
-     * Email is still not wired: a mail provider is a configuration decision for whoever deploys
-     * this, and the useful part, working out what is actually outstanding, is done either way.
+     * Builds and sends the message: by email where a mail relay is configured, to the entity's
+     * Teams channel where one is bound, and to the log in every case.
      */
     private void notifyEntity(PublicEntity entity, ReportingPeriod period,
-                              Enums.NotificationOffset offset, long daysOut) {
+                              Enums.NotificationOffset offset, long daysOut,
+                              boolean sendEmail, boolean postTeams) {
 
         UUID fyId = period.getFinancialYear().getId();
         List<Target> entityTargets = targets.findByEntityIdAndFinancialYearId(entity.getId(), fyId);
@@ -118,8 +151,20 @@ public class NotificationService {
                     entity.getShortName(), period.getLabel(), daysOut,
                     outstanding.size(), String.join(", ", outstanding));
 
-        log.info("[{}] -> {} : {}", offset, entity.getContactEmail(), body);
+        log.info("[{}] {} : {}", offset, entity.getShortName(), body);
 
+        if (sendEmail) {
+            List<String> to = new ArrayList<>();
+            to.add(entity.getContactEmail());
+            users.findByEntityIdAndRole(entity.getId(), Enums.Role.ENTITY_REPORTER)
+                    .forEach(u -> to.add(u.getEmail()));
+            String due = daysOut == 0 ? "is due today" : "is due in " + daysOut + " day(s)";
+            email.send(to,
+                    "Vuka: " + period.getLabel() + " " + due,
+                    emailBody(entity, period, due, outstanding));
+        }
+
+        if (!postTeams) return;
         workspaces.findByEntityId(entity.getId())
                 .map(EntityWorkspace::getTeamsWebhookUrl)
                 .ifPresent(webhook -> {
@@ -137,5 +182,23 @@ public class NotificationService {
                                     + " is due in " + daysOut + " day(s)",
                             body, facts);
                 });
+    }
+
+    /** Plain text, so it reads the same in Outlook, a phone and a government webmail client. */
+    static String emailBody(PublicEntity entity, ReportingPeriod period, String due,
+                            List<String> outstanding) {
+        StringBuilder b = new StringBuilder();
+        b.append(entity.getName()).append("\n\n");
+        b.append(period.getLabel()).append(' ').append(due)
+         .append(" (").append(period.getRegulatoryDeadline()).append(").\n\n");
+        if (outstanding.isEmpty()) {
+            b.append("Every target has evidence attached. What remains is to confirm the figures and submit.\n");
+        } else {
+            b.append(outstanding.size()).append(" target(s) still have no evidence attached:\n");
+            outstanding.forEach(ref -> b.append("  - ").append(ref).append('\n'));
+        }
+        b.append("\nSign in to Vuka to upload the completed template and attach the evidence.\n");
+        b.append("\nThis reminder stops once the period is submitted.\n");
+        return b.toString();
     }
 }

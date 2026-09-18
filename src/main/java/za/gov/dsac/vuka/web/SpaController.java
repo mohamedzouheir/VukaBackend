@@ -35,7 +35,15 @@ public class SpaController {
 
     private static final String SHELL = "forward:/index.html";
 
-    @GetMapping({"/signin", "/entity", "/review", "/portfolio"})
+    /**
+     * The rail's own destinations. Six of these were missing, so a reload on Tasks or on Risk &
+     * Alerts fell through to the authenticated catch-all and answered 401 to a browser asking for
+     * a page. It matters twice over now that the dashboard works offline: the service worker
+     * falls back to its saved copy of this shell for a navigation it cannot reach, and it can only
+     * have saved a shell the server was willing to return.
+     */
+    @GetMapping({"/signin", "/entity", "/review", "/portfolio", "/entities", "/risk", "/analytics",
+                 "/workspaces", "/documents", "/tasks"})
     public String shell() {
         return SHELL;
     }

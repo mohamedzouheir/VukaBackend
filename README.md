@@ -74,7 +74,8 @@ First start runs the Flyway migrations and loads the real data described below. 
 
 | Surface | URL | Who |
 |---|---|---|
-| Citizen view | http://localhost:8080/public | Anyone, no login |
+| Citizen view | http://localhost:8080/public, chosen by connection | Anyone, no login |
+| Citizen view, light or full by choice | http://localhost:8080/public?view=lite, ?view=rich | Anyone, no login |
 | Reporter sign-in | http://localhost:8080/m/signin | Entity reporters |
 | Mobile submission | http://localhost:8080/m | Entity reporters |
 | Office dashboard | http://localhost:5173 in development, http://localhost:8080 once built | Everyone who signs in |
@@ -87,6 +88,12 @@ First start runs the Flyway migrations and loads the real data described below. 
 
 The citizen view needs no authentication, so it is the fastest way to confirm the application is
 alive.
+
+**Without Docker, for a demonstration.** With Postgres already on 5432, `./run-demo.sh` starts the
+backend against its own `vuka_demo` database with development sign in and the demo account uids,
+and `./run-demo.sh --reset` puts that database back to the seeded demo state after a rehearsal.
+Then `cd frontend && VITE_DEV_AUTH=true npm run dev` and open http://localhost:5173. Never run it
+anywhere another person can reach.
 
 ### The office dashboard
 
@@ -128,6 +135,16 @@ entityId  the entity a reporter is bound to; omit for DSAC roles
 `entityId` lives on the token rather than in a request parameter precisely so a client cannot
 choose it. It is what stops one entity reading another's data, and every controller routes that
 check through `VukaPrincipal.canRead`.
+
+**Reporters cannot sign up; they can only sign in.** A reporter account is issued by a DSAC
+administrator from the Administration screen, for one named entity (`ReporterAccountService`).
+With Firebase configured it creates the user with no password, sets both claims and returns a
+set-password link for the administrator to send, so the password never passes through DSAC.
+Without Firebase it records the person in the directory, so they still receive the entity's
+reminders, and says that no credential was issued. Firebase's own sign-up endpoint can only be
+switched off in the console (Authentication, Settings, User actions); turn it off for any real
+deployment. Either way an account made that way carries no `role` claim and every endpoint
+refuses it. DSAC staff accounts are still set by script.
 
 With no usable credential the application still starts. The citizen view, the migrations and the
 Thymeleaf surfaces have nothing to do with Firebase, and taking them down because a key file is
@@ -180,6 +197,10 @@ VUKA_DEV_AUTH=true mvn spring-boot:run     # backend
 VITE_DEV_AUTH=true                          # in frontend/.env
 ```
 
+On a Mac with no Docker, `./run-local.sh --dev-auth` starts a portable Postgres from `~/.vuka` on
+port 5433 and then the backend; see the script's header. `PORT=8081 ./run-local.sh` runs the
+backend on another port, and `VUKA_API=http://localhost:8081 npm run dev` points the frontend at it.
+
 It must never be true in a deployed environment. `DevAuthFilter` is a `@ConditionalOnProperty`
 bean, so with the property off the filter is not in the chain and there is no code path to bypass.
 It runs after the real verifier and only fills a context the real verifier left empty, so a signed
@@ -201,13 +222,50 @@ dashboard shows a page or a button only when the API behind it would accept the 
 | Comment, set and move tasks | yes | yes | | yes |
 | Download the pre-filled template | yes | yes | | yes |
 | See across entities | | yes | yes | yes |
-| Approve, return, decide on documents | | yes | | yes |
-| Publication, Microsoft binding | | | | yes |
+| Approve, return, decide on documents | | yes | | |
+| Register entities, issue reporter accounts, set deadlines, publish, bind Microsoft | | | | yes |
 
 The executive column reads everything and changes nothing. The reporter column is the only one
 that puts figures or evidence on the record. Before this table existed, two endpoints let an
 executive post a comment or approve a document while the dashboard presented the role as read
 only.
+
+**Each role opens on its own screen, with its own rail.** `/` is one address with four homes
+(`Home` in `frontend/src/App.tsx`, `railFor` in `components/AppShell.tsx`):
+
+| Role | Lands on | Rail |
+|---|---|---|
+| Reporter | My reporting (W1). On sign in, a warning when a quarter is late or due within 30 days. Anything the Department returned sits at the top: who, why, and each disputed figure in the reviewer's words, live | My reporting, Documents, Workspaces, Tasks, Citizen View |
+| Reviewer | Today: what awaits their decision, and the top three of the risk-ranked queue | Today, Review queue, Risk & Alerts, Analytics, Documents, Workspaces, Tasks |
+| Executive | The portfolio (W9): counts, bands, rands in the critical band | Portfolio, Entities, Analytics, Citizen View |
+| Admin | Administration: quarter deadlines, register an entity, issue its reporter account, publish | Administration, Workspaces, Tasks, Citizen View |
+
+**Deadlines are the Department's to set, and a passed one is fixed.** For a Schedule 3A entity
+TR 30.2.1 names no day count, so the quarterly due date is a departmental instruction, set per
+quarter on the Administration screen. The reporter's warning, the countdown, the email reminders
+and the lateness signal all read that one date. Four refusals, each tested in
+`DeadlineRulesTest`: a deadline that has passed cannot be moved (lateness was measured against
+it), a new one cannot be in the past, it cannot fall before the quarter ends, and it cannot be
+later than a statutory deadline where one applies. Every change is written to the audit log with
+the administrator's name.
+
+The admin does not review, in the table or on screen. Whoever decides what the public sees is not
+the person who approves the figures it will see, so publication and approval always take two
+people; an admin approval is refused by the API with a 403. This narrows the PRD's "nothing is
+fully barred" for the administrator, deliberately.
+
+**Analytics & Insights answers whether things are getting better** (`/analytics`, one call to
+`GET /api/dashboard/analytics`, `AnalyticsService`). Every other oversight screen describes one
+quarter; this one carries the four series the data can actually support. Year on year: ENE
+allocation per financial year beside the Auditor-General's published outcomes and targets-achieved
+counts. Who moved: the same entities in the two latest audited years, because a portfolio rate
+over six audited entities one year and twelve the next measures who got audited, not who improved.
+Quarter by quarter: filing against the due date, figures against each target's own quarter value,
+and the stored risk bands. By sector: rands and delivery side by side for the quarter under review,
+never divided into a cost per outcome. A year not audited shows no rate, and a quarter not yet due
+shows no "not filed" count. There is no monthly series and no document view count, because nothing
+records either. `AnalyticsServiceTest` holds the matched-cohort arithmetic and the latest-row rule
+for corrected figures.
 
 A refusal is told apart from a missing sign in, and says why:
 
@@ -250,6 +308,19 @@ the code. Say so if asked, because someone will ask.
 Data lives in `src/main/resources/data/` as CSV with its citations in the file header, not buried
 in Java. Set `vuka.seed.enabled=false` to turn it off.
 
+**Demo workflow data is invented, all of it.** `DemoDataService` runs once after the seed, on a
+database with no comments or tasks yet, and adds what the workflow screens need to show something:
+Q1 2026/27 submissions in every review state (six approved, five awaiting review, the National
+Library returned with two open disputes, Robben Island with nothing filed), evidence tagged to the
+Auditor-General's tests, a three version document history with a rejection, comment threads, tasks
+for each demo account in both directions across the departmental boundary, two Q2 drafts, and a
+completed Q2 template for the demo reporter at `var/demo/Iziko_Q2-2026-27_completed.xlsx`. That
+template carries one row for each case the confirmation screen catches. Every document it stores
+says on its first line that it is a demonstration file. It finds entities by short name, so it
+works on an existing database without breaking a reporter's `entityId` claim. The demo account uids
+are in `application.yml` under `vuka.demo`; with the development sign in, set them to the `dev-*`
+uids. Set `VUKA_DEMO_DATA=false` for any real department data.
+
 ---
 
 ## How it is put together
@@ -264,7 +335,8 @@ service/
   SubmissionService   upload -> parse -> confirm -> submit -> review
   UnitCostService     planned versus actual, sector-bound peer comparison
   ExportService       the filing in full, DPME and spreadsheet shapes
-  NotificationService 30 day / 15 day / hourly countdowns
+  NotificationService 30 day / 15 day / final day countdowns, by email and optionally Teams
+  EmailNotifier       SMTP, off unless configured, with a demo redirect
   PublicationService  builds the citizen view, gated on DSAC approval
   SeedService         real published data, plus labelled illustrative quarterlies
   ReportingViewService assembles the rows the dashboard reads, provenance attached
@@ -389,10 +461,26 @@ page says "a receipt is not an approval" in those words.
 entity's repository could put evidence there under the entity's name. Whether a task is external
 is read from who set it and who has to do it, not from a flag the caller chooses.
 
-**The countdown lands in Teams.** Where an administrator sets a channel workflow URL on an
-entity's workspace, the 30 day, 15 day and hourly reminders post there as an Adaptive Card naming
-the targets with no evidence. A workflow webhook rather than Graph's `ChannelMessage.Send`,
-because that permission is protected by Microsoft and far larger than a reminder needs.
+**The countdown arrives by email.** Every entity has a mailbox, and many departments restrict
+Teams workflows, so email is the channel expected to work everywhere. At 08:00 on 30 days, 15
+days, the day before and the due date, the entity's contact address and its registered reporters
+get a plain-text reminder naming the targets that still have no evidence. It stops once the
+period is submitted. Any SMTP relay works (Microsoft 365, Azure Communication Services, SendGrid,
+a government relay), rather than Graph's `Mail.Send`, which would let the app send as any mailbox
+in the tenant:
+
+```bash
+export MAIL_HOST=smtp.example.gov.za  MAIL_FROM=vuka@example.gov.za
+export MAIL_USERNAME=...  MAIL_PASSWORD_FILE=/path/to/file/containing/the/password
+export MAIL_REDIRECT_TO=you@example.com   # demos: every reminder goes here instead
+```
+
+The seeded contact addresses are invented, so set `MAIL_REDIRECT_TO` for any demonstration.
+
+**Teams is optional.** Where an administrator also sets a channel workflow URL on an entity's
+workspace, the same countdown posts there as an Adaptive Card, once at 30 and 15 days and hourly
+on the last two days. A workflow webhook rather than Graph's `ChannelMessage.Send`, because that
+permission is protected by Microsoft and far larger than a reminder needs.
 
 To bind a tenant, register an app with `Files.ReadWrite.All` or `Sites.ReadWrite.All` as an
 application permission (`Sites.Selected` with a per-library grant is the smaller, better
@@ -444,15 +532,85 @@ step page, whose page budget is nearly spent. Replies on a phone happen on the t
 
 ## The low-bandwidth surfaces
 
-Server-rendered Thymeleaf, no JavaScript framework, every page under 5KB before compression and
-under 2KB once gzip is on. Response compression is configured in `application.yml`; do not turn it
-off.
+Server-rendered Thymeleaf, no JavaScript framework, and every page under 2.5KB once gzip is on.
+Response compression is configured in `application.yml`; do not turn it off. The 5KB budget before
+compression that the design document set is no longer met by every page: the one-indicator step page
+is 5.8KB and the light citizen entity page 6.0KB, and both were over it before the offline layer
+added about 170 and 350 bytes to them. Gzipped, which is what a phone downloads, they are 2.3KB.
+See [docs/frontend-design-corrections.md](docs/frontend-design-corrections.md) for the table.
 
-One page qualifies that. The comment thread, `mobile-thread.html`, carries the only script on these
-surfaces, an inline poller of about 600 bytes, and it grows with the conversation. Empty it is
-4.0KB, 1.8KB gzipped. With three comments of realistic length it is 4.9KB, 2.1KB gzipped, and at
-about four comments it passes 5KB. The poll that keeps it live is a 304 with no body while nothing
-changes, and roughly 380 bytes gzipped when something does.
+Script on these surfaces is optional everywhere and required nowhere. The comment thread,
+`mobile-thread.html`, carries an inline poller of about 600 bytes, and grows with the conversation;
+the poll is a 304 with no body while nothing changes. Every reporter page loads
+`static/offline/mobile.js` (about 3KB gzipped, fetched once and then served from the phone), and
+the light citizen pages carry one line that registers the offline worker. With scripts off, every
+page still works, it just does not work offline.
+
+### Two citizen views
+
+`/public` is served in one of two forms, chosen per request by `CitizenSurface`:
+
+| | Light view | Full view |
+|---|---|---|
+| Built with | Thymeleaf, server-rendered | React, its own Vite entry (`citizen.html`, `src/citizen/`) |
+| On the wire | 1.7KB to 2.3KB gzipped per page | about 55KB gzipped once (React 46KB, the page 4KB, CSS 2.4KB), then JSON |
+| Has | every figure, five languages | the same figures and languages, plus search, sector filters, a delivery chart per entity and portfolio totals |
+| Loads | no framework, no Firebase, no web font | no Firebase, no router, no web font: never the dashboard bundle |
+
+How the choice is made, in order: the reader's own choice in `?view=lite` or `?view=rich`, which
+always wins; `Save-Data: on`; the `ECT` and `Downlink` client hints, where a 3G effective connection
+or under 1 Mbps gets the light view; otherwise the full view. The full view checks again in the
+browser before its bundle runs, using `navigator.connection`, and a watchdog offers the light view
+after three seconds and moves there after ten if the bundle has not started. That covers Safari and
+Firefox, which send no hints. A browser with no script at all is sent to the light view by a
+`<noscript>` refresh. Each view links to the other, and every link in the light view carries
+`view=lite`, so the choice holds for the visit. It is in the URL rather than a cookie for the reason
+the language is: nothing is stored about a reader who never signed in. A build without the frontend
+has no full view, and serves the light one to everybody.
+
+Both read `PublicationService`, the full view through `/public/api/entities` and
+`/public/api/messages`, so they cannot disagree about a figure, and both return 404 for an entity
+DSAC has not published.
+
+### Offline
+
+One service worker, `frontend/public/sw.js`, served at `/sw.js`, with a different rule for each
+audience because each needs something different from a dropped connection.
+
+| Who | What works with no connection | How |
+|---|---|---|
+| Citizen, either view | every page and figure already read on this device, with the date it was saved at the top | pages and `/public/api/*` answers kept by the worker, network first |
+| Entity reporter, phone | every page opened, every indicator of a report once any of it has been opened, and answering: each answer typed with no signal is kept on the phone and sent in order when the signal returns | pages kept per person; answers kept in IndexedDB; a bar at the bottom says how many are waiting |
+| DSAC staff and entity reporters, dashboard | the dashboard opens, every screen already visited shows its last data with the time it was saved, and comments, replies, approving or returning a submission, confirming figures, submitting a period, task moves and document decisions are kept and sent when the connection returns | the shell and bundle kept by the worker; data kept per person by `lib/offline.ts`; a bar under the top bar lists every kept change |
+
+Four rules hold across all three, because they are what make offline safe rather than merely
+convenient:
+
+- **Never a copy when the network answered.** Every read tries the network first. A copy is only
+  shown when there was no answer, and it always says when it was saved.
+- **Sent as the person who made it, or not at all.** Every figure and decision in Vuka carries a
+  name. A kept change is stamped with who was signed in and is only sent under that same session.
+  On the phone, the worker fetches the form again before sending, which proves the same reporter is
+  signed in through the `X-Vuka-User` header (`OfflineIdentity`) and gets a fresh CSRF token. An
+  answer kept by one reporter on a shared phone waits for that reporter.
+- **The server stays the judge.** Kept changes are sent oldest first, through the same endpoints and
+  state checks as anything else. A refusal, such as a missing reason or a submission approved in the
+  meantime, is shown in the server's own words against the kept change, and nothing after it is sent
+  until it is discarded or corrected.
+- **Sign-out takes it all.** Kept pages and data for the person signing out are deleted. On the
+  dashboard, unsent changes are deleted too, after a confirmation that says how many.
+
+What is never kept for later: uploads, opening a period, setting a task, publication and recompute.
+Each either needs the server's answer before the screen can go on, or is a decision that should not
+be made against a copy. They say they need a connection instead.
+
+Verified in headless Chrome against a running backend: both citizen views offline in English and
+Afrikaans, the full view moving to the light one on an emulated 3G connection and staying put with
+`?view=rich`, the reviewer's dashboard opening offline with its comments, a reply kept and
+discarded without reaching the server, a reporter answering an indicator they had never opened, and
+a kept answer sent on reconnection and refused with the server's own sentence. An accepted replay
+was not run end to end, because it writes to the append-only record and there is no undoing that on
+a demo database.
 
 **Two different arguments, and they should not be confused.** The citizen page is a genuine
 bandwidth case: no login, no training, a low-end phone, prepaid data, and a reader who may never
@@ -464,7 +622,8 @@ screens they can finish on a phone between other work is a different proposition
 with a spreadsheet. Requirement (d) asks for full functionality on mobile devices in any case.
 
 The mobile flow puts one indicator per screen and carries the step index in the URL rather than in
-session state, so a dropped connection loses nothing.
+session state, so a dropped connection loses nothing, and with the offline layer above it the
+reporter can keep going through one.
 
 ### Accessibility
 
@@ -528,6 +687,22 @@ State these before someone finds them.
   version, history, download, the receipt, DSAC approval, per-criterion evidence, a cross-boundary
   task and the tenancy refusals were exercised over HTTP with the development sign in. The
   Microsoft calls were not, for want of a tenant; see below.
+- **Evidence can be attached a quarter at a time.** "Attach evidence files" on the confirmation
+  screen takes every file at once, reads the indicator code (`HER-1.1`, `her_1_1`, `HER1.1`) and
+  the reliability test (attendance, reconciliation, register) from each file name, and asks only
+  about the files it could not place. A file with no indicator or no test is held back, never
+  attached as a guess. Each file goes through `POST /api/submissions/{id}/evidence`, the same path
+  as a single attach. The matching was walked in Chrome against the demo data; the attach itself
+  was not pressed there, to keep the demo database clean, and is the same call the single attach
+  already makes.
+- **The template is optional on the web.** The quarter card leads with "Enter figures", which opens
+  the confirmation screen with a box per indicator; uploading the template is the second option.
+  A column of figures copied from any spreadsheet can be pasted into the first box and fills the
+  rows below it in screen order, and two columns, indicator code and figure, fill by code in any
+  order. Wider selections are refused, because a row of the template also holds its targets.
+  Pasting only fills the boxes; nothing is written until the reporter confirms, so a typed or
+  pasted figure carries "entered by hand" and the confirmer's name rather than a source cell. Both
+  were walked in Chrome against a seeded draft; nothing was confirmed.
 - **It runs, and starting it found two bugs that reading did not.** `./mvnw clean test` passes, 60
   source files and 17 tests, Flyway applies all three migrations, the seed loads and
   `Started VukaApplication` appears. Getting there took three attempts. `ddl-auto: validate`
@@ -537,29 +712,29 @@ State these before someone finds them.
   `LazyInitializationException` reading `RiskScore.signals`, so the review queue and the executive
   portfolio had no working data source at all. Both are fixed. Section 8 of `SESSION-LOG.md` has
   the detail.
-- **No screen has been opened by a person.** The API returns correct data for every endpoint the
-  dashboard calls, against a seeded Postgres with Firebase configured. That is not the same as the
-  screens being right, and the empty and error states in particular have never been seen.
-- **The mobile reporter flow has never been exercised against a running server.** The 401 and 405
-  faults that made it unusable are fixed, and the reasoning is in *Signing in on the reporter
-  surface* above, but no request has been made against it. The specific thing to check first is
-  that the CSRF hidden field is actually rendered into the forms. Thymeleaf injects it through
-  Spring Security's `RequestDataValueProcessor` into any form with a `th:action`, which is the
-  standard mechanism and the only one available since Thymeleaf 3.1 removed request-attribute
-  access from templates. If that processor is not registered for any reason, every POST under `/m`
-  answers 403 and the fix is to add the field explicitly. View the page source once and look for
-  `name="_csrf"` before trusting the flow.
+- **Every journey has now been walked in a browser, on development sign in.** Reporter on the web
+  and on a phone, reviewer, executive, administrator and citizen, against a freshly seeded
+  Postgres, driven by a script that clicks what a person would click. That pass found and fixed:
+  the template download, the source cell links and the evidence links all opening without the
+  token (the Open link on the Documents screen was missed by that pass and fixed later; a PDF or
+  image now opens in a new tab, anything else downloads); submission detail, submit, review, export, the drilldown, the phone home and the phone
+  receipt answering 500 on lazy loads; every phone form bouncing to sign in because each request
+  deleted the CSRF cookie; a returned figure that could not be corrected; and no state checks on
+  confirm, submit or review, so a figure could be changed after submission and a draft approved.
+  `SubmissionStateTest` holds the last of those. What has not been walked is a real Firebase
+  sign in, on either surface.
 - **`docker compose up -d` assumes you have Docker.** If you do not, native Postgres works
   unchanged: the credentials in `docker-compose.yml` are the defaults in `application.yml`, so a
   `vuka` role owning a `vuka` database on 5432 needs no configuration. `run-local.ps1` starts the
   application that way on Windows.
-- **The seed scores Q1 and the system thinks it is Q2.** `currentPeriodId()` resolves to the last
-  period whose window has opened. `SeedService` writes risk scores against Q1 2026/27. So a fresh
-  database shows every band as `NOT_SCORED` until somebody presses Recompute, and recomputing
-  against Q2 puts Robben Island at 45 and medium where the frontend design has it at 74 and
-  critical, because the seed carries one prior period of history where those wireframes assume
-  three. The engine is right and the data is thin. Decide which quarter the demo is in before
-  presenting it.
+- **Reporters and the Department open on different quarters, on purpose.** A reporter's screens
+  default to the open period, the last one whose window has started. The Department's screens
+  default to the last period whose due date has passed (`reviewPeriodId()`), because until then
+  there is nothing to review. In September that is Q2 for the reporter and Q1 for the reviewer.
+  `RiskSchedule` scores both. Robben Island still scores 45 and medium where the frontend design
+  has it at 74 and critical, because the seed carries one prior period of history where those
+  wireframes assume three. The engine is right and the data is thin. A quarterly report that fell
+  due and was never filed counts as late until it is filed, where the entity has targets registered.
 - **Quarterly submission timing in the seed is illustrative**, as described above.
 - **The eQPRS export shape is our reading of a published reporting format, not a certified
   integration.** Confirm the columns against DPME's current template before anyone relies on it.
@@ -571,6 +746,9 @@ State these before someone finds them.
   mapping is unit tested against Graph's response shapes, but no tenant was available. Bind one
   test library and run `POST .../microsoft/sync` before showing it. The Teams card is likewise
   tested for shape, not posted to a live channel.
+- **Reminder email has not been sent through a real relay.** The schedule and the message are unit
+  tested; delivery has not been exercised. Point `MAIL_HOST` at a test relay with
+  `MAIL_REDIRECT_TO` set and wait for, or temporarily trigger, the 08:00 run before relying on it.
 - **Delta polling, not change notifications.** Five minutes between a save in SharePoint and the
   version in Vuka by default (`MS_POLL_INTERVAL_MS`). Graph subscriptions would make it seconds
   but need a public HTTPS endpoint Microsoft can reach.

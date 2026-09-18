@@ -13,6 +13,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import za.gov.dsac.vuka.repository.PublicEntityRepository;
 
 import java.io.IOException;
 import java.util.List;
@@ -53,7 +54,15 @@ public class DevAuthFilter extends OncePerRequestFilter {
     private static final List<String> ROLES =
             List.of("ENTITY_REPORTER", "DSAC_REVIEWER", "DSAC_EXECUTIVE", "ADMIN");
 
-    public DevAuthFilter(@Value("${spring.profiles.active:default}") String profile) {
+    private final PublicEntityRepository entities;
+    private final String demoReporterEntity;
+    private volatile String demoReporterEntityId;
+
+    public DevAuthFilter(@Value("${spring.profiles.active:default}") String profile,
+                         @Value("${vuka.demo.reporter-entity:Iziko}") String demoReporterEntity,
+                         PublicEntityRepository entities) {
+        this.entities = entities;
+        this.demoReporterEntity = demoReporterEntity;
         log.warn("");
         log.warn("  DEVELOPMENT SIGN IN IS ENABLED. Bearer tokens are not verified and any role");
         log.warn("  can be assumed by anyone who can reach this port. Active profile: {}", profile);
@@ -93,6 +102,10 @@ public class DevAuthFilter extends OncePerRequestFilter {
         // hold an entityId would make the dev path behave differently from the real one, which is
         // the one thing a development shortcut must not do.
         if (!"ENTITY_REPORTER".equals(role)) entityId = null;
+        // A dev reporter with no entity is the demo reporter, whose uid the demo data already
+        // binds to this entity. Saves pasting a uuid mid-demonstration; a real token never
+        // reaches this line.
+        else if (entityId == null) entityId = demoReporterEntityId();
 
         VukaPrincipal principal = new VukaPrincipal(
                 "dev-" + role.toLowerCase(),
@@ -102,5 +115,16 @@ public class DevAuthFilter extends OncePerRequestFilter {
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(
                         principal, null, List.of(new SimpleGrantedAuthority("ROLE_" + role))));
+    }
+
+    private String demoReporterEntityId() {
+        if (demoReporterEntityId == null) {
+            demoReporterEntityId = entities.findAll().stream()
+                    .filter(e -> demoReporterEntity.equals(e.getShortName()))
+                    .map(e -> e.getId().toString())
+                    .findFirst()
+                    .orElse(null);
+        }
+        return demoReporterEntityId;
     }
 }

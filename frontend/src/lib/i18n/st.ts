@@ -10,6 +10,10 @@ import type { Key } from './en';
 
 export const st: Record<Key, string> = {
   'nav.dashboard': 'Letlapa la taolo',
+  'nav.today': 'Kajeno',
+  'nav.portfolio': 'Photofolio',
+  'nav.reviewQueue': 'Moleko wa tlhahlobo',
+  'nav.administration': 'Tsamaiso',
   'nav.entities': 'Mekgatlo',
   'nav.reports': 'Ditlaleho',
   'nav.myReporting': 'Tlaleho ya ka',
@@ -347,6 +351,8 @@ export const st: Record<Key, string> = {
   'signin.or': 'kapa',
   'signin.employee': 'Kena e le mosebetsi',
   'signin.noAccount': 'Ha o na akhaonto ya molaodi?',
+  'signin.phoneNote': 'O tlaleha ka founu? Sebopeho sa bandwidth e tlase, se sa hlokeng JavaScript, se ho',
+  'signin.citizenNote': 'Pono ya moahi, e sa hlokeng akhaonto ho hang, e ho',
   'signin.contact': 'Ikopanye le thuso ya DSAC',
   'signin.popia':
     'Tlhahisoleseding ya hao e sirelelitswe mme e sebetswa ho ya ka Molao wa Tshireletso ya Tlhahisoleseding ya Botho (POPIA).',
@@ -883,6 +889,7 @@ export const st: Record<Key, string> = {
     'Palo e 1 e tlalehilweng ha e na bopaki bo hokelletsweng mme e tla dula rekotong e le e ke keng ya netefatswa. Ho amohela ha ho fetole seo, mme ho romela ho se tshwere.',
 
   'pf.title': 'Photofolio',
+  'pf.sub': 'Ke tse kae, ebe ke dife, ebe hobaneng. Ho bala feela: ha ho letho skrineng sena le fetolang palo.',
   'pf.what': 'photofolio',
   'pf.allocatedThisYear': 'Se abetsweng selemong sena',
   'pf.noAllocationRows': 'mekgatlo e {0} ha e na rekoto ya kabo',
@@ -924,6 +931,7 @@ export const st: Record<Key, string> = {
   'er.noFileParsed':
     'Ha ho faele e hlahlobilweng bakeng sa nako ena. Dipalo tse kentsweng mona di tshwailwe e le tse kentsweng ka letsoho.',
   'er.confirmedOf': 'ho netefaditswe {0} ho tse {1}',
+  'er.withEvidence': '{0} tse nang le bopaki',
   'er.warning':
     'Ha ho letho mona le bolokilweng e le sephetho se tlalehilweng. Netefatso e ngola dipalo tsena lebitsong la hao, mme di ke ke tsa fetolwa kamora moo. Tokiso e etsahala ka hore Lefapha le kgutlise tlaleho.',
   'er.returnedForCorrection': 'Dipalo tse {0} di kgutlisitswe bakeng sa tokiso.',

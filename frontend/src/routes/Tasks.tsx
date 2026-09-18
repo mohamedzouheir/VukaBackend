@@ -10,8 +10,9 @@
  * set invented here. A screen that shows a state the database cannot hold is a screen that will
  * disagree with the database.
  */
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { api } from '../lib/api';
+import { can, useAuth } from '../lib/auth';
 import { useAsync } from '../lib/useAsync';
 import type { WorkspaceTask } from '../lib/types';
 import { num, date } from '../lib/format';
@@ -24,6 +25,7 @@ import { IconAlert, IconCheck, IconCheckCircle, IconClock, IconSpinner, IconTask
 type Filter = 'OPEN' | 'DONE' | 'ALL';
 
 export function Tasks() {
+  const { me } = useAuth();
   const tasks = useAsync(() => api.myTasks(), []);
   const { t } = useI18n();
   const L = useLabels();
@@ -79,6 +81,8 @@ export function Tasks() {
       </div>
 
       {error ? <ErrorState message={error} /> : null}
+
+      {can(me, 'PARTICIPATE') ? <NewTaskForm onCreated={tasks.reload} /> : null}
 
       <div className="card" style={{ marginTop: 'var(--space-4)' }}>
         <div className="section-head">
@@ -189,5 +193,160 @@ export function Tasks() {
         )}
       </div>
     </div>
+  );
+}
+
+/**
+ * Setting a task. The challenge asks for tasks set "internally and externally (up or down in the
+ * operations process)", and whether a task is external is not asked here: the server derives it
+ * from who set it and who has to do it, so it cannot be ticked wrongly.
+ *
+ * A reporter can only set tasks on their own entity, so there is nothing to choose. The Department
+ * picks the entity first, and the people list is then the Department plus that entity's reporters.
+ */
+function NewTaskForm({ onCreated }: { onCreated: () => void }) {
+  const { me } = useAuth();
+  const ownEntity = me?.entityId ?? null;
+  const portfolio = useAsync(() => api.portfolio(), [], ownEntity === null);
+
+  const [open, setOpen] = useState(false);
+  const [entityId, setEntityId] = useState<string>(ownEntity ?? '');
+  const [assignee, setAssignee] = useState('');
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [due, setDue] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [failure, setFailure] = useState<string | null>(null);
+
+  const people = useAsync(() => api.taskPeople(entityId), [entityId], open && entityId !== '');
+  useEffect(() => setAssignee(''), [entityId]);
+
+  const choices = (people.data ?? []).filter((p) => p.uid !== me?.uid);
+  const ready = entityId !== '' && assignee !== '' && title.trim() !== '';
+
+  async function save() {
+    const person = choices.find((p) => p.uid === assignee);
+    setSaving(true);
+    setFailure(null);
+    setMessage(null);
+    try {
+      await api.createTask(entityId, {
+        title: title.trim(),
+        description: description.trim() || null,
+        assignedToUid: assignee,
+        assignedToName: person?.name ?? null,
+        dueDate: due || null,
+        documentId: null,
+        submissionId: null,
+      });
+      setMessage('Set for ' + (person?.name ?? 'them') + '. It is on their task list now.');
+      setTitle('');
+      setDescription('');
+      setDue('');
+      onCreated();
+    } catch (e) {
+      setFailure(e instanceof Error ? e.message : 'The task was not set.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!open) {
+    return (
+      <div className="row" style={{ marginTop: 'var(--space-4)', gap: 10 }}>
+        <button type="button" onClick={() => setOpen(true)}>
+          <IconTasks size={15} /> Set a task
+        </button>
+        {message ? <span className="small muted" role="status">{message}</span> : null}
+      </div>
+    );
+  }
+
+  return (
+    <form
+      className="card stack"
+      style={{ marginTop: 'var(--space-4)' }}
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (ready && !saving) void save();
+      }}
+    >
+      <div className="section-head">
+        <h2>Set a task</h2>
+        <span className="spacer" />
+        <button type="button" className="link" onClick={() => setOpen(false)}>
+          Close
+        </button>
+      </div>
+
+      {ownEntity === null ? (
+        <div>
+          <label htmlFor="task-entity">Entity</label>
+          <select id="task-entity" value={entityId} onChange={(e) => setEntityId(e.target.value)}>
+            <option value="">Choose the entity this is about</option>
+            {(portfolio.data ?? [])
+              .slice()
+              .sort((a, b) => a.name.localeCompare(b.name))
+              .map((r) => (
+                <option key={r.entityId} value={r.entityId}>
+                  {r.name}
+                </option>
+              ))}
+          </select>
+        </div>
+      ) : null}
+
+      <div>
+        <label htmlFor="task-assignee">Assign to</label>
+        <select
+          id="task-assignee"
+          value={assignee}
+          disabled={entityId === '' || people.loading}
+          onChange={(e) => setAssignee(e.target.value)}
+        >
+          <option value="">{people.loading ? 'Loading people' : 'Choose a person'}</option>
+          {choices.map((p) => (
+            <option key={p.uid} value={p.uid}>
+              {p.name} ({p.dsac ? 'Department' : 'entity'})
+            </option>
+          ))}
+        </select>
+        {entityId !== '' && !people.loading && choices.length === 0 ? (
+          <p className="small muted">
+            Nobody else has signed in for this entity yet, so there is nobody to assign to.
+          </p>
+        ) : null}
+        {people.error ? <p className="field-error">{people.error}</p> : null}
+      </div>
+
+      <div>
+        <label htmlFor="task-title">What needs doing</label>
+        <input id="task-title" type="text" value={title} maxLength={300} onChange={(e) => setTitle(e.target.value)} />
+      </div>
+
+      <div>
+        <label htmlFor="task-description">Detail (optional)</label>
+        <textarea id="task-description" value={description} maxLength={2000} onChange={(e) => setDescription(e.target.value)} />
+      </div>
+
+      <div>
+        <label htmlFor="task-due">Due (optional)</label>
+        <input id="task-due" type="date" value={due} onChange={(e) => setDue(e.target.value)} />
+      </div>
+
+      {failure ? <p className="field-error" role="alert">{failure}</p> : null}
+      {message ? <p className="small muted" role="status">{message}</p> : null}
+
+      <div className="row" style={{ gap: 10 }}>
+        <button type="submit" disabled={!ready || saving}>
+          {saving ? <IconSpinner size={15} className="spin" /> : <IconCheck size={15} />}
+          Set task
+        </button>
+        <span className="small muted">
+          Marked external automatically when it crosses between the Department and an entity.
+        </span>
+      </div>
+    </form>
   );
 }
