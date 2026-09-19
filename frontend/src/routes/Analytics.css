@@ -1,50 +1,87 @@
-/* Analytics & Insights. Bars carry their figure in text beside them, so nothing here is read
-   from colour alone. */
+/*
+ * Analytics & Insights.
+ *
+ * The chart marks themselves live in Charts.css. What is here is the page around them: the
+ * toolbar, the stacked rows, the sources block, and the print rules that turn this screen into a
+ * committee pack.
+ *
+ * The old bar and outcome-stack classes went with the rebuild. They are gone rather than kept
+ * "in case", because two ways of drawing the same thing on one screen is how two versions of the
+ * same figure end up in front of the same person.
+ */
 
 .an-section { margin-top: var(--space-5); }
-.an-section h2 { margin-bottom: var(--space-2); }
+.an-section h2 { margin-bottom: var(--space-3); }
 
-.an-bar { display: flex; align-items: center; gap: var(--space-2); min-width: 12rem; }
-.an-track {
-  flex: 0 0 6rem;
-  height: 8px;
-  background: var(--rule);
-  border-radius: var(--radius-pill);
-  overflow: hidden;
-}
-.an-fill { display: block; height: 100%; background: var(--brand); border-radius: var(--radius-pill); }
-.an-bar-text { font-size: 0.875rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* ---------- the toolbar ---------- */
 
-.an-outcomes { display: flex; flex-direction: column; gap: var(--space-1); min-width: 12rem; }
-.an-stack {
+.an-tools {
   display: flex;
-  height: 10px;
-  border-radius: var(--radius-pill);
-  overflow: hidden;
-  background: var(--rule);
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
 }
-.an-seg { display: block; height: 100%; }
-.an-seg + .an-seg { border-left: 2px solid var(--surface); }
-.an-o-unqualified { background: var(--band-low); }
-.an-o-unqualified_with_findings { background: var(--teal); }
-.an-o-qualified { background: var(--band-medium); }
-.an-o-adverse { background: var(--band-high); }
-.an-o-disclaimer { background: var(--band-critical); }
-.an-o-outstanding { background: var(--navy-ink); }
+
+/* ---------- stacked rows ---------- */
+
+.an-stacks { display: flex; flex-direction: column; gap: var(--space-3); }
+
+.an-stack-row {
+  display: grid;
+  grid-template-columns: minmax(4.5rem, 6rem) minmax(6rem, 1fr) minmax(0, 1.4fr);
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* The stack in words. Not a caption on the picture: it is the picture's content, and it is what
+   survives greyscale, a screen reader and a photocopier. */
+.an-stack-words { line-height: 1.35; }
+
+.an-stack-row.an-current .viz-row-label { font-weight: 700; }
+
+/* ---------- movement ---------- */
 
 .an-up { color: var(--ok); font-weight: 600; }
 .an-down { color: var(--danger); font-weight: 600; }
 
 tr.an-current td { background: var(--brand-wash); }
 
+/* ---------- notes and sources ---------- */
+
 .an-note {
   display: flex;
   gap: var(--space-2);
   align-items: flex-start;
-  margin: var(--space-3) 0 0;
+  margin: var(--space-4) 0 0;
   font-size: 0.875rem;
   color: var(--ink-muted);
 }
 .an-note svg { flex: 0 0 auto; margin-top: 2px; }
 
+/* Every caveat on the screen, in one place, closed by default. They are all still true and all
+   still load-bearing; what they are not is the first thing an executive needs to read. */
+.an-sources { margin-top: var(--space-5); }
+.an-sources summary { cursor: pointer; font-weight: 600; }
+.an-sources p { font-size: 0.875rem; color: var(--ink-muted); margin: var(--space-3) 0 0; }
+
 .an-section td strong, .an-section td.num { white-space: nowrap; }
+
+@media (max-width: 720px) {
+  .an-stack-row { grid-template-columns: 1fr; gap: var(--space-1); }
+}
+
+/* ---------- print ----------
+   The screen becomes the pack. Controls and the rail go, the cards lose their shadow, and
+   nothing that carries a figure is allowed to break across a page. */
+@media print {
+  .no-print { display: none !important; }
+
+  .card, .an-section {
+    box-shadow: none;
+    border: 1px solid #ccc;
+    break-inside: avoid;
+  }
+  .viz { break-inside: avoid; }
+  .an-sources { display: block; }
+  .an-sources summary { list-style: none; }
+}

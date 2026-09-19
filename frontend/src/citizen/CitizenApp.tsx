@@ -306,6 +306,19 @@ function EntityScreen({ id, t, go, lang }: { id: string; t: T; go: (to: string) 
         )}
       </section>
 
+      {/* The way out of this page. Vuka answers one question about a funded body and raises
+          three it cannot: what is on, how to visit, who runs it. Without this the reader's next
+          step was a search engine. Absent entirely where no address is on record, because a
+          wrong link under a government masthead is worse than no link. */}
+      {e.website ? (
+        <section className="c-site">
+          <a href={e.website} target="_blank" rel="noopener noreferrer external" className="c-btn">
+            {t('page.entity.website', e.name)} <span aria-hidden="true">&#8599;</span>
+          </a>
+          <p className="c-muted small">{t('page.entity.website.note')}</p>
+        </section>
+      ) : null}
+
       <footer className="c-foot">
         <p>
           {e.lastReportedAt

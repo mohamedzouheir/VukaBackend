@@ -16,7 +16,7 @@
  * what did not.
  */
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useAsync } from '../lib/useAsync';
 import { can, useAuth } from '../lib/auth';
@@ -27,7 +27,7 @@ import { useLabels } from '../lib/labels';
 import { RiskBadge, RiskBadgeSkeleton } from '../components/RiskBadge';
 import { RiskPanel } from '../components/RiskPanel';
 import { EmptyState, ErrorState, Loading } from '../components/Shell';
-import { IconChevronRight, IconFilter, IconGauge, IconSpinner } from '../icons';
+import { IconCheckCircle, IconChevronRight, IconFilter, IconGauge, IconSpinner } from '../icons';
 import './ReviewQueue.css';
 
 type Sort = 'risk' | 'entity' | 'received';
@@ -35,6 +35,7 @@ type Sort = 'risk' | 'entity' | 'received';
 export function ReviewQueue() {
   const { me } = useAuth();
   const { t } = useI18n();
+  const done = (useLocation().state as { done?: string } | null)?.done ?? null;
   const portfolio = useAsync(() => api.portfolio(), []);
   const subs = useAsync(() => api.submissions(), []);
   const periods = useAsync(() => api.periods(), []);
@@ -111,6 +112,15 @@ export function ReviewQueue() {
           </button>
         ) : null}
       </div>
+
+      {/* Set by SubmissionReview on its way back here. A reviewer who has just approved or
+          returned something arrives at a list that has one fewer row on it, and without this
+          the only evidence the action landed was its absence. */}
+      {done ? (
+        <p className="queue-done" role="status">
+          <IconCheckCircle size={16} /> {done}
+        </p>
+      ) : null}
 
       {portfolio.loading ? (
         <Loading what={t('review.what')} />

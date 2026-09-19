@@ -39,14 +39,31 @@ and not yet started).
 The bottom of the record says when the entity last reported to the Department. Figures are as
 reported by the entity and reviewed by DSAC, and published with the Department's approval.
 
-## 3. Read it in your language
+## 3. Go to the entity itself
+
+Under the record is a link, **Visit <entity name>**, which opens the entity's own website in a new
+tab.
+
+Vuka holds one thing about a funded body: what it was given and what it reported against it. Once
+you have read that, the next questions — what is on this month, how to visit, who runs it — are
+answered on the entity's own site, not here. The link is there so you do not have to go looking.
+
+Two things to know:
+
+- It is the entity's website, not a government page. DSAC does not control what is published
+  there, and the page says so under the link.
+- Where no address is on record for an entity, there is no link. A wrong link under a government
+  masthead would send you somewhere that is not the entity at all, so Vuka would rather show
+  nothing.
+
+## 4. Read it in your language
 
 At the bottom of every page, under **Language**, choose **English**, **Afrikaans**, **isiZulu**,
 **isiXhosa** or **Sesotho**.
 
 ![The citizen view in isiZulu](img/j5-04-isizulu.png)
 
-## 4. Save data with the light version
+## 5. Save data with the light version
 
 On a slow connection or a small data bundle, tap **Light version, uses less data** at the bottom of
 the page. It shows the same entities and figures as plain text, with no charts. Tap **Full version,

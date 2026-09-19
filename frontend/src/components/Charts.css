@@ -1,0 +1,257 @@
+/*
+ * The chart kit's styles.
+ *
+ * Marks are thin, ends are rounded by 4px and anchored to the baseline, grid and axis lines are
+ * recessive, and every stacked segment carries a 2px gap of surface so two neighbours never read
+ * as one mark. Nothing here uses colour as the only carrier: the text beside each mark is part of
+ * the chart rather than a caption on it.
+ */
+
+.viz {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.viz figcaption { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2); }
+.viz figcaption h3 { margin: 0; font-size: 0.9375rem; }
+.viz figcaption p { margin: 0; flex: 1 1 12rem; }
+.viz-toggle { white-space: nowrap; }
+
+.viz-body { min-height: 0; }
+.viz-table { margin-top: var(--space-2); }
+.viz-table table { font-size: 0.8125rem; }
+
+/* The box every mark is positioned against, and the anchor for the tooltip. */
+.viz-plot { position: relative; }
+
+.viz-tip {
+  position: absolute;
+  transform: translate(-50%, -140%);
+  padding: 4px 8px;
+  background: var(--navy-800);
+  color: #fff;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  line-height: 1.35;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 3;
+  box-shadow: 0 2px 8px rgba(7, 26, 56, 0.25);
+}
+
+/* ---------- legend ---------- */
+
+.viz-legend {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  font-size: 0.8125rem;
+  color: var(--ink-muted);
+}
+.viz-legend li { display: flex; align-items: center; gap: 6px; }
+
+.viz-swatch { width: 12px; height: 12px; border-radius: 3px; flex: none; }
+
+/* Not applicable, not due, not published. Hatched as well as grey, so it survives greyscale
+   and a forced-colours mode where every fill collapses to the same thing. */
+.viz-hatched {
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.85) 0 3px,
+    transparent 3px 6px
+  );
+}
+
+/* ---------- vertical columns ---------- */
+
+.viz-cols {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+  border-bottom: 1px solid var(--rule);
+}
+
+.viz-col {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+  gap: 2px;
+}
+
+.viz-col-note {
+  font-size: 0.6875rem;
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  min-height: 1em;
+}
+
+/* The labels are their own row under the axis line, laid out on the same flex rule as the
+   columns so each one lands under its bar. Inside the plot they had to be pushed down with a
+   transform, which overflowed the box and landed on whatever the card put next. */
+.viz-axis {
+  display: flex;
+  gap: var(--space-2);
+  padding-top: var(--space-1);
+}
+
+.viz-col-label {
+  flex: 1 1 0;
+  min-width: 0;
+  text-align: center;
+  font-size: 0.6875rem;
+  color: var(--ink-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.viz-bar {
+  width: 100%;
+  max-width: 44px;
+  border-radius: 4px 4px 0 0;
+  transition: filter 0.12s ease;
+}
+.viz-bar:hover { filter: brightness(1.12); }
+
+/* The current or under-review period, called out without a second colour. */
+.viz-col-on .viz-col-note { color: var(--ink); font-weight: 600; }
+.viz-col-label.viz-col-on { color: var(--ink); font-weight: 600; }
+
+/* Not audited, not published, nothing filed. Words in the plot where a bar would be, so the gap
+   says what it is instead of reading as a bar of nought. */
+.viz-absent {
+  font-size: 0.6875rem;
+  color: var(--ink-faint);
+  font-style: italic;
+  text-align: center;
+  line-height: 1.2;
+  padding-bottom: 2px;
+}
+.viz-row-value.viz-absent { text-align: right; }
+
+/* ---------- horizontal bars ---------- */
+
+.viz-bars, .viz-dumbbells {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.viz-bars li, .viz-dumbbells li {
+  display: grid;
+  grid-template-columns: minmax(6rem, 10rem) 1fr minmax(4.5rem, auto);
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.viz-row-label {
+  font-size: 0.8125rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.viz-row-value {
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--ink-muted);
+}
+
+.viz-track {
+  position: relative;
+  height: 14px;
+  background: var(--surface-sunk);
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+}
+
+.viz-bar-h {
+  height: 14px;
+  border-radius: 0 4px 4px 0;
+  transition: filter 0.12s ease;
+}
+.viz-bar-h:hover { filter: brightness(1.12); }
+
+/* ---------- stacked bar ---------- */
+
+.viz-stack {
+  display: flex;
+  height: 14px;
+  border-radius: 7px;
+  overflow: hidden;
+  /* The 2px gap between segments is a gap of surface, not a border, so a segment never gains a
+     line that reads as part of the data. */
+  gap: 2px;
+  background: var(--surface);
+}
+.viz-seg { display: block; height: 100%; }
+.viz-seg:first-child { border-radius: 7px 0 0 7px; }
+.viz-seg:last-child { border-radius: 0 7px 7px 0; }
+
+.viz-empty { margin: 0; }
+
+/* ---------- dumbbells ---------- */
+
+.viz-dumbbells .viz-track { height: 18px; }
+
+.viz-link {
+  position: absolute;
+  height: 2px;
+  border-radius: 1px;
+  top: 8px;
+}
+.viz-up { background: var(--ok); }
+.viz-down { background: var(--danger); }
+
+.viz-dot {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  top: 4px;
+  transform: translateX(-5px);
+  /* A 2px ring of surface, so two dots that land on the same point stay two dots. */
+  box-shadow: 0 0 0 2px var(--surface);
+}
+.viz-dot-to { width: 12px; height: 12px; top: 3px; transform: translateX(-6px); }
+
+.viz-up-text { color: var(--ok); }
+.viz-down-text { color: var(--danger); }
+
+/* ---------- layout ---------- */
+
+.viz-pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr));
+  gap: var(--space-5);
+}
+
+@media (max-width: 720px) {
+  .viz-bars li, .viz-dumbbells li { grid-template-columns: minmax(5rem, 7rem) 1fr auto; gap: var(--space-2); }
+  .viz-col-label { font-size: 0.625rem; }
+}
+
+/* A chart printed is a chart in a committee pack. Marks keep their fill, the tooltip goes, and
+   nothing is hidden behind a hover. */
+@media print {
+  .viz-tip, .viz-toggle { display: none !important; }
+  .viz-bar, .viz-bar-h, .viz-seg, .viz-dot, .viz-link {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

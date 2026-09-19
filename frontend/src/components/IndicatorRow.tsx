@@ -378,6 +378,8 @@ interface VerifyProps extends CommonProps {
   onDispute: (targetId: string, comment: string) => void;
   disputed: boolean;
   disputeComment: string;
+  /** True where this dispute is already on the record, so it cannot be taken back here. */
+  alreadySent?: boolean;
   disabled?: boolean;
 }
 
@@ -387,10 +389,15 @@ export function IndicatorRowVerify({
   onDispute,
   disputed,
   disputeComment,
+  alreadySent,
   disabled,
 }: VerifyProps) {
   const { t } = useI18n();
-  const [open, setOpen] = useState(disputed);
+  /* The row has three states, not two, and conflating the last two was the defect: after
+     Mark disputed the form stayed open with the same button on it, so nothing said the mark
+     had taken and clicking again did nothing visible. Marking now closes the form and the row
+     reads back the reason it will send. */
+  const [editing, setEditing] = useState(false);
   const [comment, setComment] = useState(disputeComment);
   const commentId = 'dispute-' + row.targetId;
 
@@ -477,13 +484,7 @@ export function IndicatorRowVerify({
       {/* There is no edit control on this row and that is the thing to point at during the
           demo. A reviewer can dispute, comment and return. She cannot change what the
           entity reported, and neither can anyone else, because the endpoint does not exist. */}
-      {!open ? (
-        <div className="ind-actions">
-          <button type="button" disabled={disabled} onClick={() => setOpen(true)}>
-            <IconComment size={16} /> {t('review.disputeFigure')}
-          </button>
-        </div>
-      ) : (
+      {editing ? (
         <div className="ind-dispute">
           <label htmlFor={commentId}>
             {t('ind.disputeReason')}
@@ -492,6 +493,7 @@ export function IndicatorRowVerify({
             id={commentId}
             value={comment}
             disabled={disabled}
+            autoFocus
             onChange={(e) => setComment(e.target.value)}
           />
           <div className="row">
@@ -499,22 +501,64 @@ export function IndicatorRowVerify({
               type="button"
               className="primary"
               disabled={disabled || comment.trim() === ''}
-              onClick={() => onDispute(row.targetId, comment.trim())}
+              onClick={() => {
+                onDispute(row.targetId, comment.trim());
+                setEditing(false);
+              }}
             >
-              <IconCheck size={16} /> {t('review.markDisputed')}
+              <IconCheck size={16} />{' '}
+              {disputed ? t('review.saveReason') : t('review.markDisputed')}
             </button>
             <button
               type="button"
-              onClick={() => {
-                setOpen(false);
-                setComment('');
-                onDispute(row.targetId, '');
-              }}
               disabled={disabled}
+              onClick={() => {
+                // Cancelling an edit of an existing dispute puts the saved reason back rather
+                // than dropping the dispute. Only cancelling a new one clears it.
+                setComment(disputeComment);
+                setEditing(false);
+              }}
             >
-              Cancel
+              {t('common.cancel')}
             </button>
           </div>
+        </div>
+      ) : disputed ? (
+        <div className="ind-disputed-note">
+          <p className="ind-note ind-note-warn">
+            <IconComment size={15} />
+            <span>
+              <strong>{alreadySent ? t('review.disputeSent') : t('review.disputeMarked')}</strong>{' '}
+              {disputeComment || comment || t('review.disputeNoReason')}
+            </span>
+          </p>
+          <p className="small muted">
+            {alreadySent ? t('review.disputeSentNote') : t('review.disputeStagedNote')}
+          </p>
+          {alreadySent ? null : (
+            <div className="row">
+              <button type="button" disabled={disabled} onClick={() => { setComment(disputeComment); setEditing(true); }}>
+                {t('review.editReason')}
+              </button>
+              <button
+                type="button"
+                className="link"
+                disabled={disabled}
+                onClick={() => {
+                  setComment('');
+                  onDispute(row.targetId, '');
+                }}
+              >
+                {t('review.undoDispute')}
+              </button>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="ind-actions">
+          <button type="button" disabled={disabled} onClick={() => { setComment(disputeComment); setEditing(true); }}>
+            <IconComment size={16} /> {t('review.disputeFigure')}
+          </button>
         </div>
       )}
     </div>

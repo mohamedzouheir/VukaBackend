@@ -19,32 +19,40 @@
 # publiclyVisible is a departmental decision, not ours. It is set false for every entity here
 # and DSAC turns it on. See PublicationService.
 #
-shortName,name,pfmaSchedule,sector,sizeBand,alloc2023_24,alloc2024_25,alloc2025_26,alloc2026_27,publiclyVisible
-Artscape,Artscape,SCHEDULE_3A,ARTS,MEDIUM,72958,70071,78605,73801,false
-SAST,The South African State Theatre,SCHEDULE_3A,ARTS,MEDIUM,79766,76939,86988,83371,false
-Playhouse,The Playhouse Company,SCHEDULE_3A,ARTS,MEDIUM,55405,61142,64866,57121,false
-PACOFS,Performing Arts Centre of the Free State,SCHEDULE_3A,ARTS,MEDIUM,52242,59139,61793,54663,false
-MarketTheatre,Market Theatre Foundation,SCHEDULE_3A,ARTS,MEDIUM,56706,59215,63987,57445,false
-MandelaBay,Mandela Bay Theatre Complex,SCHEDULE_3A,ARTS,SMALL,23000,35516,50147,35876,false
-NAC,National Arts Council of South Africa,SCHEDULE_3A,ARTS,LARGE,313487,262443,244654,297212,false
-NFVF,National Film and Video Foundation,SCHEDULE_3A,ARTS,LARGE,331983,310510,383707,338047,false
-Ditsong,Ditsong Museums of South Africa,SCHEDULE_3A,HERITAGE,LARGE,109976,114831,123976,124346,false
-NatMuseum,National Museum Bloemfontein,SCHEDULE_3A,HERITAGE,MEDIUM,63331,63909,67646,69519,false
-Amazwi,Amazwi South African Museum of Literature,SCHEDULE_3A,HERITAGE,SMALL,19227,18476,21377,16909,false
-RobbenIsland,Robben Island Museum,SCHEDULE_3A,HERITAGE,MEDIUM,92458,88970,100024,96799,false
-FreedomPark,Freedom Park,SCHEDULE_3A,HERITAGE,MEDIUM,105341,110973,115393,114075,false
-NelsonMandelaMuseum,Nelson Mandela Museum,SCHEDULE_3A,HERITAGE,SMALL,46046,35130,42973,38189,false
-KZNMuseum,KwaZulu-Natal Museum,SCHEDULE_3A,HERITAGE,SMALL,46306,43750,45522,46461,false
-uMsunduzi,uMsunduzi Museum,SCHEDULE_3A,HERITAGE,SMALL,27613,23991,31423,25998,false
-WHAG,William Humphreys Art Gallery,SCHEDULE_3A,HERITAGE,SMALL,12454,11931,12464,13007,false
-WarMuseum,War Museum of the Boer Republics,SCHEDULE_3A,HERITAGE,SMALL,28754,19526,18976,18907,false
-Iziko,Iziko Museums of South Africa,SCHEDULE_3A,HERITAGE,MEDIUM,128003,108759,117583,110607,false
-Luthuli,Luthuli Museum,SCHEDULE_3A,HERITAGE,SMALL,17689,17814,18601,19369,false
-Taalmuseum,Die Afrikaanse Taalmuseum en -monument,SCHEDULE_3A,LANGUAGE,SMALL,16182,13453,19650,13345,false
-SAHRA,South African Heritage Resources Agency,SCHEDULE_3A,HERITAGE,MEDIUM,73718,79459,75762,74953,false
-NHC,National Heritage Council of South Africa,SCHEDULE_3A,HERITAGE,MEDIUM,136301,99217,100657,107683,false
-NLSA,National Library of South Africa,SCHEDULE_3A,LIBRARIES,LARGE,127953,128820,132999,137898,false
-SALB,South African Library for the Blind,SCHEDULE_3A,LIBRARIES,SMALL,43888,37494,38539,39220,false
-PanSALB,Pan South African Language Board,SCHEDULE_1,LANGUAGE,LARGE,119716,127399,131714,139212,false
-SAIDS,South African Institute for Drug-Free Sport,SCHEDULE_3A,SPORT,SMALL,31281,29775,31009,32274,false
-BoxingSA,Boxing South Africa,SCHEDULE_3A,SPORT,SMALL,24463,19971,20731,21523,false
+# website is each body's own public site, shown to citizens who want more than the figures
+# Vuka holds. It is the one column in this file that is NOT taken from a published Treasury or
+# Auditor-General document: it was written from general knowledge of these entities and every
+# URL must be checked against the entity's own letterhead before this surface is published.
+# A wrong link here sends a citizen looking for a national museum to somebody else's domain,
+# which is a worse defect than a blank cell. Leave the cell empty rather than guess: the
+# citizen page omits the link where there is none.
+#
+shortName,name,pfmaSchedule,sector,sizeBand,alloc2023_24,alloc2024_25,alloc2025_26,alloc2026_27,publiclyVisible,website
+Artscape,Artscape,SCHEDULE_3A,ARTS,MEDIUM,72958,70071,78605,73801,false,https://www.artscape.co.za
+SAST,The South African State Theatre,SCHEDULE_3A,ARTS,MEDIUM,79766,76939,86988,83371,false,https://www.statetheatre.co.za
+Playhouse,The Playhouse Company,SCHEDULE_3A,ARTS,MEDIUM,55405,61142,64866,57121,false,https://www.playhousecompany.com
+PACOFS,Performing Arts Centre of the Free State,SCHEDULE_3A,ARTS,MEDIUM,52242,59139,61793,54663,false,https://www.pacofs.co.za
+MarketTheatre,Market Theatre Foundation,SCHEDULE_3A,ARTS,MEDIUM,56706,59215,63987,57445,false,https://markettheatre.co.za
+MandelaBay,Mandela Bay Theatre Complex,SCHEDULE_3A,ARTS,SMALL,23000,35516,50147,35876,false,https://www.mbtc.co.za
+NAC,National Arts Council of South Africa,SCHEDULE_3A,ARTS,LARGE,313487,262443,244654,297212,false,https://www.nac.org.za
+NFVF,National Film and Video Foundation,SCHEDULE_3A,ARTS,LARGE,331983,310510,383707,338047,false,https://www.nfvf.co.za
+Ditsong,Ditsong Museums of South Africa,SCHEDULE_3A,HERITAGE,LARGE,109976,114831,123976,124346,false,https://ditsong.org.za
+NatMuseum,National Museum Bloemfontein,SCHEDULE_3A,HERITAGE,MEDIUM,63331,63909,67646,69519,false,https://www.nasmus.co.za
+Amazwi,Amazwi South African Museum of Literature,SCHEDULE_3A,HERITAGE,SMALL,19227,18476,21377,16909,false,https://www.amazwi.museum
+RobbenIsland,Robben Island Museum,SCHEDULE_3A,HERITAGE,MEDIUM,92458,88970,100024,96799,false,https://www.robben-island.org.za
+FreedomPark,Freedom Park,SCHEDULE_3A,HERITAGE,MEDIUM,105341,110973,115393,114075,false,https://www.freedompark.co.za
+NelsonMandelaMuseum,Nelson Mandela Museum,SCHEDULE_3A,HERITAGE,SMALL,46046,35130,42973,38189,false,https://www.nelsonmandelamuseum.org.za
+KZNMuseum,KwaZulu-Natal Museum,SCHEDULE_3A,HERITAGE,SMALL,46306,43750,45522,46461,false,https://www.nmsa.org.za
+uMsunduzi,uMsunduzi Museum,SCHEDULE_3A,HERITAGE,SMALL,27613,23991,31423,25998,false,https://www.msunduzimuseum.org.za
+WHAG,William Humphreys Art Gallery,SCHEDULE_3A,HERITAGE,SMALL,12454,11931,12464,13007,false,https://www.whag.co.za
+WarMuseum,War Museum of the Boer Republics,SCHEDULE_3A,HERITAGE,SMALL,28754,19526,18976,18907,false,https://www.wmbr.org.za
+Iziko,Iziko Museums of South Africa,SCHEDULE_3A,HERITAGE,MEDIUM,128003,108759,117583,110607,false,https://www.iziko.org.za
+Luthuli,Luthuli Museum,SCHEDULE_3A,HERITAGE,SMALL,17689,17814,18601,19369,false,https://www.luthulimuseum.org.za
+Taalmuseum,Die Afrikaanse Taalmuseum en -monument,SCHEDULE_3A,LANGUAGE,SMALL,16182,13453,19650,13345,false,https://www.taalmuseum.co.za
+SAHRA,South African Heritage Resources Agency,SCHEDULE_3A,HERITAGE,MEDIUM,73718,79459,75762,74953,false,https://www.sahra.org.za
+NHC,National Heritage Council of South Africa,SCHEDULE_3A,HERITAGE,MEDIUM,136301,99217,100657,107683,false,https://www.nhc.org.za
+NLSA,National Library of South Africa,SCHEDULE_3A,LIBRARIES,LARGE,127953,128820,132999,137898,false,https://www.nlsa.ac.za
+SALB,South African Library for the Blind,SCHEDULE_3A,LIBRARIES,SMALL,43888,37494,38539,39220,false,https://www.salb.org.za
+PanSALB,Pan South African Language Board,SCHEDULE_1,LANGUAGE,LARGE,119716,127399,131714,139212,false,https://www.pansalb.org
+SAIDS,South African Institute for Drug-Free Sport,SCHEDULE_3A,SPORT,SMALL,31281,29775,31009,32274,false,https://www.drugfreesport.org.za
+BoxingSA,Boxing South Africa,SCHEDULE_3A,SPORT,SMALL,24463,19971,20731,21523,false,https://www.boxingsa.co.za

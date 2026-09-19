@@ -18,9 +18,11 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useAsync } from '../lib/useAsync';
 import { useLiveComments } from '../lib/useLiveComments';
+import { isQueued } from '../lib/offline';
 import { CommentPanel } from '../components/CommentPanel';
 import { date, dateTime, num } from '../lib/format';
 import { useI18n } from '../lib/i18n';
+import { useLabels } from '../lib/labels';
 import { IndicatorRowSkeleton, IndicatorRowVerify } from '../components/IndicatorRow';
 import { RiskBadge } from '../components/RiskBadge';
 import { RiskPanel } from '../components/RiskPanel';
@@ -33,6 +35,7 @@ import './SubmissionReview.css';
 
 export function SubmissionReview() {
   const { t } = useI18n();
+  const labels = useLabels();
   const { submissionId } = useParams<{ submissionId: string }>();
   const navigate = useNavigate();
 
@@ -74,11 +77,24 @@ export function SubmissionReview() {
         num(disputedIds.length) +
           (disputedIds.length === 1 ? ' figure disputed.' : ' figures disputed.') +
           ' See the comment against each target.';
-      await api.review(submissionId!, false, reason);
+      const res = await api.review(submissionId!, false, reason);
       setReturnModal(false);
-      navigate('/review');
+      // The disputes have left this screen either way: sent, or waiting in the outbox in
+      // order. Clearing them stops a second return sending the same comments twice.
+      setDisputes({});
+      setOverall('');
+      navigate('/review', {
+        state: {
+          done: isQueued(res)
+            ? t('sr.doneReturnQueued')
+            : disputedIds.length === 1
+              ? t('sr.doneReturnedOne')
+              : t('sr.doneReturned', num(disputedIds.length) ?? ''),
+        },
+      });
     } catch (e) {
-      setError(e instanceof Error ? e.message : t('sr.notReturned'));
+      setReturnModal(false);
+      setError(e instanceof Error ? e.message : t('sr.notReturnedNothingSent'));
     } finally {
       setBusy(false);
     }
@@ -88,11 +104,18 @@ export function SubmissionReview() {
     setBusy(true);
     setError(null);
     try {
-      await api.review(submissionId!, true);
+      const res = await api.review(submissionId!, true);
       setApproveModal(false);
-      navigate('/review');
+      navigate('/review', {
+        state: {
+          done: isQueued(res)
+            ? t('sr.doneApproveQueued')
+            : t('sr.doneApproved', detail.data?.entity.name ?? t('common.submission')),
+        },
+      });
     } catch (e) {
-      setError(e instanceof Error ? e.message : t('sr.notApproved'));
+      setApproveModal(false);
+      setError(e instanceof Error ? e.message : t('sr.notApprovedNothingChanged'));
     } finally {
       setBusy(false);
     }
@@ -193,6 +216,9 @@ export function SubmissionReview() {
           disabled={closed}
           disputed={(disputes[row.targetId] ?? '').trim() !== '' || row.disputed}
           disputeComment={disputes[row.targetId] ?? row.disputeComment ?? ''}
+          // Already on the record, so it cannot be undone from here: it went when the period
+          // was last returned. Only a mark staged on this screen is still the reviewer's to take back.
+          alreadySent={row.disputed && (disputes[row.targetId] ?? '').trim() === ''}
           onDispute={(targetId, comment) =>
             setDisputes((m) => {
               const next = { ...m };
@@ -204,17 +230,29 @@ export function SubmissionReview() {
         />
       ))}
 
+      {/* One decision, and only one button carries it.
+          A reviewer leaving this screen is either sending it back or signing it off, and which
+          of the two is decided by whether anything above is marked. Showing both as equal
+          controls and greying one out made the reviewer work out the rule for herself on every
+          submission; the footer now states it in a sentence and offers the action that follows
+          from what she has already done. */}
       {rows.length > 0 ? (
         <div className="card sr-foot">
-          <div className="row">
-            <strong>
-              {disputedIds.length === 0
-                ? t('review.noFiguresDisputed')
+          {/* The sentence that says which of the two decisions this submission is now at. It
+              sits above the button rather than under it, because it is what the button means. */}
+          <p className="sr-next">
+            {closed
+              ? d.submission.status === 'DRAFT'
+                ? t('sr.nextDraft')
+                : t('sr.nextClosed', labels.status(d.submission.status).toLowerCase())
+              : disputedIds.length === 0
+                ? t('sr.nextNothingMarked', num(rows.length) ?? '')
                 : disputedIds.length === 1
-                  ? t('sr.oneFigureDisputed')
-                  : t('sr.figuresDisputed', num(disputedIds.length) ?? '')}
-            </strong>
-            <span className="spacer" />
+                  ? t('sr.nextOneMarked')
+                  : t('sr.nextMarked', num(disputedIds.length) ?? '')}
+          </p>
+
+          <div className="row">
             <a
               className="btn"
               href={api.exportUrl(d.submission.submissionId, 'full.csv')}
@@ -228,29 +266,37 @@ export function SubmissionReview() {
             >
               <IconDownload size={16} /> {t('sr.exportProvenance')}
             </a>
-            <button
-              type="button"
-              disabled={closed || busy || disputedIds.length === 0}
-              onClick={() => setReturnModal(true)}
-            >
-              <IconReturn size={16} /> {t('review.returnWithComments')}
-            </button>
-            <button
-              type="button"
-              className="primary"
-              disabled={closed || busy || disputedIds.length > 0}
-              onClick={() => setApproveModal(true)}
-            >
-              <IconCheckCircle size={16} /> {t('review.approve')}
-            </button>
+            <span className="spacer" />
+            {/* One decision, and only one button carries it. A reviewer leaving this screen is
+                either sending it back or signing it off, and which of the two is decided by
+                whether anything above is marked. Showing both as equal controls and greying one
+                out made the reviewer work out the rule on every submission. */}
+            {disputedIds.length > 0 ? (
+              <button
+                type="button"
+                className="primary"
+                disabled={closed || busy}
+                onClick={() => setReturnModal(true)}
+              >
+                <IconReturn size={16} />{' '}
+                {disputedIds.length === 1
+                  ? t('sr.returnOneFigure')
+                  : t('sr.returnNFigures', num(disputedIds.length) ?? '')}
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="primary"
+                disabled={closed || busy}
+                onClick={() => setApproveModal(true)}
+              >
+                <IconCheckCircle size={16} /> {t('sr.approveAll', num(rows.length) ?? '')}
+              </button>
+            )}
           </div>
 
           <p className="small muted" style={{ marginTop: 'var(--space-2)' }}>
-            {d.submission.status === 'DRAFT'
-              ? t('sr.draftNote')
-              : disputedIds.length > 0
-                ? t('review.returningNote')
-                : t('review.noEditControl')}
+            {t('review.noEditControl')}
           </p>
         </div>
       ) : null}

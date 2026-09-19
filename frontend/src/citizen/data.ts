@@ -12,6 +12,8 @@ export interface CitizenEntity {
   name: string;
   sector: string;
   mandate: string | null;
+  /** The entity's own public website, or null where none is on record. */
+  website: string | null;
   financialYearLabel: string;
   totalAllocation: number;
   targetsCommitted: number;

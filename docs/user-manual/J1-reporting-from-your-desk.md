@@ -72,7 +72,8 @@ Each target has its own row.
 3. **attach**, for step 5.
 
 Most rows need nothing from you. Vuka stops you on three kinds of row, and each one says what it
-needs.
+needs. (In the demonstration data there is exactly one such row, so the screen can be walked in a
+minute; a real file usually has a few.)
 
 **A value that is not a number.** The cell held text such as "approx 8". Type the number into
 **Reported figure**, or tick **No result this quarter, because** and give the reason.
@@ -121,8 +122,13 @@ figure with nothing attached shows to the Department as **unverifiable**.
 
 ## 6. Confirm your figures
 
-Confirm one row at a time with its **Confirm** button, or all ready rows at once with
-**Confirm N remaining** at the bottom of the page.
+Confirm one row at a time with its **Confirm** button, or every row that is ready at once with the
+button at the bottom of the page. That button reads **Confirm all *n*** while every outstanding row
+is ready, and **Confirm *n* ready** while some still need a figure or a reason.
+
+Only one of the two buttons at the bottom is the next step at any moment, and it is the highlighted
+one. While figures are outstanding, that is the bulk confirm. Once nothing is outstanding, it
+becomes **Submit to the Department**.
 
 Vuka shows every figure you are about to confirm, with the cell it came from.
 
