@@ -224,6 +224,11 @@ a:focus-visible, button:focus-visible, input:focus-visible {
 .c-table td { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
 
 .c-back { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; margin-top: 8px; font-weight: 600; text-decoration: none; }
+/* The link off the page to the entity's own site. A control rather than body text, because it
+   is the one thing here a reader is likely to want to tap. */
+.c-site { margin-top: 20px; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.c-site .c-btn { text-decoration: none; }
+
 .c-foot { margin-top: 20px; font-size: 14px; color: var(--c-muted); }
 .c-foot p { margin: 0 0 10px; }
 

@@ -92,14 +92,29 @@ export function Modal({
   const { t } = useI18n();
   const close = useRef<HTMLButtonElement>(null);
 
+  /* onClose is an inline arrow at every call site, so it is a different function on every render
+     of the screen behind the modal. Held in a ref, the Escape listener reads the current one
+     without the effect that installs it depending on its identity.
+
+     That dependency was a real defect rather than a tidiness point. The same effect also moved
+     focus, so every keystroke in a textarea inside a modal re-ran it and threw focus onto the
+     close button: a reviewer could type exactly one character of a return note at a time before
+     having to click back into the box. Focus now moves once, when the modal opens, which is the
+     only moment it should. */
+  const latestClose = useRef(onClose);
+  latestClose.current = onClose;
+
   useEffect(() => {
     close.current?.focus();
+  }, []);
+
+  useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') latestClose.current();
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  }, []);
 
   return (
     <div className="panel-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>

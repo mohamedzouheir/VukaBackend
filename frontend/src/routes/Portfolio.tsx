@@ -20,7 +20,8 @@ import { useLabels } from '../lib/labels';
 import { RiskPanel } from '../components/RiskPanel';
 import { EmptyState, ErrorState, Loading, Tile } from '../components/Shell';
 import { PageHead } from '../components/AppShell';
-import { IconFilter, IconGauge, IconInfo } from '../icons';
+import { AskVuka } from '../components/AskVuka';
+import { IconChart, IconFilter, IconGauge, IconHelp, IconInfo } from '../icons';
 import './Portfolio.css';
 
 const SECTORS: Sector[] = ['ARTS', 'HERITAGE', 'LIBRARIES', 'SPORT', 'LANGUAGE', 'OTHER'];
@@ -34,6 +35,7 @@ export function Portfolio() {
 
   const [sector, setSector] = useState<Sector | null>(null);
   const [explain, setExplain] = useState<PortfolioRow | null>(null);
+  const [asking, setAsking] = useState(false);
 
   const period = useMemo(() => reviewPeriod(periods.data), [periods.data]);
 
@@ -93,6 +95,18 @@ export function Portfolio() {
         title={t('pf.title')}
         subtitle={(period ? period.label : t('review.noOpenPeriod')) + '. ' + t('pf.sub')}
       />
+
+      {/* On the executive's home as well as on Analytics. This is the screen they are on when
+          somebody in the room asks a question, and making them navigate to Analytics first is
+          the difference between using it and guessing. */}
+      <div className="po-tools">
+        <button type="button" onClick={() => setAsking(true)}>
+          <IconHelp size={16} /> {t('ask.open')}
+        </button>
+        <Link className="btn" to="/analytics">
+          <IconChart size={16} /> {t('pf.toAnalytics')}
+        </Link>
+      </div>
 
       {/* Counts first. */}
       <div className="tiles">
@@ -260,6 +274,8 @@ export function Portfolio() {
       {explain ? (
         <RiskPanel risk={explain} entityName={explain.name} onClose={() => setExplain(null)} />
       ) : null}
+
+      {asking ? <AskVuka onClose={() => setAsking(false)} /> : null}
     </div>
   );
 }

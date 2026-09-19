@@ -229,3 +229,16 @@ export const IconTrend = (p: Props) => (
 export const IconPlus = (p: Props) => (
   <Icon {...p}><path d="M12 5v14" /><path d="M5 12h14" /></Icon>
 );
+
+/** A bound Microsoft drive: the cloud a document mirrors to. */
+export const IconCloud = (p: Props) => (
+  <Icon {...p}><path d="M7 18h10a4 4 0 0 0 .5-7.97 5.5 5.5 0 0 0-10.86-1.03A4 4 0 0 0 7 18Z" /></Icon>
+);
+
+/** A sync or re-check action. */
+export const IconRefresh = (p: Props) => (
+  <Icon {...p}>
+    <path d="M4.5 4.5v5h5" /><path d="M19.5 19.5v-5h-5" />
+    <path d="M5.3 9A7.5 7.5 0 0 1 19 12" /><path d="M18.7 15A7.5 7.5 0 0 1 5 12" />
+  </Icon>
+);

@@ -11,7 +11,7 @@ import type {
   ChainView, CommentView, EntityDetail, ExtractionView, IndicatorRowView, MeView,
   ParseReport, PeerComparison, PeriodView, PortfolioRow, SubmissionDetail, SubmissionRow,
   AuditPage, UnitCostView, WorkspaceDocument, WorkspaceTask, TaskPerson, NewTask, AdminEntityRow,
-  IssuedReporter, AnalyticsView,
+  IssuedReporter, AnalyticsView, MicrosoftBindResult, MicrosoftWebhookResult, MicrosoftSyncResult,
 } from './types';
 import { copyOf, enqueue, keep, reachable, registerSender, type Queued } from './offline';
 
@@ -132,10 +132,15 @@ async function network<T>(path: string, init: RequestInit): Promise<T> {
 async function failureMessage(res: Response): Promise<string> {
   const text = await res.text().catch(() => '');
   try {
-    const body = JSON.parse(text) as { message?: unknown };
-    if (res.status < 500 && typeof body.message === 'string' && body.message.trim() !== '') {
-      return body.message;
-    }
+    // Most controllers write a refusal under "message"; WorkspaceController and a few others
+    // write it under "error" instead. Both are a sentence meant for the screen, so both are shown.
+    const body = JSON.parse(text) as { message?: unknown; error?: unknown };
+    const said = typeof body.message === 'string' && body.message.trim() !== ''
+      ? body.message
+      : typeof body.error === 'string' && body.error.trim() !== ''
+        ? body.error
+        : null;
+    if (res.status < 500 && said) return said;
   } catch {
     // Not JSON. Fall through to the plain sentence.
   }
@@ -430,6 +435,30 @@ export const api = {
 
   /** Whether a Microsoft tenant is actually bound, so the screen can say so rather than guess. */
   microsoftStatus: () => request<Record<string, unknown>>('/api/workspace/microsoft/status'),
+
+  /**
+   * Binds an entity's workspace to a SharePoint drive: either a driveId directly, or a site
+   * addressed the way an administrator has it in front of them, a hostname and a path.
+   */
+  bindMicrosoft: (
+    entityId: string,
+    body: { driveId?: string | null; siteHostname?: string | null; sitePath?: string | null; folderPath?: string | null },
+  ) =>
+    request<MicrosoftBindResult>('/api/workspace/entity/' + entityId + '/microsoft/bind', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+
+  /** Sets, or with null clears, the Teams channel the deadline countdown posts into. */
+  setMicrosoftWebhook: (entityId: string, webhookUrl: string | null) =>
+    request<MicrosoftWebhookResult>('/api/workspace/entity/' + entityId + '/microsoft/teams-webhook', {
+      method: 'POST',
+      body: JSON.stringify({ webhookUrl }),
+    }),
+
+  /** Runs a delta poll now rather than waiting for the timer. */
+  syncMicrosoftNow: (entityId: string) =>
+    request<MicrosoftSyncResult>('/api/workspace/entity/' + entityId + '/microsoft/sync', { method: 'POST' }),
 
   /* ---------- audit trail ---------- */
 

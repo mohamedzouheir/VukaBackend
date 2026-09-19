@@ -267,6 +267,30 @@ shows no "not filed" count. There is no monthly series and no document view coun
 records either. `AnalyticsServiceTest` holds the matched-cohort arithmetic and the latest-row rule
 for corrected figures.
 
+The screen draws those series rather than tabulating them (`components/Charts.tsx`: inline SVG and
+CSS, no chart library), with **Show the figures** beside every picture opening the exact table it
+was drawn from. Money and delivery are always two charts and never one with two scales. The palette
+was run through a colour-blindness and contrast validator against this surface rather than chosen
+by eye, which is why sector identity is carried by the axis label and one hue instead of by six
+colours: no six-way categorical set passes. A year with no audited figure draws no bar and says
+why. **Download as CSV** builds the whole view client side in screen order, with a blank cell
+meaning not published or not yet due and the file saying so; **Print or save as PDF** lays the
+screen out as a committee pack.
+
+**Ask Vuka** (`components/AskVuka.tsx`, on Analytics and on the Portfolio) takes a typed question
+and answers it from the same figures those screens are drawn from. There is no language model
+behind it and nothing leaves the building: it matches the question against a fixed set this product
+can answer, naming an entity beats every general question, and where it matches nothing it says so
+and lists what it can take. Every answer carries its source and a link to the screen that shows the
+working. That is the design rather than a shortcut, because an executive quoting a figure in a
+portfolio committee has to be able to defend where it came from.
+
+All of it is translated into the same five languages as the rest of the interface, including the
+headers of the CSV: an export is a document somebody hands to somebody else, so a reader who chose
+isiZulu is not handed an English spreadsheet. Ask Vuka carries its trigger words per language rather
+than matching English stems against a question typed in Sesotho, with the English triggers kept in
+every language so a bilingual user can type whichever word comes first.
+
 A refusal is told apart from a missing sign in, and says why:
 
 - `/api/**`: 401 JSON when not signed in, 403 JSON naming the caller's role and listing what it
@@ -374,6 +398,16 @@ Missing a target is not one of them.
 **Publication is a departmental decision.** Nothing reaches the citizen view unless DSAC sets
 `publicly_visible` on the entity. The system makes publication a switch, not a project, and does
 not make the call. Every seeded entity ships with it false.
+
+**The citizen page has a way out of it.** Both citizen views carry a link to the entity's own
+website, in all five languages. Vuka holds one thing about a funded body, what it was given and
+what it reported against it, and a reader who has taken that in wants to know what is on and how to
+visit, which is not here. The address comes from `public_entity.website`, loaded from
+`data/dsac-entities.csv`. Where none is on record there is no link, because a wrong address on a
+named national institution sends a reader to somebody else's domain under a government masthead.
+**That column is the only one in the reference file not taken from a published Treasury or
+Auditor-General document**, so every URL in it must be checked against the entity's own letterhead
+before this surface is published anywhere real.
 
 ### The risk engine
 

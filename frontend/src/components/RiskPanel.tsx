@@ -42,15 +42,20 @@ export function RiskPanel({ risk, entityName, computedAt, loading, error, onClos
   const panel = useRef<HTMLDivElement>(null);
   const closeButton = useRef<HTMLButtonElement>(null);
 
-  // Escape closes, and focus starts inside the panel rather than behind it.
+  // Escape closes, and focus starts inside the panel rather than behind it. Focus moves once,
+  // on open: an effect that both moves focus and depends on an inline onClose re-runs on every
+  // render of the screen behind it, which steals focus mid-keystroke. See Modal in Shell.tsx.
+  const latestClose = useRef(onClose);
+  latestClose.current = onClose;
+
   useEffect(() => {
     closeButton.current?.focus();
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') latestClose.current();
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  }, []);
 
   const signals = risk?.signals ?? [];
   // Ordered by the published weight rather than by contribution, so the panel reads the

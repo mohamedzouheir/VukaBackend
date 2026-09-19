@@ -456,6 +456,10 @@ export function ExtractionReview() {
         </div>
       ) : null}
 
+      {/* Two buttons, and which of them is the next step is never both at once. While figures
+          are outstanding the bulk confirm is the primary and Submit is greyed; once nothing is
+          outstanding they swap. A reporter who has just uploaded a file should not have to work
+          out which of two equally weighted buttons applies to them. */}
       {!locked && rows.length > 0 ? (
         <div className="card er-foot">
           <div className="row">
@@ -465,15 +469,19 @@ export function ExtractionReview() {
             <span className="spacer" />
             <button
               type="button"
+              className={outstanding.length > 0 && readyForBulk.length > 0 ? 'primary' : ''}
               disabled={busy || readyForBulk.length === 0}
               onClick={() => setConfirmModal({ rows: readyForBulk })}
               title={t('er.bulkTitle')}
             >
-              <IconCheck size={16} /> {t('er.confirmRemaining', num(readyForBulk.length) ?? '')}
+              <IconCheck size={16} />{' '}
+              {readyForBulk.length === outstanding.length && outstanding.length > 1
+                ? t('er.confirmAll', num(readyForBulk.length) ?? '')
+                : t('er.confirmReady', num(readyForBulk.length) ?? '')}
             </button>
             <button
               type="button"
-              className="primary"
+              className={outstanding.length === 0 ? 'primary' : ''}
               disabled={busy || outstanding.length > 0}
               onClick={() => setSubmitModal(true)}
             >

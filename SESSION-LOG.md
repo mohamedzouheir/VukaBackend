@@ -4,7 +4,7 @@ A record of what was decided, what was checked, what changed and what is still o
 somebody who was not in the session can pick the project up, and so we can defend any of it in the
 judging room.
 
-Last updated: 18 September 2026, after merging that work and rebuilding the interface.
+Last updated: 19 September 2026, after a pass over the four user flows.
 
 ---
 
@@ -888,10 +888,175 @@ not before the merge either: they are thrown outside any component, where the tr
 cannot reach, and reach the screen as English. The same holds for the offline outbox, which stores
 each change's description in the language it was made in. Fixing either means the library layer
 raising keys and arguments rather than sentences. It is listed in section 13.
+## 13. A pass over the four user flows
+
+Asked for: go through each user flow and take the decisions out of it. Four specific changes came
+with the request, one per role. All four are done, and three of them turned out to be sitting on
+defects rather than on preferences.
+
+### How this work reached the branch twice
+
+Worth recording, because the recovery is the useful part. This work was first written against
+`fd19ba9`, committed as two commits, and then lost to a `git reset --hard origin/mo` that moved the
+branch onto `92c60c5`, which carried the language work in section 12. The commits survived in the
+reflog, so nothing was retyped: they were saved to the branch `rescue/ui-overhaul` and the tag
+`rescue-ui-overhaul`, a patch of only the paths this work owns was taken from them, and that was
+replayed onto the new base with a three-way merge. Six files conflicted and were resolved by hand.
+
+Two things came out of doing it that way rather than redoing it. The patch deliberately excluded
+`icons/index.tsx`, `lib/api.ts`, `lib/types.ts`, `routes/Documents.tsx` and `routes/EntityAdmin.tsx`,
+which were somebody else's uncommitted Microsoft workspace changes that the first commit had swept
+up; they stayed on the branch untouched. And the replay landed on a base where every screen had been
+externalised into `lib/i18n/`, so the English strings this work had introduced would have been a
+visible regression in four languages. They were keyed instead. That is the next subsection.
+
+### Everything here is translated
+
+185 new keys across all five dictionaries, covering the rebuilt Analytics screen, the chart kit,
+Ask Vuka, the reviewer's three-state dispute row and the reporter's confirm footer. The dictionaries
+are `Record<Key, string>` against `en.ts`, so a key added to four files out of five is a compile
+error, which is how the count is known to be right rather than believed to be.
+
+Two decisions inside that. The CSV export is headed in the reader's language, because an export is a
+document somebody hands to somebody else and a reader who chose isiZulu should not be handed an
+English spreadsheet. And Ask Vuka carries its trigger words per language rather than matching English
+stems against a question typed in Sesotho, with the English triggers kept in every language's list
+because a bilingual user types whichever word comes first.
+
+The four translations are machine-drafted and unreviewed, exactly as section 12.2 records for the
+rest of them. The vocabulary that must not drift was not touched.
+
+### The reporter: one gap instead of five
+
+The demonstration template that `DemoDataService` writes for the reporter used to carry five rows
+needing attention, one for each case the confirmation screen exists to catch: a figure typed as
+words, a figure typed as text, a shortfall past the variance threshold with no reason, a missing
+figure with its reason, and an indicator code the entity never registered. Every one of those is a
+real case and every one is still handled by the code that reads the file. What they were not is a
+demonstration. Four minutes of somebody retyping numbers in front of a panel buries the one claim
+the screen is there to make.
+
+It now writes one gap. Row three of twenty arrives with no figure, no explanation and no evidence
+reference; everything else is a clean number inside the threshold. The unregistered code stays,
+because it costs the reporter nothing and lands in **Held aside** by itself. Verified end to end
+against a running backend: the file parses as 21 rows read, 20 matched, 1 held aside, and the rows
+endpoint gives 19 figures confirmable in one click with exactly one row needing a figure and a
+supporting document.
+
+The footer of that screen also stopped offering two equal buttons. While anything is outstanding
+the bulk confirm is the primary and **Submit** is off; once nothing is outstanding they swap.
+
+### The reviewer: three defects, two of them real
+
+**Typing stopped after one character.** This was the worst of the four and it was not a reviewer
+screen bug at all. `Modal` in `Shell.tsx` ran one effect that both moved focus to the close button
+and installed the Escape handler, with `[onClose]` as its dependency. `onClose` is an inline arrow
+at every call site, so it is a different function on every render of the screen behind the modal.
+Every keystroke in the return note re-rendered that screen, gave the modal a new `onClose`, re-ran
+the effect and threw focus onto the close button. Focus now moves once, on open; the Escape handler
+reads the current `onClose` through a ref. `RiskPanel` had the identical pattern and is fixed with
+it. This was affecting every textarea inside every modal in the product, not only the reviewer's.
+
+**The dispute button did not go away.** `IndicatorRowVerify` had two states where it needed three.
+After **Mark disputed** the form stayed open with the same button on it, so nothing said the mark
+had taken and clicking again did nothing visible. It now closes the form and reads the reason back
+under a **Disputed** label, with **Edit the reason** and **Undo this dispute** beside it. A dispute
+already sent to the entity on an earlier round says so and offers no undo, because that one has
+left the reviewer's hands.
+
+**One decision, one button.** The footer used to show **Return with comments** and **Approve** side
+by side with one of them greyed, leaving the reviewer to work out the rule on every submission. It
+now states in a sentence what has been marked and what the button will do about it, and carries
+only that button: **Approve all n figures** while nothing is marked, **Return n figures to the
+entity** as soon as anything is. Either decision returns to the queue with a line confirming what
+was recorded, including the offline case where it is waiting in the outbox.
+
+**Submitting works.** Checked against the running backend rather than assumed. A per-target comment
+posts, `POST /review` with `approve=false` moves the submission to RETURNED with the reason and the
+row reading as disputed; `approve=true` moves another to APPROVED with the reviewer's name and the
+time. The frontend defect was the focus loop, which made the return note impossible to type.
+
+### The executive: pictures, an export, and a question box
+
+`Analytics.tsx` was five tables and about nine hundred words of caveat. Every word was true and
+most were load-bearing, and it still failed the person it was written for.
+
+**Drawn rather than tabulated.** A chart kit in `components/Charts.tsx` and `Charts.css`: inline
+SVG and CSS, no library. Money and delivery as two column charts side by side and never one chart
+with two scales; audit outcomes as a stacked bar per year; filing as on time, late and not filed per
+quarter; sector as paired horizontal bars; movement as one dumbbell per entity. Every chart has
+**Show the figures**, which opens the exact table it was drawn from, and the caveats moved into one
+closed block at the bottom where they are read once rather than stepped over five times.
+
+Nothing was softened to do it. A year with no audited figure still draws no bar and says why. The
+sector charts still refuse to divide rands by outcomes.
+
+**The palette was computed, not chosen.** Run through a colour-blindness and contrast validator
+against this surface's white rather than eyeballed. Categorical `#1D6BF3 #0E9AA7 #7C5CFC #C2389E`
+passes every check; a six-way categorical set does not exist that passes, which is why sector
+identity is carried by the axis label and one hue rather than by six. Status is `#15803D` good,
+`#CA8A04` warning, `#DC2626` critical; the warning step sits at 2.86:1 against white, just under the
+line, which obliges visible labels rather than colour alone, and every status chart here prints its
+counts and keeps its table. Audit outcomes use four steps, not six, for the same reason: the three
+worst opinions share a fill and stay six separate labelled rows in the sentence and the table. There
+is no dark theme on the office surface, so there is one palette to hold.
+
+**Export.** **Download as CSV** builds the whole view client side, in screen order, so a figure
+quoted from the spreadsheet and one quoted from the screen cannot disagree; a blank cell means not
+published or not yet due and the file says so on its fifth line. **Print or save as PDF** lays the
+screen out as a committee pack, with the controls off and the chart fills kept.
+
+**Ask Vuka** (`components/AskVuka.tsx`) is the question box, on Analytics and on the Portfolio.
+There is no language model behind it and nothing leaves the building. It matches a typed question
+against a fixed set this product can answer and then reads the same figures the screens are drawn
+from; naming any entity beats every general question. Where it cannot match it says so and lists
+what it can take. Every answer carries its source and a link to the screen that shows the working.
+
+That restraint is the design rather than a shortcut. An executive quoting a figure in a portfolio
+committee is accountable for it, and a number that came from a model that might have inferred it is
+a number they cannot defend. The first time one is wrong in that room the product is finished.
+
+### The citizen: a way off the page
+
+The public record answered one question well and left the reader with three it cannot answer. There
+was nowhere to go from it but a search engine.
+
+`public_entity` gains a `website` column (`V7__entity_website.sql`), loaded from a new column in
+`data/dsac-entities.csv`, carried on `PublicationService.CitizenView` and rendered on both citizen
+views as **Visit <entity>**, opening in a new tab, in all five languages. Where no address is on
+record there is no link: a wrong address under a government masthead sends a reader to somebody
+else's domain, which is worse than a blank.
+
+**This is the one column in that reference file not taken from a published Treasury or
+Auditor-General document.** The 28 URLs were written from general knowledge of these bodies and
+every one must be checked against the entity's own letterhead before the citizen surface is
+published anywhere real. The file says so in its header and so does the migration. That check is
+item 16 in section 14.
+
+### What was verified, and how
+
+Against a freshly reset `vuka_demo` and a running backend: the migration applies; 28 entities load
+with their websites; `/public/api/entities` carries the field; the light citizen page renders the
+link and the note in English, Afrikaans, isiZulu, isiXhosa and Sesotho; the demo template contains
+exactly one empty row; the upload parses to 19 one-click confirmable rows and one gap; dispute,
+return and approve all move the submission and record the reviewer. The frontend typechecks and
+builds.
+
+All of it was run again after the replay onto the new base, against a freshly reset
+`vuka_demo`: the migration applies, 28 entities load with their websites, the citizen page renders
+the link and its note in English, isiZulu and Sesotho, the demo template still has exactly one empty
+row, the upload still parses to 19 one-click confirmable rows and one gap, and dispute, return and
+approve still move the submission and record the reviewer. 85 backend tests pass, the frontend
+typechecks and builds.
+
+**Not verified:** no screen in this pass has been looked at in a browser. There is no browser
+automation in this environment and installing one was not a call to make unasked. The charts, the
+Ask Vuka panel and the new reviewer footer are correct by construction, by build and by their data,
+not by sight. That is item 3 in section 14, which this pass has made larger rather than smaller.
 
 ---
 
-## 13. Still open
+## 14. Still open
 
 Ordered by how much it costs us if it is not done.
 
@@ -945,10 +1110,24 @@ Ordered by how much it costs us if it is not done.
    `lib/i18n/` on the client now both carry the same five languages. The obvious split is the
    properties files for the Thymeleaf mobile and citizen templates and the dictionaries for the
    React app, but nobody has decided it, and until someone does a sentence can be translated twice.
+16. **Check all 28 entity websites against each entity's own letterhead.** The `website` column in
+   `data/dsac-entities.csv` is the only column in that file not taken from a published document. It
+   was written from general knowledge of these bodies, and a wrong URL on a named national
+   institution sends a citizen to somebody else's domain under a government masthead. Leave a cell
+   blank rather than guess: the citizen page omits the link where there is none. Note this also
+   grew `public-entity.html` a little, so item 12 is now slightly worse than it was.
+17. **Delete the `rescue/ui-overhaul` branch and the `rescue-ui-overhaul` tag once this
+   work is merged.** They exist only because a `git reset --hard` discarded it once. They point at
+   the pre-language version of these screens, so leaving them around invites somebody to check the
+   wrong one out. See the note at the top of section 13.
+18. **Look at the rebuilt Analytics screen, the Ask Vuka panel and the reviewer footer in a
+   browser.** They typecheck, they build, and their data was verified against a running backend, but
+   no person has seen them render. Label collision, overflow and layout at phone width are exactly
+   what a build does not catch. This enlarges item 3 rather than reducing it.
 
 ---
 
-## 14. Standing preferences and constraints
+## 15. Standing preferences and constraints
 
 - **No em dashes or dashes in written output.** Natural flowing prose. This applies to every
   message and document produced for this project.
