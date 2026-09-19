@@ -48,6 +48,25 @@
 }
 .au-dept-text b { font-weight: 700; }
 
+/* The product mark after a thin gold rule, matching the landing page header. */
+.au-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: var(--space-2);
+  padding-left: var(--space-4);
+  border-left: 1px solid var(--au-gold);
+}
+.au-brand img { display: block; flex: none; height: 42px; width: auto; }
+.au-brand span {
+  font-family: "Playfair Display", Georgia, "Times New Roman", serif;
+  font-size: 1.875rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--au-ink);
+}
+
 .au-top-right { display: flex; align-items: center; gap: var(--space-4); }
 
 .au-lang {
@@ -217,6 +236,9 @@
 @media (max-width: 640px) {
   .au-top { padding: var(--space-3) var(--space-4); }
   .au-dept-text { display: none; }
+  .au-brand { margin-left: 0; padding-left: var(--space-3); }
+  .au-brand img { height: 30px; }
+  .au-brand span { font-size: 1.375rem; }
   .au-hero { min-height: 240px; padding: var(--space-5) var(--space-4); }
   .au-panel { padding: var(--space-5) var(--space-4); }
   .au-foot { padding: var(--space-4); justify-content: center; text-align: center; }

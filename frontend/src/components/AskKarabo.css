@@ -1,74 +1,89 @@
 /*
- * Ask Karabo: a floating button that grows a label on hover, and a panel from the right.
+ * Ask Karabo, docked on the right.
+ *
+ * Karabo takes its own column rather than floating over the page. Closed, a narrow strip on the
+ * right edge holds its tab. Open, the page gives up the panel's full width, so nothing on it is
+ * covered: a table stays readable beside the answer that is talking about it. The page makes
+ * room by padding the body, driven by classes AskKarabo puts on the root element, so no screen
+ * has to know Karabo is there.
+ *
+ * Below 900px there is no room to stand beside the page, so the panel becomes a sheet over it
+ * and the strip shrinks to a small tab on the edge. That is the one place it overlays, and it is
+ * the only honest option on a phone.
  *
  * The panel uses the app's green rather than the landing page's, because it is the product
  * speaking rather than the Department's public face.
  */
 
-/* ---------------------------------------------------------------- the button */
+:root {
+  --karabo-strip: 52px;
+  --karabo-panel: 400px;
+  --karabo-dock: 0px;
+}
 
-.karabo-fab {
+@media (min-width: 900px) {
+  html.karabo-docked { --karabo-dock: var(--karabo-strip); }
+  html.karabo-docked.karabo-dock-open { --karabo-dock: var(--karabo-panel); }
+  html.karabo-docked body {
+    padding-right: var(--karabo-dock);
+    transition: padding-right 220ms ease;
+  }
+}
+
+/* ---------------------------------------------------------------- the strip */
+
+.karabo-dock {
   position: fixed;
-  right: var(--space-5);
-  bottom: var(--space-5);
-  z-index: 60;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: var(--karabo-strip);
+  z-index: 58;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: var(--space-6);
+  background: var(--surface);
+  border-left: 1px solid var(--rule);
+}
+.karabo-dock-hidden { visibility: hidden; }
 
-  display: inline-flex;
+.karabo-tab {
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 0;
-  height: 56px;
-  min-height: 56px;
-  padding: 0;
-  width: 56px;
-
+  gap: var(--space-3);
+  width: 40px;
+  min-height: 0;
+  padding: var(--space-2) 0 var(--space-4);
   border: 0;
   border-radius: var(--radius-pill);
   background: var(--brand);
   color: #fff;
-  box-shadow: 0 8px 24px rgba(12, 32, 25, 0.28);
-  overflow: hidden;
-
-  transition: width 200ms ease, gap 200ms ease, padding 200ms ease, background 140ms ease;
+  box-shadow: 0 4px 14px rgba(12, 32, 25, 0.22);
+  transition: background 140ms ease;
 }
-.karabo-fab:hover:not(:disabled),
-.karabo-fab:focus-visible {
-  background: var(--brand-dark);
-  width: 182px;
-  gap: var(--space-2);
-  padding: 0 var(--space-5) 0 0;
-}
+.karabo-tab:hover:not(:disabled),
+.karabo-tab:focus-visible { background: var(--brand-dark); }
 
-.karabo-fab-icon {
-  width: 56px;
-  flex: none;
-  display: grid;
-  place-items: center;
+.karabo-tab-avatar {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--gold);
+  color: #241C0E;
+  font-weight: 800;
+  font-size: 0.8125rem;
 }
 
-/*
- * The label is always in the document, so it is announced and focusable, and only its width is
- * animated. Hiding it with display:none would take it out of the accessibility tree, which is
- * the usual mistake with a control like this.
- */
-.karabo-fab-label {
+/* Read top to bottom, the way a spine label reads, and always in the document so it is announced. */
+.karabo-tab-label {
+  writing-mode: vertical-rl;
   white-space: nowrap;
-  font-size: 0.9375rem;
+  font-size: 0.8125rem;
   font-weight: 650;
-  max-width: 0;
-  opacity: 0;
-  overflow: hidden;
-  transition: max-width 200ms ease, opacity 160ms ease;
+  letter-spacing: 0.02em;
 }
-.karabo-fab:hover .karabo-fab-label,
-.karabo-fab:focus-visible .karabo-fab-label {
-  max-width: 120px;
-  opacity: 1;
-}
-
-/* Open, it is a close control and does not need to keep offering its name. */
-.karabo-fab-open,
-.karabo-fab-open:hover { width: 56px; gap: 0; padding: 0; }
-.karabo-fab-open .karabo-fab-label { max-width: 0; opacity: 0; }
 
 /* ---------------------------------------------------------------- the panel */
 
@@ -77,7 +92,7 @@
   right: 0;
   top: 0;
   bottom: 0;
-  width: 400px;
+  width: var(--karabo-panel);
   max-width: 100vw;
   z-index: 59;
 
@@ -85,13 +100,12 @@
   flex-direction: column;
   background: var(--surface);
   border-left: 1px solid var(--rule);
-  box-shadow: -12px 0 40px rgba(28, 26, 22, 0.14);
 
   transform: translateX(100%);
-  transition: transform 220ms ease;
+  transition: transform 220ms ease, visibility 0s linear 220ms;
   visibility: hidden;
 }
-.karabo-open { transform: translateX(0); visibility: visible; }
+.karabo-open { transform: translateX(0); visibility: visible; transition: transform 220ms ease; }
 
 .karabo-head {
   display: flex;
@@ -164,6 +178,25 @@
   font-size: 0.6875rem;
   line-height: 1.45;
   color: var(--ink-muted);
+}
+.karabo-source-head {
+  display: block;
+  margin-bottom: 2px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.karabo-source ul { margin: 0; padding-left: 1.1em; }
+.karabo-source li + li { margin-top: 2px; }
+
+/* A model's answer keeps its own line breaks, which is how it sets out a short list. */
+.karabo-answer { white-space: pre-line; }
+
+/* Why Karabo did not answer. Quieter than an answer, so it is not read as one. */
+.karabo-bubble-error {
+  background: var(--surface-sunk);
+  color: var(--ink-muted);
+  font-style: italic;
 }
 
 .karabo-thinking {
@@ -241,11 +274,24 @@
 
 /* ---------------------------------------------------------------- narrow */
 
+@media (max-width: 899px) {
+  /* No column to stand in: a small tab on the edge, and a sheet over the page when open. */
+  .karabo-dock {
+    top: auto;
+    bottom: var(--space-6);
+    width: auto;
+    padding: 0;
+    background: none;
+    border: 0;
+  }
+  .karabo-tab { border-radius: var(--radius) 0 0 var(--radius); width: 38px; }
+  .karabo { box-shadow: -12px 0 40px rgba(28, 26, 22, 0.14); }
+}
+
 @media (max-width: 520px) {
   .karabo { width: 100vw; border-left: 0; }
-  .karabo-fab { right: var(--space-4); bottom: var(--space-4); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .karabo, .karabo-fab, .karabo-fab-label { transition: none; }
+  .karabo, .karabo-tab, html.karabo-docked body { transition: none; }
 }

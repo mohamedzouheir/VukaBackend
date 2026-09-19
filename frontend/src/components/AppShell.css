@@ -42,10 +42,11 @@
 .rail-collapse:hover { background: rgba(255, 255, 255, 0.18); color: #fff; }
 .rail-collapse svg { transition: transform 160ms ease; transform: rotate(180deg); }
 .rail-wordmark {
-  display: flex; align-items: center; gap: 2px;
+  display: flex; align-items: center; gap: var(--space-2);
   font-size: 1.75rem; font-weight: 800; letter-spacing: -0.02em; color: #fff;
 }
-.rail-wordmark-v { color: var(--gold-light); }
+/* 313 by 256 at source, so the width follows the height rather than being set square. */
+.rail-logo { display: block; flex: none; height: 28px; width: auto; }
 .rail-tagline {
   margin: 2px 0 0;
   font-size: 0.6875rem;

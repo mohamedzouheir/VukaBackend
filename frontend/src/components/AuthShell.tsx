@@ -18,6 +18,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { LanguagePicker } from './LanguagePicker';
 import { Arms } from './Arms';
+import { AskKarabo } from './AskKarabo';
 import { useI18n } from '../lib/i18n';
 import { IconHome } from '../icons';
 import './AuthShell.css';
@@ -52,6 +53,13 @@ export function AuthShell({ eyebrow, headline, lede, features, backHome, childre
             {t('dept.line2')}
             <br />
             <b>{t('dept.line3')}</b>
+          </span>
+
+          {/* The product's mark beside the Department's, as on the landing page. Decorative:
+              the name is written beside it. */}
+          <span className="au-brand">
+            <img src="/img/vuka-logo.png" alt="" aria-hidden="true" width={52} height={42} draggable={false} />
+            <span>Vuka</span>
           </span>
         </Link>
 
@@ -105,6 +113,10 @@ export function AuthShell({ eyebrow, headline, lede, features, backHome, childre
           <a href={withLang('/public')}>{t('foot.help')}</a>
         </nav>
       </footer>
+
+      {/* Nobody is signed in on these screens, so Karabo answers from published data, as on the
+          landing page. Same panel and questions as everywhere else. */}
+      <AskKarabo />
     </div>
   );
 }

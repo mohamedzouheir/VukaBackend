@@ -478,7 +478,88 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ dueDate }),
     }),
+
+  karaboStatus: () => karabo<KaraboStatus>('/api/chat/status', { method: 'GET' }),
+
+  askKarabo: (question: string, history: KaraboTurn[], lang: string) =>
+    karabo<KaraboReply>('/api/chat', {
+      method: 'POST',
+      body: JSON.stringify({ question, history, lang }),
+    }),
 };
+
+/* ------------------------------------------------------------------ */
+/* Karabo                                                              */
+/* ------------------------------------------------------------------ */
+
+export interface KaraboTurn {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface KaraboSource {
+  label: string;
+  reference: string;
+}
+
+export interface KaraboReply {
+  reply: string;
+  sources: KaraboSource[];
+}
+
+export interface KaraboStatus {
+  configured: boolean;
+  available: boolean;
+  signedIn: boolean;
+}
+
+/** Why Karabo did not answer, as the server names it. The panel turns it into words. */
+export type KaraboFailure =
+  | 'NOT_CONFIGURED' | 'SIGN_IN_REQUIRED' | 'RATE_LIMITED' | 'INVALID'
+  | 'FILTERED' | 'TIMEOUT' | 'PROVIDER' | 'OFFLINE';
+
+export class KaraboError extends Error {
+  constructor(readonly code: KaraboFailure) {
+    super(code);
+    this.name = 'KaraboError';
+  }
+}
+
+/**
+ * Karabo's own path through the network, apart from request() for two reasons. A question is
+ * neither kept for offline reading nor queued for sending later: an answer that arrives an hour
+ * after the question, from a model that has since been asked something else, is not an answer.
+ * And a refusal comes back as a code, never as a sentence, so it can be shown in the reader's
+ * language rather than the server's.
+ */
+async function karabo<T>(path: string, init: RequestInit): Promise<T> {
+  let token: string | null = null;
+  try {
+    token = await getToken();
+  } catch {
+    // No token is a valid way to ask: Karabo answers anyone, from published data.
+  }
+  const headers = new Headers(init.headers);
+  if (token) headers.set('Authorization', 'Bearer ' + token);
+  if (init.body) headers.set('Content-Type', 'application/json');
+
+  let res: Response;
+  try {
+    res = await fetch(path, { ...init, headers });
+  } catch {
+    throw new KaraboError('OFFLINE');
+  }
+  if (res.ok) return (await res.json()) as T;
+
+  let code: KaraboFailure = 'PROVIDER';
+  try {
+    const body = (await res.json()) as { error?: string };
+    if (typeof body.error === 'string') code = body.error as KaraboFailure;
+  } catch {
+    // Not our JSON, most likely a proxy's error page. The generic code stands.
+  }
+  throw new KaraboError(code);
+}
 
 // Replay goes through the same client, with the same token and the same error rules.
 registerSender(

@@ -481,6 +481,7 @@ function Frame({ children, skip = 'Skip to the main content' }: { children: Reac
           <i style={{ background: '#DE3831' }} />
           <i style={{ background: '#002395' }} />
         </span>
+        <img src="/img/vuka-logo.png" alt="" aria-hidden="true" className="c-logo" width={27} height={22} draggable={false} />
         <span className="c-brand">Vuka</span>
         <span className="c-muted small">Sport, Arts and Culture</span>
       </div>

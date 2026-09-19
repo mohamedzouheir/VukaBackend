@@ -399,8 +399,6 @@ export const st: Record<Key, string> = {
   'karabo.placeholder': 'Botsa ka mokgatlo, palo kapa letsatsi la ho qetela...',
   'karabo.trySome': 'Leka e nngwe ya tsena',
   'karabo.thinking': 'Ho balwa rekoto',
-  'karabo.notConnected':
-    'Karabo ke moralo. Ha ho mohlala o hokahantsweng mme ha ho karabo mona e leng ya nnete. Ha a hokahantswe, o tla bala dintlha tse tshwanang le tsa hao, kahoo a ke ke a o bolella letho leo akhaonto ya hao e neng e ke ke ya le bona.',
 
   'outcome.clean': 'Tlhahlobo e hlwekileng',
   'outcome.unqualifiedFindings': 'E se nang dipehelo empa e na le diphumano',
@@ -558,27 +556,10 @@ export const st: Record<Key, string> = {
 
   'karabo.greeting':
     'Ke nna Karabo. Mpotse ka mokgatlo ofe kapa ofe o tshehetswang ke Lefapha, ka mantswe a tlwaelehileng, mme ke tla araba ka palo le moo e tswang teng.',
-  'karabo.disclaimer':
-    'Ha ke so hokahanngwe, kahoo nke ke ka araba ka nnete. Tsohle tseo ke tla di arabang ho tswa ho tsona di se di le sistiming: dikabo, dipheo, se tlalehilweng, bopaki bo hokelletsweng le ya netefaditseng. Leka potso mme ke tla o bolella seo nkabeng ke se bala.',
   'karabo.q1': 'Ke mekgatlo efe e siilweng ke nako kotareng ena?',
   'karabo.q2': 'Ke eng e abetsweng Iziko selemong sena?',
   'karabo.q3': 'Hobaneng Robben Island e lekanyeditswe e le e tebileng?',
   'karabo.q4': 'Mpontshe dipalo tse se nang bopaki bo hokelletsweng',
-  'karabo.aLate':
-    'Nkabe ke araba sena ho tswa letshwaong la ho romela ka mora nako ho mokgatlo o mong le o mong, le bolokang matsatsi a siileng le hore na le lekantswe kgahlano le letsatsi lefe. Phapang eo e bohlokwa: taelo ya lefapha le letsatsi le behilweng ke molao wa PFMA ha se tlolo e le nngwe.',
-  'karabo.sLate': 'Nkabe ke bala: matshwao a kotsi, dinako tsa tlaleho le motheo wa matsatsi a tsona',
-  'karabo.aMoney':
-    'Nkabe ke o fa palo le mola oo e tswang ho ona, oo bakeng sa dikabo e leng Estimates of National Expenditure 2026, Vote 37, Tafole 37.3. Mokgatlo o se nang rekoto ya kabo o ne o tla kgutla e le o se nang yona ho ena le ho ba zero.',
-  'karabo.sMoney': 'Nkabe ke bala: dikabo tsa selemo sa ditjhelete sa hajwale',
-  'karabo.aRisk':
-    'Nkabe ke bala matshwao a mahlano a bolokilweng a ka morao ho dintlha mme ka o fa ona le boima ba ona le menehelo ya ona, ka mantswe a tshwanang le a sebediswang ke phanele ya kotsi. Dintlha ke dipalo ho ena le ponelopele, kahoo nka o bontsha kamoo di fihletsweng kateng ho ena le ho kopa hore o di tshepe.',
-  'karabo.sRisk': 'Nkabe ke bala: dintlha tsa kotsi tse bolokilweng le matshwao a tsona nakong eo',
-  'karabo.aEvidence':
-    'Nkabe ke thathamisa dipalo tse tlalehilweng tse se nang tokomane e hokelletsweng. Tseo di bonahala ho Lefapha e le tse ke keng tsa netefatswa, e leng lentswe la Mohlahlobi Kakaretso wa Dibuka mme e fapane le tse sa netefatswang.',
-  'karabo.sEvidence': 'Nkabe ke bala: diphetho tsa dipheo le ditokomane tse hokelletsweng ho tsona',
-  'karabo.aFallback':
-    'Ha ke se ke hokahantswe nkabe ke araba seo ho tswa rekotong ya tlaleho mme ka o bontsha moo palo e tswang teng. Hajwale karabo e tshwanang e diskrining ka bo tsona: photofolio bakeng sa ya kotsing, leqephe la mokgatlo bakeng sa kabo le dipheo tsa ona, le mohlala wa tlhahlobo bakeng sa ya entseng eng.',
-  'karabo.sFallback': 'Ha ho hokahanngwa. Ha ho palo e iqapetsweng karabong ena',
 
   'tasks.what': 'mesebetsi ya hao',
   'tasks.notUpdated': 'Mosebetsi ha oa ntlafatswa.',
@@ -1456,4 +1437,31 @@ export const st: Record<Key, string> = {
   'signin.roleExecutive': 'Molaodi e moholo wa DSAC',
   'signin.roleAdmin': 'Molaodi',
   'signin.roleReporter': 'Motlalehi wa mokgatlo',
+
+  /* ---------------------------------------------------------------- karabo, connected */
+  'karabo.checking': 'Ke sheba hore na nka araba...',
+  'karabo.introStaff':
+    'Ke araba ho tswa direkotong tsa Vuka ka botsona, ka seo akhaonto ya hao e ka se bonang feela. Ka tlase ho karabo ka nngwe ke bontsha moo palo e tswang teng. Ha rekoto e sa bontshe ho hong, ke tla bolela jwalo ho ena le ho hakanya.',
+  'karabo.introPublic':
+    'Ke araba ho tswa ho seo Lefapha le se phatlaladitseng: dikabo le hore na mokgatlo ka mong o fihletse dipheo tse kae. Ka tlase ho karabo ka nngwe ke bontsha moo palo e tswang teng. Basebetsi ba kenang ba ka botsa hape ka dinako tsa ho qetela, kotsi le bopaki.',
+  'karabo.introOff':
+    'Ha ke a hokahanngwa mofuteng ona, kahoo ha ke kgone ho araba hajwale. Ha ke se ke hokahantswe, ke tla araba ho tswa direkotong tsa Vuka mme ke bontshe moo palo ka nngwe e tswang teng.',
+  'karabo.sourcesLabel': 'Moo sena se tswang teng',
+  'karabo.empty': 'Ha ke a fumana karabo ya seo rekotong.',
+  'karabo.errNotConfigured': 'Ha ke a hokahanngwa mofuteng ona, kahoo ha ke kgone ho araba hajwale.',
+  'karabo.errSignIn':
+    'Kena ho mpotsa dipotso. Mofuteng ona ke araba basebetsi ba Lefapha le ba mekgatlo feela.',
+  'karabo.errRate': 'Tseo ke dipotso tse ngata ka nako e kgutshwane. Ema motsotso mme o botse hape.',
+  'karabo.errInvalid':
+    'Ha ke a kgona ho bala potso eo. E boloke e le ka tlase ho ditlhaku tse 1 000 mme o leke hape.',
+  'karabo.errFiltered':
+    'Ha ke kgone ho araba potso eo. Leka ho botsa ka mokgatlo, palo kapa nako ya ho qetela.',
+  'karabo.errTimeout':
+    'Seo se nkile nako e telele haholo ho araba. Leka hape, kapa o botse ho hong ho hosesane.',
+  'karabo.errProvider':
+    'Ha ke a kgona ho araba hona jwale. Ha ho letho le fetotsweng. Leka hape nakwana.',
+  'karabo.errOffline': 'Ha o a hokahana, mme ke hloka khokahano ho araba. Potso ya hao ha ea romelwa.',
+  'karabo.footLive':
+    'Karabo o araba ho tswa direkotong tsa Vuka feela, ka phihlello ya hao, mme a ntse a ka fosa. Hlahloba mohlodi ka tlase ho karabo ka nngwe.',
+  'karabo.footOff': 'Karabo ha a hokahanngwa mofuteng ona. Ha ho karabo mona e iqapetsweng.',
 };

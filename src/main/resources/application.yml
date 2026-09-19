@@ -133,6 +133,25 @@ vuka:
     max-files-per-sync: ${MS_MAX_FILES_PER_SYNC:50}
     max-file-bytes: ${MS_MAX_FILE_BYTES:15728640}
 
+  karabo:
+    # The assistant, on a model deployed in Microsoft Foundry. With nothing set here Karabo says
+    # it is not connected and every other screen is unaffected.
+    #
+    # The endpoint of the Foundry resource, as https://<resource>.openai.azure.com, and the name
+    # given to the model deployment there. The deployment name is yours, not the model's.
+    endpoint: ${AZURE_OPENAI_ENDPOINT:}
+    deployment: ${AZURE_DEPLOYMENT_NAME:}
+    # A path to a file holding the API key, not the key itself, as for every other secret here.
+    api-key-path: ${AZURE_OPENAI_API_KEY_FILE:}
+    # The key itself. Accepted for a laptop; the file wins where both are set. Never in a deployment.
+    api-key: ${AZURE_OPENAI_API_KEY:}
+    # Whether someone who is not signed in may ask at all. Either way they reach published data only.
+    public-enabled: ${KARABO_PUBLIC_ENABLED:true}
+    # The cost ceiling for the public: questions per minute and per day from one address.
+    per-minute-public: ${KARABO_PER_MINUTE_PUBLIC:6}
+    per-day-public: ${KARABO_PER_DAY_PUBLIC:60}
+    per-minute-signed-in: ${KARABO_PER_MINUTE_SIGNED_IN:20}
+
 logging:
   level:
     za.gov.dsac.vuka: DEBUG

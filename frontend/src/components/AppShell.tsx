@@ -31,6 +31,7 @@ import {
 import { SearchField } from './SearchField';
 import { LanguagePicker } from './LanguagePicker';
 import { Arms } from './Arms';
+import { AskKarabo } from './AskKarabo';
 import { ConnectionBar } from './ConnectionBar';
 import './AppShell.css';
 
@@ -173,8 +174,19 @@ export function AppShell({
         <div className="rail-brand">
           <Link to="/" className="rail-brand-link">
             <span className="rail-wordmark">
-              <span className="rail-wordmark-v">V</span>
-              <span className="rail-label">uka</span>
+              {/* Decorative: the name sits beside it, so a screen reader hears "Vuka" once. When
+                  the rail collapses the name goes and the mark stays, which is what the drawn
+                  gold V used to stand in for. */}
+              <img
+                src="/img/vuka-logo.png"
+                alt=""
+                aria-hidden="true"
+                className="rail-logo"
+                width={34}
+                height={28}
+                draggable={false}
+              />
+              <span className="rail-label">Vuka</span>
             </span>
             <p className="rail-tagline rail-label">{t('nav.tagline')}</p>
           </Link>
@@ -301,6 +313,10 @@ export function AppShell({
           {children}
         </main>
       </div>
+
+      {/* Signed in, Karabo answers with this person's own access, which is what makes the
+          staff questions answerable at all. On the landing page it sees published data only. */}
+      <AskKarabo />
     </div>
   );
 }

@@ -399,8 +399,6 @@ export const af: Record<Key, string> = {
   'karabo.placeholder': 'Vra oor ’n entiteit, ’n syfer of ’n sperdatum...',
   'karabo.trySome': 'Probeer een van hierdie',
   'karabo.thinking': 'Lees die rekord',
-  'karabo.notConnected':
-    'Karabo is ’n ontwerp. Geen model is gekoppel nie en geen antwoord hier is werklik nie. Wanneer dit gekoppel is, sal dit dieselfde eindpunte lees as jy, so dit sal jou nooit iets vertel wat jou eie rekening nie kon sien nie.',
 
   'outcome.clean': 'Skoon oudit',
   'outcome.unqualifiedFindings': 'Ongekwalifiseer met bevindinge',
@@ -559,27 +557,10 @@ export const af: Record<Key, string> = {
 
   'karabo.greeting':
     'Ek is Karabo. Vra my oor enige liggaam wat die Departement befonds, in gewone woorde, en ek sal antwoord met die syfer en waar dit vandaan kom.',
-  'karabo.disclaimer':
-    'Ek is nog nie gekoppel nie, so ek kan nie werklik antwoord nie. Alles waaruit ek sal antwoord is reeds in die stelsel: toewysings, teikens, wat gerapporteer is, watter bewys aangeheg is en wie dit bevestig het. Probeer \u2019n vraag en ek sal jou vertel wat ek sou lees.',
   'karabo.q1': 'Watter entiteite is hierdie kwartaal laat?',
   'karabo.q2': 'Wat is vanjaar aan Iziko toegewys?',
   'karabo.q3': 'Hoekom is Robbeneiland as krities getelleer?',
   'karabo.q4': 'Wys my syfers sonder aangehegte bewys',
-  'karabo.aLate':
-    'Ek sou dit uit die laat-indiening sein op elke entiteit antwoord, wat die dae laat stoor en teen watter sperdatum dit gemeet is. Daardie onderskeid maak saak: \u2019n departementele opdrag en \u2019n statut\u00eare WOFB-datum is nie dieselfde oortreding nie.',
-  'karabo.sLate': 'Sou lees: risikoseine, verslagtydperke en hul sperdatumgrondslag',
-  'karabo.aMoney':
-    'Ek sou jou die syfer gee en die re\u00ebl waaruit dit kom, wat vir toewysings Ramings van Nasionale Besteding 2026, Stem 37, Tabel 37.3 is. \u2019n Entiteit sonder \u2019n toewysingsrekord sou terugkom as een sonder een, eerder as as nul.',
-  'karabo.sMoney': 'Sou lees: toewysings vir die huidige boekjaar',
-  'karabo.aRisk':
-    'Ek sou die vyf gestoorde seine agter die telling lees en hulle vir jou gee met hul gewigte en bydraes, in dieselfde woorde as die risikopaneel. Die telling is rekenkunde eerder as \u2019n voorspelling, so ek kan jou wys hoe dit bereik is eerder as om te vra dat jy dit vertrou.',
-  'karabo.sRisk': 'Sou lees: die gestoorde risikotelling en sy seine vir daardie tydperk',
-  'karabo.aEvidence':
-    'Ek sou die gerapporteerde syfers lys sonder \u2019n aangehegte dokument. Daardie vertoon vir die Departement as onverifieerbaar, wat die Ouditeur-generaal se woord is en \u2019n ander ding as ongeverifieer.',
-  'karabo.sEvidence': 'Sou lees: teikenresultate en die dokumente wat by elkeen aangeheg is',
-  'karabo.aFallback':
-    'Sodra ek gekoppel is sou ek dit uit die verslagrekord antwoord en jou wys waar die syfer vandaan kom. Vir eers is dieselfde antwoord op die skerms self: die portefeulje vir wie in gevaar is, \u2019n entiteitsbladsy vir sy toewysing en teikens, en die ouditspoor vir wie wat gedoen het.',
-  'karabo.sFallback': 'Nie gekoppel nie. Geen syfer is vir hierdie antwoord uitgedink nie',
 
   'tasks.what': 'jou take',
   'tasks.notUpdated': 'Die taak is nie opgedateer nie.',
@@ -1452,4 +1433,31 @@ export const af: Record<Key, string> = {
   'signin.roleExecutive': 'DSAC uitvoerende beampte',
   'signin.roleAdmin': 'Administrateur',
   'signin.roleReporter': 'Entiteitverslaggewer',
+
+  /* ---------------------------------------------------------------- karabo, connected */
+  'karabo.checking': 'Kyk of ek kan antwoord...',
+  'karabo.introStaff':
+    'Ek antwoord uit Vuka se eie rekords, met presies wat jou rekening kan sien. Onder elke antwoord wys ek waar die syfer vandaan kom. As die rekord iets nie wys nie, sal ek dit se eerder as om te raai.',
+  'karabo.introPublic':
+    'Ek antwoord uit wat die Departement gepubliseer het: toewysings en hoeveel teikens elke entiteit bereik het. Onder elke antwoord wys ek waar die syfer vandaan kom. Personeel wat aanteken kan ook oor sperdatums, risiko en bewyse vra.',
+  'karabo.introOff':
+    'Ek is nie in hierdie weergawe gekoppel nie, so ek kan nog nie antwoord nie. Wanneer ek is, sal ek uit Vuka se eie rekords antwoord en wys waar elke syfer vandaan kom.',
+  'karabo.sourcesLabel': 'Waar dit vandaan kom',
+  'karabo.empty': 'Ek kon nie n antwoord daarop in die rekord vind nie.',
+  'karabo.errNotConfigured':
+    'Ek is nie in hierdie weergawe gekoppel nie, so ek kan nog nie antwoord nie.',
+  'karabo.errSignIn':
+    'Teken aan om my vrae te vra. Ek antwoord in hierdie weergawe slegs Departement- en entiteitpersoneel.',
+  'karabo.errRate': 'Dit is baie vrae in n kort tyd. Wag n minuut en vra weer.',
+  'karabo.errInvalid':
+    'Ek kon nie daardie vraag lees nie. Hou dit onder 1 000 karakters en probeer weer.',
+  'karabo.errFiltered':
+    'Ek kan nie daardie vraag beantwoord nie. Probeer vra oor n entiteit, n syfer of n sperdatum.',
+  'karabo.errTimeout': 'Dit het te lank geneem om te antwoord. Probeer weer, of vra iets nouer.',
+  'karabo.errProvider': 'Ek kon nie nou antwoord nie. Niks is verander nie. Probeer oor n oomblik weer.',
+  'karabo.errOffline':
+    'Jy is vanlyn, en ek het n verbinding nodig om te antwoord. Jou vraag is nie gestuur nie.',
+  'karabo.footLive':
+    'Karabo antwoord slegs uit Vuka se rekords, met jou eie toegang, en kan steeds verkeerd wees. Kontroleer die bron onder elke antwoord.',
+  'karabo.footOff': 'Karabo is nie in hierdie weergawe gekoppel nie. Geen antwoord hier is versin nie.',
 };

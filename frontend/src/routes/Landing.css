@@ -11,6 +11,9 @@
   --land-cream: #F7F3EA;
   --land-ink: #1C1A16;
 
+  /* The header is absolute. Anchored here rather than to the viewport, so it moves over with the
+     page when Karabo's strip takes the right edge, instead of running underneath it. */
+  position: relative;
   min-height: 100vh;
   background: var(--land-cream);
   color: var(--land-ink);
@@ -115,6 +118,30 @@
   grid-template-columns: minmax(0, 1fr) 380px;
   gap: var(--space-7);
   align-items: center;
+}
+
+/*
+ * The product mark beside the Department's lockup, after a thin gold rule: two marks, one line,
+ * the way a departmental programme sits under its department. Same height as the arms, in the
+ * page's serif so it reads as part of the page.
+ */
+.land-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  align-self: center;
+  margin-left: var(--space-2);
+  padding-left: var(--space-4);
+  border-left: 1px solid var(--land-gold);
+}
+.land-brand img { display: block; flex: none; height: 42px; width: auto; }
+.land-brand span {
+  font-family: "Playfair Display", Georgia, "Times New Roman", serif;
+  font-size: 1.875rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--land-ink);
 }
 
 .land-eyebrow {
@@ -300,6 +327,20 @@
   .land-pillar:first-child { border-top: 0; }
   .land-quote { padding: var(--space-5) var(--space-4); }
   .land-dept-text { display: none; }
+  /* The two marks and the two controls have to share one phone-width line. The marks shrink,
+     the controls tighten, and the citizen link keeps to one line rather than wrapping. */
+  .land-top { gap: var(--space-2); }
+  .land-brand { padding-left: var(--space-3); margin-left: 0; }
+  .land-brand img { height: 30px; }
+  .land-brand span { font-size: 1.375rem; }
+  .land-top-right { gap: var(--space-2); }
+  .land-lang { white-space: nowrap; }
+}
+
+@media (max-width: 440px) {
+  /* Narrower still, the V alone carries the product. Its name is in the page title and the
+     headline, so nothing is lost. */
+  .land-brand span { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

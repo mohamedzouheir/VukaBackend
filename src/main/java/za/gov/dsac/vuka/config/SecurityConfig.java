@@ -122,6 +122,13 @@ public class SecurityConfig {
                 // signal on the sign-in page has nothing installed to fall back on.
                 .requestMatchers("/sw.js", "/offline/**", "/citizen.html", "/favicon.svg").permitAll()
 
+                // Karabo answers on the landing page, before anyone signs in. The door is open;
+                // what is behind it is not. An anonymous question can reach only the published
+                // projection, and a signed-in one runs with the caller's own access, both decided
+                // in KaraboTools. The token filters above still run, so a signed-in caller is
+                // recognised here exactly as everywhere else.
+                .requestMatchers("/api/chat", "/api/chat/status").permitAll()
+
                 // Everything else needs a verified Firebase token carrying a role claim. That
                 // includes every /api route, so the shell above can be read by anyone and the
                 // data underneath it cannot.
