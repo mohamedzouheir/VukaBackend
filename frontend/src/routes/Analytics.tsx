@@ -35,7 +35,8 @@
 import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useAsync } from '../lib/useAsync';
-import type { AnalyticsCohort, AnalyticsQuarter, AnalyticsSector, AnalyticsView, AnalyticsYear } from '../lib/types';
+import type { ReactNode } from 'react';
+import type { AnalyticsCohort, AnalyticsQuarter, AnalyticsSector, AnalyticsView, AnalyticsYear, PortfolioRow } from '../lib/types';
 import { date, num, percent, randsShort } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import type { I18n, Key } from '../lib/i18n';
@@ -45,7 +46,11 @@ import { EmptyState, ErrorState, Loading, Tile } from '../components/Shell';
 import { PageHead } from '../components/AppShell';
 import { openKarabo } from '../components/AskKarabo';
 import { Bars, Columns, Dumbbells, Figure, Legend, Stack, VIZ, type Datum, type Slice } from '../components/Charts';
-import { IconChart, IconCheckCircle, IconClock, IconDownload, IconHelp, IconInfo, IconSheet, IconTrend } from '../icons';
+import {
+  IconAlert, IconChart, IconCheckCircle, IconChevronRight, IconClock, IconDownload, IconHelp, IconInfo, IconSheet,
+  IconShield, IconTrend,
+} from '../icons';
+import { RiskRing } from './Portfolio';
 import './Analytics.css';
 
 /* Best to worst, and the order every stack and every table on this screen uses. */
@@ -79,6 +84,7 @@ function outcomeColour(outcome: string): { colour: string; hatched?: boolean } {
 
 export function Analytics() {
   const data = useAsync(() => api.analytics(), []);
+  const portfolio = useAsync(() => api.portfolio(), []);
   const i18n = useI18n();
   const { t } = i18n;
   const L = useLabels();
@@ -99,67 +105,85 @@ export function Analytics() {
         icon={<IconChart size={26} />}
         title={t('nav.analytics')}
         subtitle={t('an.subtitleCharts')}
-      />
+      >
+        {/* The three things an executive does with this screen: ask it something, take it away,
+            put it in front of a committee. They belong beside the title, rather than at the
+            bottom of a page they may never scroll to. */}
+        <div className="an-tools no-print">
+          <button type="button" className="primary" onClick={openKarabo}>
+            <IconHelp size={16} /> {t('karabo.ask')}
+          </button>
+          <button type="button" onClick={() => downloadCsv(a, i18n, L)}>
+            <IconSheet size={16} /> {t('an.downloadCsv')}
+          </button>
+          <button type="button" onClick={() => window.print()}>
+            <IconDownload size={16} /> {t('an.printPdf')}
+          </button>
+        </div>
+      </PageHead>
 
-      {/* The three things an executive does with this screen: ask it something, take it away,
-          put it in front of a committee. They belong at the top, beside the title, rather than
-          at the bottom of a page they may never scroll to. */}
-      <div className="an-tools no-print">
-        <button type="button" className="primary" onClick={openKarabo}>
-          <IconHelp size={16} /> {t('karabo.ask')}
-        </button>
-        <button type="button" onClick={() => downloadCsv(a, i18n, L)}>
-          <IconSheet size={16} /> {t('an.downloadCsv')}
-        </button>
-        <button type="button" onClick={() => window.print()}>
-          <IconDownload size={16} /> {t('an.printPdf')}
-        </button>
+      <div className="an-top">
+        <div className="an-main">
+          <div className="tiles">
+            <Tile
+              icon={<IconCheckCircle size={22} />}
+              tone="ok"
+              value={latestAudited ? percent(latestAudited.achievedPercent) : null}
+              label={t('an.tileAchieved')}
+              sub={
+                latestAudited
+                  ? t('an.tileAchievedSub', latestAudited.financialYear, num(latestAudited.entitiesWithCounts) ?? '')
+                  : t('an.tileAchievedNone')
+              }
+            />
+            <Tile
+              icon={<IconTrend size={22} />}
+              tone={a.cohort && a.cohort.declined > a.cohort.improved ? 'warn' : 'purple'}
+              value={a.cohort ? t('an.tileMovedValue', num(a.cohort.improved) ?? '', num(a.cohort.declined) ?? '') : null}
+              label={t('an.tileMoved')}
+              sub={
+                a.cohort
+                  ? t('an.tileMovedSub', a.cohort.fromYear, a.cohort.toYear, num(a.cohort.entities) ?? '')
+                  : t('an.tileMovedNone')
+              }
+            />
+            <Tile
+              icon={<IconClock size={22} />}
+              tone={review && review.late + (review.notFiled ?? 0) > 0 ? 'warn' : 'ok'}
+              value={review ? t('an.ofCount', num(review.onTime) ?? '', num(review.expected) ?? '') : null}
+              label={t('an.tileOnTime')}
+              sub={review?.label ?? t('an.noQuarterDue')}
+            />
+            <Tile
+              icon={<IconChart size={22} />}
+              value={review ? percent(review.metPercent) : null}
+              label={t('an.tileMet')}
+              sub={
+                review && review.metPercent !== null
+                  ? t('an.tileMetSub', num(review.metTarget) ?? '', num(review.metTarget + review.belowTarget) ?? '', review.label)
+                  : t('an.tileMetNone')
+              }
+            />
+          </div>
+
+          <MoneyAndDelivery years={a.years} />
+        </div>
+
+        <KeyInsights a={a} portfolio={portfolio.data} />
       </div>
 
-      <div className="tiles">
-        <Tile
-          icon={<IconCheckCircle size={22} />}
-          tone="ok"
-          value={latestAudited ? percent(latestAudited.achievedPercent) : null}
-          label={t('an.tileAchieved')}
-          sub={
-            latestAudited
-              ? t('an.tileAchievedSub', latestAudited.financialYear, num(latestAudited.entitiesWithCounts) ?? '')
-              : t('an.tileAchievedNone')
-          }
-        />
-        <Tile
-          icon={<IconTrend size={22} />}
-          tone={a.cohort && a.cohort.declined > a.cohort.improved ? 'warn' : 'purple'}
-          value={a.cohort ? t('an.tileMovedValue', num(a.cohort.improved) ?? '', num(a.cohort.declined) ?? '') : null}
-          label={t('an.tileMoved')}
-          sub={
-            a.cohort
-              ? t('an.tileMovedSub', a.cohort.fromYear, a.cohort.toYear, num(a.cohort.entities) ?? '')
-              : t('an.tileMovedNone')
-          }
-        />
-        <Tile
-          icon={<IconClock size={22} />}
-          tone={review && review.late + (review.notFiled ?? 0) > 0 ? 'warn' : 'ok'}
-          value={review ? t('an.ofCount', num(review.onTime) ?? '', num(review.expected) ?? '') : null}
-          label={t('an.tileOnTime')}
-          sub={review?.label ?? t('an.noQuarterDue')}
-        />
-        <Tile
-          icon={<IconChart size={22} />}
-          value={review ? percent(review.metPercent) : null}
-          label={t('an.tileMet')}
-          sub={
-            review && review.metPercent !== null
-              ? t('an.tileMetSub', num(review.metTarget) ?? '', num(review.metTarget + review.belowTarget) ?? '', review.label)
-              : t('an.tileMetNone')
-          }
-        />
+      <div className="an-trio">
+        {portfolio.data ? (
+          <RiskRing rows={portfolio.data} />
+        ) : (
+          <section className="card">
+            {portfolio.loading ? <Loading what={t('an.what')} /> : <ErrorState message={portfolio.error ?? ''} onRetry={portfolio.reload} />}
+          </section>
+        )}
+        <TopEntities cohort={a.cohort} />
+        <Outcomes years={a.years} />
       </div>
 
-      <MoneyAndDelivery years={a.years} />
-      <Outcomes years={a.years} />
       <Filing
         quarters={a.quarters}
         year={a.currentYear}
@@ -181,6 +205,156 @@ export function Analytics() {
       </details>
 
     </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* key insights                                                        */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The rail of sentences an executive reads first. Each one is arithmetic over figures already on
+ * this screen, stated with its denominator, and each is skipped rather than guessed when the
+ * figures behind it are not on record. The year-on-year line uses the like-for-like cohort only,
+ * for the reason the sources note gives.
+ */
+function KeyInsights({ a, portfolio }: { a: AnalyticsView; portfolio: PortfolioRow[] | null }) {
+  const { t } = useI18n();
+  const L = useLabels();
+  const items: { key: string; tone: string; icon: ReactNode; head: string; body: string }[] = [];
+
+  const c = a.cohort;
+  if (c && c.entities > 0) {
+    const diff = c.toPercent - c.fromPercent;
+    items.push({
+      key: 'cohort',
+      tone: diff > 0.5 ? 'ok' : diff < -0.5 ? 'critical' : 'purple',
+      icon: <IconTrend size={18} />,
+      head: diff > 0.5 ? t('an.insUpHead') : diff < -0.5 ? t('an.insDownHead') : t('an.insFlatHead'),
+      body: t('an.insCohortBody', num(c.entities) ?? '', percent(c.fromPercent) ?? '', c.fromYear, percent(c.toPercent) ?? '', c.toYear),
+    });
+  }
+
+  const rated = a.sectors.filter((s) => s.metPercent !== null);
+  if (rated.length > 1) {
+    const low = rated.reduce((m, s) => (s.metPercent! < m.metPercent! ? s : m));
+    items.push({
+      key: 'sector',
+      tone: 'critical',
+      icon: <IconAlert size={18} />,
+      head: t('an.insSectorHead', L.sector(low.sector)),
+      body: t('an.insSectorBody', percent(low.metPercent) ?? '', a.reviewPeriodLabel ?? ''),
+    });
+  }
+
+  const review = a.quarters.find((q) => q.periodId === a.reviewPeriodId);
+  if (review && review.expected > 0) {
+    items.push({
+      key: 'filing',
+      tone: review.late + (review.notFiled ?? 0) > 0 ? 'warn' : 'ok',
+      icon: <IconClock size={18} />,
+      head: t('an.insFilingHead', review.label),
+      body: t('an.insFilingBody', num(review.onTime) ?? '', num(review.expected) ?? '', num(review.late) ?? ''),
+    });
+  }
+
+  if (portfolio) {
+    const scored = portfolio.filter((r) => r.band !== 'NOT_SCORED');
+    const elevated = scored.filter((r) => r.band === 'HIGH' || r.band === 'CRITICAL').length;
+    if (scored.length > 0) {
+      items.push({
+        key: 'risk',
+        tone: elevated > 0 ? 'critical' : 'ok',
+        icon: <IconShield size={18} />,
+        head: t('an.insRiskHead', num(elevated) ?? ''),
+        body: t('an.insRiskBody', num(scored.length) ?? ''),
+      });
+    }
+  }
+
+  const best = c?.rows.reduce<AnalyticsCohort['rows'][number] | null>(
+    (m, r) => (r.changePoints > 0 && (!m || r.changePoints > m.changePoints) ? r : m),
+    null,
+  );
+  if (c && best) {
+    items.push({
+      key: 'mover',
+      tone: 'purple',
+      icon: <IconCheckCircle size={18} />,
+      head: t('an.insMoverHead', best.shortName ?? best.name),
+      body: t('an.insMoverBody', percent(best.fromPercent) ?? '', percent(best.toPercent) ?? '', c.fromYear, c.toYear),
+    });
+  }
+
+  return (
+    <aside className="card an-insights">
+      <h2>{t('an.insightsHead')}</h2>
+      {items.length === 0 ? (
+        <p className="small muted">{t('an.insNone')}</p>
+      ) : (
+        <ul>
+          {items.map((it) => (
+            <li key={it.key}>
+              <span className={'an-ins-icon an-ins-' + it.tone} aria-hidden="true">{it.icon}</span>
+              <div>
+                <strong>{it.head}</strong>
+                <p>{it.body}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+      <button type="button" className="link no-print" onClick={openKarabo}>
+        {t('karabo.ask')} <IconChevronRight size={14} />
+      </button>
+    </aside>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* top performing entities                                             */
+/* ------------------------------------------------------------------ */
+
+/** The like-for-like cohort ranked by the later year's audited rate, with the direction it moved. */
+function TopEntities({ cohort }: { cohort: AnalyticsCohort | null }) {
+  const { t } = useI18n();
+  if (!cohort || cohort.rows.length === 0) {
+    return (
+      <section className="card">
+        <h2>{t('an.topEntities')}</h2>
+        <EmptyState>{t('an.whoMovedNone')}</EmptyState>
+      </section>
+    );
+  }
+  const top = [...cohort.rows].sort((x, y) => y.toPercent - x.toPercent).slice(0, 5);
+  return (
+    <section className="card an-top-entities">
+      <h2>{t('an.topEntities')}</h2>
+      <p className="small muted">{t('an.topEntitiesHint', cohort.toYear)}</p>
+      <table>
+        <thead>
+          <tr>
+            <th>{t('an.colEntity')}</th>
+            <th className="num">{cohort.toYear}</th>
+            <th className="num">{t('an.colChange')}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {top.map((m) => (
+            <tr key={m.entityId}>
+              <td><Link to={'/portfolio/entity/' + m.entityId}>{m.shortName ?? m.name}</Link></td>
+              <td className="num">{percent(m.toPercent)}</td>
+              <td className={'num ' + (m.changePoints < 0 ? 'an-down' : m.changePoints > 0 ? 'an-up' : '')}>
+                {signed(m.changePoints, ' pts')}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <Link to="/entities" className="an-more no-print">
+        {t('an.allEntities')} <IconChevronRight size={14} />
+      </Link>
+    </section>
   );
 }
 
@@ -238,16 +412,18 @@ function MoneyAndDelivery({ years }: { years: AnalyticsYear[] }) {
   const mixed = counted.length > 1 && new Set(counted.map((y) => y.entitiesWithCounts)).size > 1;
 
   return (
-    <div className="card an-section">
-      <h2>{t('an.moneyAndDelivery')}</h2>
-      <div className="viz-pair">
-        <Figure title={t('an.figAllocated')} hint={t('an.figAllocatedHint')} table={<YearTable years={years} money />}>
-          <Columns data={moneyData} label={t('an.chartAllocationLabel')} colour={VIZ.cat[0]} />
-        </Figure>
-
-        <Figure title={t('an.figAchieved')} hint={t('an.figAchievedHint')} table={<YearTable years={years} />}>
-          <Columns data={deliveryData} label={t('an.chartAchievedLabel')} colour={VIZ.cat[1]} />
-        </Figure>
+    <div className="an-section">
+      <div className="an-pair">
+        <section className="card">
+          <Figure title={t('an.figAchieved')} hint={t('an.figAchievedHint')} table={<YearTable years={years} />}>
+            <Columns data={deliveryData} label={t('an.chartAchievedLabel')} colour={VIZ.good} />
+          </Figure>
+        </section>
+        <section className="card">
+          <Figure title={t('an.figAllocated')} hint={t('an.figAllocatedHint')} table={<YearTable years={years} money />}>
+            <Columns data={moneyData} label={t('an.chartAllocationLabel')} colour={VIZ.cat[0]} />
+          </Figure>
+        </section>
       </div>
 
       {/* Two charts rather than one with a second scale. A rands axis and a per-cent axis on the
@@ -311,7 +487,7 @@ function Outcomes({ years }: { years: AnalyticsYear[] }) {
   if (withOutcomes.length === 0) return null;
 
   return (
-    <div className="card an-section">
+    <section className="card an-outcomes">
       <h2>{t('an.auditOutcomes')}</h2>
       <Figure title={t('an.figOpinions')} hint={t('an.figOpinionsHint')} table={<OutcomeTable years={withOutcomes} />}>
         <Legend
@@ -342,7 +518,7 @@ function Outcomes({ years }: { years: AnalyticsYear[] }) {
           })}
         </div>
       </Figure>
-    </div>
+    </section>
   );
 }
 

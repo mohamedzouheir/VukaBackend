@@ -242,3 +242,11 @@ export const IconRefresh = (p: Props) => (
     <path d="M5.3 9A7.5 7.5 0 0 1 19 12" /><path d="M18.7 15A7.5 7.5 0 0 1 5 12" />
   </Icon>
 );
+
+/** The greeting on the executive's home. Decorative: it always sits beside the words. */
+export const IconSun = (p: Props) => (
+  <Icon {...p}>
+    <circle cx="12" cy="12" r="4" />
+    <path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4" />
+  </Icon>
+);
