@@ -48,6 +48,10 @@
 }
 .au-dept-text b { font-weight: 700; }
 
+/* The Department alone, as the sign in screenshot sets it: a larger lockup, since nothing sits beside it. */
+.au-dept-large .au-dept-text { font-size: 0.6875rem; }
+.au-dept-large .au-dept-text strong { font-size: 1.25rem; font-weight: 500; }
+
 /* The product mark after a thin gold rule, matching the landing page header. */
 .au-brand {
   display: flex;
@@ -93,8 +97,19 @@
 .au-split {
   flex: 1 1 auto;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  /* The photograph takes a little more than half, as the screenshot has it. */
+  grid-template-columns: minmax(0, 9fr) minmax(0, 7fr);
   min-height: 0;
+}
+
+/*
+ * On a desktop the frame is exactly one screen: bar, split, footer. The form panel scrolls on its
+ * own when its content runs past, so a long form never pushes the display copy on the photograph
+ * below the fold, which is where it was going before.
+ */
+@media (min-width: 1041px) {
+  .au { height: 100vh; min-height: 560px; }
+  .au-split { overflow: hidden; }
 }
 
 /* ---------------------------------------------------------------- hero */
@@ -120,7 +135,19 @@
   inset: 0;
   background:
     linear-gradient(0deg, rgba(11, 32, 25, 0.92) 0%, rgba(11, 32, 25, 0.62) 38%, rgba(11, 32, 25, 0.12) 70%),
-    linear-gradient(90deg, rgba(11, 32, 25, 0.55) 0%, rgba(11, 32, 25, 0) 55%);
+    linear-gradient(90deg, rgba(11, 32, 25, 0.55) 0%, rgba(11, 32, 25, 0) 55%),
+    rgba(11, 32, 25, 0.18);
+}
+
+/* The thin gold contour lines in the lower left corner of the photograph. Decorative only. */
+.au-hero::after {
+  content: "";
+  position: absolute;
+  left: 0; bottom: 0;
+  width: 380px; height: 200px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 380 200' fill='none' stroke='%23C2A25E' stroke-width='1'%3E%3Cpath d='M0 40c60 10 110 40 150 80s90 70 160 80'/%3E%3Cpath d='M0 60c55 10 100 38 138 76s84 62 146 64'/%3E%3Cpath d='M0 80c50 10 92 36 126 70s76 52 128 50'/%3E%3Cpath d='M0 100c45 10 84 32 114 62s68 42 110 38'/%3E%3Cpath d='M0 120c40 10 76 30 102 54s60 34 92 26'/%3E%3Cpath d='M0 140c36 8 66 26 90 46s50 24 74 14'/%3E%3C/svg%3E") left bottom / contain no-repeat;
+  opacity: 0.35;
+  pointer-events: none;
 }
 
 .au-hero-copy { position: relative; z-index: 1; max-width: 30rem; }
@@ -194,13 +221,14 @@
 
 .au-panel {
   display: flex;
-  align-items: center;
   justify-content: center;
-  padding: var(--space-6);
+  padding: var(--space-7) var(--space-6);
   background: var(--au-cream);
   overflow-y: auto;
 }
-.au-panel-inner { width: 100%; max-width: 420px; }
+/* Auto margins centre it vertically when it fits and let it scroll from the top when it does not,
+   where align-items: center would cut off the top of a long form. */
+.au-panel-inner { width: 100%; max-width: 460px; margin: auto 0; }
 /* The registration form is two columns, so it needs more room. */
 .au-panel-wide .au-panel-inner { max-width: 680px; }
 
@@ -242,4 +270,15 @@
   .au-hero { min-height: 240px; padding: var(--space-5) var(--space-4); }
   .au-panel { padding: var(--space-5) var(--space-4); }
   .au-foot { padding: var(--space-4); justify-content: center; text-align: center; }
+}
+
+/* After the base rules, so these insets win: the screenshot's generous margins on the bar, the
+   copy on the photograph and the footer alike. */
+@media (min-width: 1041px) {
+  .au-top, .au-foot { padding-left: 5vw; padding-right: 5vw; }
+  .au-hero { padding: var(--space-7) 5.5vw calc(var(--space-7) + var(--space-6)); }
+}
+
+@media (max-width: 640px) {
+  .au-dept-large .arms { height: 44px !important; width: auto; }
 }

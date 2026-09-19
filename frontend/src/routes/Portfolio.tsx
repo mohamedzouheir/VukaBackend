@@ -20,7 +20,7 @@ import { useLabels } from '../lib/labels';
 import { RiskPanel } from '../components/RiskPanel';
 import { EmptyState, ErrorState, Loading, Tile } from '../components/Shell';
 import { PageHead } from '../components/AppShell';
-import { AskVuka } from '../components/AskVuka';
+import { openKarabo } from '../components/AskKarabo';
 import { IconChart, IconFilter, IconGauge, IconHelp, IconInfo } from '../icons';
 import './Portfolio.css';
 
@@ -35,7 +35,6 @@ export function Portfolio() {
 
   const [sector, setSector] = useState<Sector | null>(null);
   const [explain, setExplain] = useState<PortfolioRow | null>(null);
-  const [asking, setAsking] = useState(false);
 
   const period = useMemo(() => reviewPeriod(periods.data), [periods.data]);
 
@@ -100,8 +99,8 @@ export function Portfolio() {
           somebody in the room asks a question, and making them navigate to Analytics first is
           the difference between using it and guessing. */}
       <div className="po-tools">
-        <button type="button" onClick={() => setAsking(true)}>
-          <IconHelp size={16} /> {t('ask.open')}
+        <button type="button" onClick={openKarabo}>
+          <IconHelp size={16} /> {t('karabo.ask')}
         </button>
         <Link className="btn" to="/analytics">
           <IconChart size={16} /> {t('pf.toAnalytics')}
@@ -275,7 +274,6 @@ export function Portfolio() {
         <RiskPanel risk={explain} entityName={explain.name} onClose={() => setExplain(null)} />
       ) : null}
 
-      {asking ? <AskVuka onClose={() => setAsking(false)} /> : null}
     </div>
   );
 }

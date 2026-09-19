@@ -66,6 +66,17 @@ const FAILURE: Record<KaraboFailure, Key> = {
 /** Earlier turns sent with each question, so "and last year?" can be understood. */
 const HISTORY_TURNS = 8;
 
+const OPEN_EVENT = 'vuka:karabo-open';
+
+/**
+ * Opens the docked panel from anywhere on the page, such as the ask button on Portfolio and
+ * Analytics. There is one Karabo per page, mounted by the shell, so a screen asks it to open
+ * rather than mounting a second one.
+ */
+export function openKarabo() {
+  window.dispatchEvent(new Event(OPEN_EVENT));
+}
+
 export function AskKarabo() {
   const { t, lang } = useI18n();
   const [open, setOpen] = useState(false);
@@ -117,6 +128,12 @@ export function AskKarabo() {
   useEffect(() => {
     document.documentElement.classList.toggle('karabo-dock-open', open);
   }, [open]);
+
+  useEffect(() => {
+    const onOpen = () => setOpen(true);
+    window.addEventListener(OPEN_EVENT, onOpen);
+    return () => window.removeEventListener(OPEN_EVENT, onOpen);
+  }, []);
 
   const ready = status?.available === true;
   const staff = status?.signedIn === true;

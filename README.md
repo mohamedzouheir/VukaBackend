@@ -277,19 +277,19 @@ why. **Download as CSV** builds the whole view client side in screen order, with
 meaning not published or not yet due and the file saying so; **Print or save as PDF** lays the
 screen out as a committee pack.
 
-**Ask Vuka** (`components/AskVuka.tsx`, on Analytics and on the Portfolio) takes a typed question
-and answers it from the same figures those screens are drawn from. There is no language model
-behind it and nothing leaves the building: it matches the question against a fixed set this product
-can answer, naming an entity beats every general question, and where it matches nothing it says so
-and lists what it can take. Every answer carries its source and a link to the screen that shows the
-working. That is the design rather than a shortcut, because an executive quoting a figure in a
-portfolio committee has to be able to defend where it came from.
+The **Ask Karabo** button on Analytics and on the Portfolio opens **Karabo**
+(`components/AskKarabo.tsx`), the assistant docked on every screen. It posts to `/api/chat`, where
+a model deployed in Microsoft Foundry answers through tools that call the dashboard's own
+controllers as the signed-in user, so it sees exactly what that account can see and nothing more.
+The sources under each answer are collected from the tools that ran, not from the model's text, so
+a citation cannot be invented; where the record does not hold the answer it says so. Where no model
+is configured the panel says it is not connected and answers nothing, rather than falling back to a
+canned figure.
 
 All of it is translated into the same five languages as the rest of the interface, including the
 headers of the CSV: an export is a document somebody hands to somebody else, so a reader who chose
-isiZulu is not handed an English spreadsheet. Ask Vuka carries its trigger words per language rather
-than matching English stems against a question typed in Sesotho, with the English triggers kept in
-every language so a bilingual user can type whichever word comes first.
+isiZulu is not handed an English spreadsheet. Karabo is told the reader's language and answers in
+it.
 
 A refusal is told apart from a missing sign in, and says why:
 
@@ -587,8 +587,8 @@ page still works, it just does not work offline.
 | | Light view | Full view |
 |---|---|---|
 | Built with | Thymeleaf, server-rendered | React, its own Vite entry (`citizen.html`, `src/citizen/`) |
-| On the wire | 1.7KB to 2.3KB gzipped per page | about 55KB gzipped once (React 46KB, the page 4KB, CSS 2.4KB), then JSON |
-| Has | every figure, five languages | the same figures and languages, plus search, sector filters, a delivery chart per entity and portfolio totals |
+| On the wire | 1.7KB to 2.3KB gzipped per page | about 60KB gzipped once (React 46KB, the page 7.7KB, CSS 5KB), then JSON. The logo (13KB) and the arms (15KB) on every screen; card pictures of 8KB to 20KB each, loaded lazily, at most seven distinct files on the index; one large photograph (51KB on the index, 40KB to 88KB on an entity) only on screens 720px and wider |
+| Has | the summary figures, five languages | the same figures and languages, plus search, sport, arts and culture groups, portfolio totals, and on each entity the accountability chain with a source for each figure, a row per committed target, a delivery chart and the Auditor-General's audit outcomes |
 | Loads | no framework, no Firebase, no web font | no Firebase, no router, no web font: never the dashboard bundle |
 
 How the choice is made, in order: the reader's own choice in `?view=lite` or `?view=rich`, which
@@ -604,7 +604,14 @@ has no full view, and serves the light one to everybody.
 
 Both read `PublicationService`, the full view through `/public/api/entities` and
 `/public/api/messages`, so they cannot disagree about a figure, and both return 404 for an entity
-DSAC has not published.
+DSAC has not published. The single entity record carries more than the list: the target table,
+the programmes and the audit history are filled on `/public/api/entities/{id}` only, so the index
+does not download every entity's indicators to draw its cards. The light view shows the summary
+counts and not the per-target table or the audit history.
+
+A target result reaches either view only once the submission it came in has been approved. A
+result filed but not yet reviewed is not counted, so an entity whose quarter is still with its
+reviewer shows its targets as not yet started, and no approved report.
 
 ### Offline
 
