@@ -14,12 +14,35 @@ what it achieved against the targets it promised. Vuka is where that happens.
 
 ![How one quarter moves through Vuka: administrator, reporter, reviewer, executive, the public](img/overview-flow.png)
 
-### Words you will see
+---
+
+## The five journeys
+
+Each chapter follows one person from signing in to finishing their work, without stopping to show
+anyone else's screen. They are in the order the demonstration plays them.
+
+| # | Person | What they do | Chapter |
+|---|---|---|---|
+| 1 | **Administrator** (DSAC) | Brings the Q2 deadline forward, gives Artscape a reporter account, publishes entities to the public | [The administrator](1-administrator.md) |
+| 2 | **Reviewer** (DSAC) | Works the Q1 queue by risk, sends one of Iziko's figures back, approves Boxing South Africa | [The reviewer](2-reviewer.md) |
+| 3 | **Reporter** (Iziko Museums) | Is warned about Q2, answers the figure the reviewer sent back, then files Q2 from the template | [The reporter](3-reporter.md) |
+| 4 | **Executive** (DSAC leadership) | Reads the portfolio, explains one entity's score, looks at the trends, asks Karabo | [The executive](4-executive.md) |
+| 5 | **The public** | Finds an entity, reads its record in their language, asks Karabo | [The public](5-public.md) |
+
+Why the reviewer comes before the reporter: the entities filed Q1 in August, so on the day of the
+demonstration the reviewer is working through those filings while Q2 is still open. Doing the
+review first means the reporter signs in once and meets everything waiting for them in one sitting.
+
+The script for presenting it is [Demonstration script](demo-script.md).
+
+---
+
+## Words you will see
 
 | Word | What it means |
 |---|---|
 | **Entity** | One of the 28 bodies DSAC funds, for example Iziko Museums or Boxing South Africa |
-| **Quarter** | A three-month reporting period. Q1 is April to June, Q2 July to September, and so on |
+| **Quarter** | A three-month reporting period. Q1 is April to June, Q2 is July to September |
 | **Target** | Something the entity promised to deliver this year, for example "12 exhibitions mounted" |
 | **Figure** | What the entity says it actually delivered against a target this quarter |
 | **Evidence** | The document behind a figure: an attendance register, a signed report, an invoice |
@@ -33,96 +56,35 @@ what it achieved against the targets it promised. Vuka is where that happens.
 
 ---
 
-This manual has one chapter for each kind of person who uses Vuka. Find yourself in the table and
-start there.
+## Signing in
 
-| If you are | You want to | Read |
-|---|---|---|
-| Anyone | Open Vuka, choose your language, sign in | [Getting in](getting-in.md) |
-| Anyone | Ask a question in ordinary words | [Asking Karabo](karabo.md) |
-| A DSAC administrator | Set deadlines, give an entity its reporter account, connect Microsoft 365, choose what the public sees | [Setting up: the administrator](00-administrator.md) |
-| A reporting officer at an entity, at a desk | Report the quarter from the Excel template | [J1. Reporting from your desk](J1-reporting-from-your-desk.md) |
-| A reporting officer on a phone | Report the quarter one question at a time, on mobile data | [J2. Reporting from a phone](J2-reporting-from-a-phone.md) |
-| A DSAC reviewer | Decide which submissions to look at, then approve or return them | [J3. Reviewing submissions](J3-reviewing-submissions.md) |
-| A DSAC executive | See the whole portfolio, explain any one entity, ask a question | [J4. The portfolio view](J4-portfolio-view.md) |
-| A member of the public | See what an entity was given and what it delivered | [J5. The citizen view](J5-citizen-view.md) |
-| Anyone signed in | Keep documents, set and close tasks, read the audit trail, work offline | [Working together](working-together.md) |
-| Presenting Vuka | Run the demonstration in order, and know what each screen answers in the brief | [Presenting Vuka](presenting.md) |
+Open the Vuka address. The landing page offers **Sign in** (1). The **Ask Karabo** tab (2) is on the
+right edge of every page, before and after signing in.
 
----
+![The landing page with Sign in and the Ask Karabo tab marked](img/g-01-landing.jpg)
 
-## How the journeys connect
+On a real deployment each person signs in with the email address and password DSAC issued them.
+There is no sign-up. In the demonstration copy, the sign-in page also has a **Demonstration
+accounts** panel under the form. Click a role to sign in as that person.
 
-A quarter moves through Vuka in one direction, and each chapter picks it up where the last one
-left it.
+![The Demonstration accounts panel: DSAC reviewer, DSAC executive, Administrator, Entity reporter](img/g-08-demo-accounts.png)
 
-1. The **administrator** sets the due date, issues the entity's reporter account and, when the
-   Department decides to, publishes the entity.
-2. The **reporter** is warned as the due date approaches, fills in the figures, attaches evidence,
-   confirms each figure and submits.
-3. The **reviewer** checks each figure against its evidence, then approves the submission or
-   returns the figures they dispute. A returned figure goes back to the reporter, who answers it
-   and submits again.
-4. The **executive** reads the result across all 28 entities, and can ask Karabo a question in
-   ordinary words.
-5. The **public** sees what was allocated, promised and delivered for each published entity.
-
-Two rules hold throughout, and they explain most of what the screens say:
-
-- **A confirmed figure cannot be edited.** Not by the reporter, not by the reviewer. If a figure is
-  wrong, the reviewer returns it and the reporter confirms a corrected one. Both stay on the record.
-- **A figure with no evidence is "unverifiable".** That is different from "unverified". Attach the
-  attendance register, signed report, photograph or invoice that the number came from.
-
----
-
-## Opening Vuka
-
-| Surface | Address | Who |
-|---|---|---|
-| Landing page and office dashboard | the address your department gives you, for example `https://vuka.example.gov.za` | Everyone with an account |
-| Phone reporting | the same address followed by `/m` | Entity reporters |
-| Citizen view | the same address followed by `/public` | Anyone, no account |
-| Audit trail | the same address followed by `/logs` | Anyone signed in (a reporter sees their own entity only) |
-
-**There is no sign-up.** DSAC issues each reporter account for one named entity. If you report for
-an entity and have no account, ask your DSAC administrator. See [Getting in](getting-in.md).
-
-**You land on your own screen.** Vuka knows your role and, for a reporter, your entity, from your
-account. A reporter never chooses an entity; the entity name is already at the top of the page.
-
-| Role | Opens on | Menu on the left |
-|---|---|---|
-| Entity reporter | My reporting | My reporting, Documents, Workspaces, Tasks, Citizen View |
-| DSAC reviewer | Today | Today, Review queue, Risk & Alerts, Analytics & Insights, Documents, Workspaces, Tasks |
-| DSAC executive | Portfolio | Portfolio, Entities, Analytics & Insights, Citizen View |
-| DSAC administrator | Administration | Administration, Workspaces, Tasks, Citizen View |
-
-Across the top of every signed-in page are a search box, the **language** picker, a notifications
-bell, and your name and role with the sign-out button. The arrow at the top of the menu collapses
-it to icons.
-
-Down the right edge of every page, signed in or not, is the **Ask Karabo** tab. See
-[Asking Karabo](karabo.md).
+Every signed-in page has a **language** picker at the top (English, Afrikaans, isiZulu, isiXhosa,
+Sesotho) and a menu down the left that holds only what that person can use.
 
 ---
 
 ## About the screenshots
 
-The screenshots were taken on a demonstration copy of Vuka loaded with the 28 real DSAC entities
-and their published allocations. Quarterly figures, reviews, comments, tasks and people's names in
-them are illustrative.
+The screenshots were taken on the demonstration copy, in the order of this manual, so each screen
+shows what the journey before it left behind. The 28 entities and their allocations are real,
+from the Estimates of National Expenditure 2026, Vote 37. Quarterly figures, comments and people's
+names are illustrative.
 
-That copy runs with a development sign-in, so three things in the screenshots will not appear on a
-real deployment:
+Two things in them appear only in the demonstration copy: the orange strip reading "Development
+sign in is enabled", and the Demonstration accounts panel.
 
-- the orange strip across the top that reads "Development sign in is enabled",
-- the **Demonstration accounts** panel at the foot of the sign-in page, and
-- the employee single sign-on button signing straight in as the administrator. A real deployment
-  would federate it to the Department's directory, which is not wired in this build.
+Karabo's answers are real answers from the connected model. Asked again, it may word them
+differently; the figures and sources stay the same.
 
-Karabo's answers in the screenshots are real answers from the connected model, given to the
-questions shown. Asked again, it may word them differently; the figures and sources stay the same.
-
-Red numbered boxes were added to the screenshots to show where to click. They are not part of the
-screen.
+Red numbered boxes were added to show where to click. They are not part of the screen.
