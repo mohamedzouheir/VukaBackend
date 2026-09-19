@@ -439,8 +439,6 @@ export const en = {
   'karabo.placeholder': 'Ask about an entity, a figure or a deadline...',
   'karabo.trySome': 'Try one of these',
   'karabo.thinking': 'Reading the record',
-  'karabo.notConnected':
-    'Karabo is a design. No model is connected and no answer here is real. When it is wired it will read the same endpoints you can, so it will never tell you something your own account could not see.',
 
   /* Audit outcomes, as the Auditor-General publishes them. "Clean audit" is the phrase in
      general use for an unqualified opinion with no findings; the others are the formal terms
@@ -597,27 +595,10 @@ export const en = {
 
   'karabo.greeting':
     'I am Karabo. Ask me about any body the Department funds, in ordinary words, and I will answer with the figure and where it came from.',
-  'karabo.disclaimer':
-    'I am not connected yet, so I cannot answer for real. Everything I will answer from is already in the system: allocations, targets, what was reported, what evidence is attached and who confirmed it. Try a question and I will tell you what I would read.',
   'karabo.q1': 'Which entities are late this quarter?',
   'karabo.q2': 'What was Iziko allocated this year?',
   'karabo.q3': 'Why is Robben Island scored critical?',
   'karabo.q4': 'Show me figures with no evidence attached',
-  'karabo.aLate':
-    'I would answer this from the submission lateness signal on each entity, which stores the days late and which deadline it measured against. That distinction matters: a departmental instruction and a statutory PFMA date are not the same breach.',
-  'karabo.sLate': 'Would read: risk signals, reporting periods and their deadline basis',
-  'karabo.aMoney':
-    'I would give you the figure and the line it came from, which for allocations is Estimates of National Expenditure 2026, Vote 37, Table 37.3. An entity with no allocation row would come back as having none rather than as zero.',
-  'karabo.sMoney': 'Would read: allocations for the current financial year',
-  'karabo.aRisk':
-    'I would read the five stored signals behind the score and give you them with their weights and contributions, in the same words the risk panel uses. The score is arithmetic rather than a prediction, so I can show you how it was reached rather than asking you to trust it.',
-  'karabo.sRisk': 'Would read: the stored risk score and its signals for that period',
-  'karabo.aEvidence':
-    'I would list the reported figures with no document attached. Those show to the Department as unverifiable, which is the Auditor-General\u2019s word and a different thing from unverified.',
-  'karabo.sEvidence': 'Would read: target results and the documents attached to each',
-  'karabo.aFallback':
-    'Once I am connected I would answer that from the reporting record and show you where the figure came from. For now the same answer is on the screens themselves: the portfolio for who is at risk, an entity page for its allocation and targets, and the audit trail for who did what.',
-  'karabo.sFallback': 'Not connected. No figure has been invented for this reply',
 
   'tasks.what': 'your tasks',
   'tasks.notUpdated': 'The task was not updated.',
@@ -1481,6 +1462,29 @@ export const en = {
   'signin.roleAdmin': 'Administrator',
   'signin.roleReporter': 'Entity reporter',
 
+  /* ---------------------------------------------------------------- karabo, connected */
+  'karabo.checking': 'Checking whether I can answer...',
+  'karabo.introStaff':
+    'I answer from Vuka’s own records, with exactly what your account can see. Under each answer I show where the figure came from. If the record does not show something, I will say so rather than guess.',
+  'karabo.introPublic':
+    'I answer from what the Department has published: allocations and how many targets each entity achieved. Under each answer I show where the figure came from. Staff who sign in can also ask about deadlines, risk and evidence.',
+  'karabo.introOff':
+    'I am not connected in this build, so I cannot answer yet. When I am, I will answer from Vuka’s own records and show where every figure came from.',
+  'karabo.sourcesLabel': 'Where this came from',
+  'karabo.empty': 'I could not find an answer to that in the record.',
+  'karabo.errNotConfigured': 'I am not connected in this build, so I cannot answer yet.',
+  'karabo.errSignIn':
+    'Sign in to ask me questions. I answer Department and entity staff only in this build.',
+  'karabo.errRate': 'That is a lot of questions in a short time. Wait a minute and ask again.',
+  'karabo.errInvalid': 'I could not read that question. Keep it under 1,000 characters and try again.',
+  'karabo.errFiltered':
+    'I cannot answer that question. Try asking about an entity, a figure or a deadline.',
+  'karabo.errTimeout': 'That took too long to answer. Try again, or ask something narrower.',
+  'karabo.errProvider': 'I could not answer just now. Nothing was changed. Try again in a moment.',
+  'karabo.errOffline': 'You are offline, and I need a connection to answer. Your question was not sent.',
+  'karabo.footLive':
+    'Karabo answers only from Vuka’s records, with your own access, and can still be wrong. Check the source under each answer.',
+  'karabo.footOff': 'Karabo is not connected in this build. No answer here is invented.',
   /* ---------------------------------------------------------------- Microsoft 365 mirroring: the
      state badge on a document, and the entity admin's bind, webhook and sync controls */
   'ms.column': 'Microsoft 365',

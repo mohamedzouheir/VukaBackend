@@ -68,6 +68,13 @@ export function Landing() {
             <br />
             <b>{t('dept.line3')}</b>
           </span>
+
+          {/* The product's mark beside the Department's: the arms say whose this is, the V says
+              what it is called. The image is decorative, since the name is written beside it. */}
+          <span className="land-brand">
+            <img src="/img/vuka-logo.png" alt="" aria-hidden="true" width={52} height={42} draggable={false} />
+            <span>Vuka</span>
+          </span>
         </div>
 
         <div className="land-top-right">
@@ -166,7 +173,7 @@ export function Landing() {
         ))}
       </section>
 
-      {/* Design only. Nothing is connected and the panel says so. */}
+      {/* Answers from published data only, for a visitor who has not signed in. */}
       <AskKarabo />
 
       <footer className="land-quote">

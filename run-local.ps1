@@ -68,6 +68,22 @@ $env:DB_USER = 'vuka'
 $env:DB_PASSWORD = 'vuka'
 
 # ---------------------------------------------------------------------------
+# Karabo, on a model in Microsoft Foundry. Optional.
+#
+# The values live in karabo.local.ps1 beside this script, which git ignores, so the key never
+# reaches a commit. Copy karabo.local.example.ps1 to karabo.local.ps1 and fill it in. Without it
+# Karabo says it is not connected and everything else works as before.
+# ---------------------------------------------------------------------------
+
+$karaboConfig = Join-Path $PSScriptRoot 'karabo.local.ps1'
+if (Test-Path $karaboConfig) {
+    . $karaboConfig
+    Write-Host "Karabo : $env:AZURE_OPENAI_ENDPOINT, deployment $env:AZURE_DEPLOYMENT_NAME"
+} else {
+    Write-Host 'Karabo : not configured (see karabo.local.example.ps1)'
+}
+
+# ---------------------------------------------------------------------------
 # Switches
 # ---------------------------------------------------------------------------
 

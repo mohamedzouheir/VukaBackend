@@ -15,6 +15,11 @@ firebase-service-account.json
 serviceAccountKey.json
 .env
 
+# Karabo's Foundry endpoint, deployment and API key for a local run. The key is a paid
+# credential: anyone holding it can run up the Department's bill. The example file is committed.
+karabo.local.ps1
+*.key
+
 # Frontend
 node_modules/
 

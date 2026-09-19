@@ -399,8 +399,6 @@ export const xh: Record<Key, string> = {
   'karabo.placeholder': 'Buza ngeziko, inani okanye umhla wokugqibela...',
   'karabo.trySome': 'Zama enye yezi',
   'karabo.thinking': 'Kufundwa irekhodi',
-  'karabo.notConnected':
-    'UKarabo luyilo. Akukho modeli iqhagamshelweyo kwaye akukho mpendulo apha eyinyani. Xa eqhagamshelwe, uya kufunda iindawo ezifanayo nawe, ngoko akasoze akuxelele nantoni na i-akhawunti yakho ebingenako ukuyibona.',
 
   'outcome.clean': 'Uphicotho olucocekileyo',
   'outcome.unqualifiedFindings': 'Olungenamiqathango kodwa lunokufunyanisiweyo',
@@ -558,27 +556,10 @@ export const xh: Record<Key, string> = {
 
   'karabo.greeting':
     'NdinguKarabo. Ndibuze ngalo naliphi na iziko elixhaswa liSebe, ngamazwi aqhelekileyo, ndiya kuphendula ngenani nangapho livela khona.',
-  'karabo.disclaimer':
-    'Andikaqhagamshelwa, ngoko andinako ukuphendula ngokwenene. Yonke into endiya kuphendula ngayo sele ikho kwinkqubo: ukwabiwa, iinjongo, okunikwe ingxelo, ubungqina obuqhotyoshelweyo nokuba ngubani oqinisekisileyo. Zama umbuzo ndikuxelele ukuba bendiza kufunda ntoni.',
   'karabo.q1': 'Ngawaphi amaziko abambezelekileyo kule kota?',
   'karabo.q2': 'Yintoni eyabelwe i-Iziko kulo nyaka?',
   'karabo.q3': 'Kutheni i-Robben Island ilinganiswe njengebucayi?',
   'karabo.q4': 'Ndibonise amanani angenabo ubungqina obuqhotyoshelweyo',
-  'karabo.aLate':
-    'Bendiza kuphendula oku ngophawu lokungenisa emva kwexesha kwiziko ngalinye, olugcina iintsuku ezibambezelekileyo nokuba luluphi umhla ekuthelekiswe nawo. Loo mahluko ubalulekile: umyalelo weSebe nomhla omiselwe ngumthetho we-PFMA akufani.',
-  'karabo.sLate': 'Bendiza kufunda: iimpawu zomngcipheko, amaxesha okunika ingxelo nesiseko semihla yawo',
-  'karabo.aMoney':
-    'Bendiza kukunika inani nomgca elivela kuwo, okuthi kokwabiwa ibe yi-Estimates of National Expenditure 2026, uVoti 37, iTheyibhile 37.3. Iziko elingenayo irekhodi yokwabiwa belingabuya njengelingenayo endaweni yokuba libe ngu-zero.',
-  'karabo.sMoney': 'Bendiza kufunda: ukwabiwa konyaka-mali okhoyo',
-  'karabo.aRisk':
-    'Bendiza kufunda iimpawu ezintlanu ezigciniweyo ezingemva kwamanqaku ndikunike zona nobunzima begalelo lazo, ngamazwi afanayo nalawo asetyenziswa yiphaneli yomngcipheko. Amanqaku yimibalo endaweni yoqikelelo, ngoko ndingakubonisa indlela afikelelwe ngayo endaweni yokucela ukuba uwathembe.',
-  'karabo.sRisk': 'Bendiza kufunda: amanqaku omngcipheko agciniweyo neempawu zawo kwelo xesha',
-  'karabo.aEvidence':
-    'Bendiza kudwelisa amanani anikwe ingxelo angenaxwebhu liqhotyoshelweyo. Lawo abonakala kwiSebe njengangenakuqinisekiswa, elilizwi loMphicothi-zincwadi Jikelele kwaye lahlukile kwelithi angaqinisekiswanga.',
-  'karabo.sEvidence': 'Bendiza kufunda: iziphumo zeenjongo namaxwebhu aqhotyoshelwe kwinye nganye',
-  'karabo.aFallback':
-    'Xa ndiqhagamshelwe bendiza kuphendula oko kwirekhodi yokunika ingxelo ndikubonise apho inani livela khona. Okwangoku impendulo efanayo ikwiiskrini ngokwazo: iphothifoliyo yokuba ngubani osemngciphekweni, iphepha leziko lokwabiwa neenjongo zalo, nomkhondo wophicotho wokuba ngubani owenze ntoni.',
-  'karabo.sFallback': 'Akuqhagamshelwanga. Akukho nani liqanjiweyo kule mpendulo',
 
   'tasks.what': 'imisebenzi yakho',
   'tasks.notUpdated': 'Umsebenzi awuhlaziywanga.',
@@ -1456,6 +1437,33 @@ export const xh: Record<Key, string> = {
   'signin.roleAdmin': 'Umlawuli',
   'signin.roleReporter': 'Umnikingxelo weziko',
 
+  /* ---------------------------------------------------------------- karabo, connected */
+  'karabo.checking': 'Ndijonga ukuba ndingaphendula na...',
+  'karabo.introStaff':
+    'Ndiphendula ngeerekhodi zikaVuka ngokwakhe, ngoko kanye iakhawunti yakho enokukubona. Phantsi kwempendulo nganye ndibonisa apho inani livela khona. Ukuba irekhodi alibonisi nto ethile, ndiya kutsho endaweni yokuqikelela.',
+  'karabo.introPublic':
+    'Ndiphendula ngoko iSebe likupapashileyo: izabelo kunye neenjongo ezingaphi eziphunyezwe liziko ngalinye. Phantsi kwempendulo nganye ndibonisa apho inani livela khona. Abasebenzi abangenayo banokubuza nangamaxesha okugqibela, umngcipheko nobungqina.',
+  'karabo.introOff':
+    'Andixhunyiwe kolu hlobo, ngoko andinakuphendula okwangoku. Xa sendixhunyiwe, ndiya kuphendula ngeerekhodi zikaVuka ndibonise apho inani ngalinye livela khona.',
+  'karabo.sourcesLabel': 'Apho oku kuvela khona',
+  'karabo.empty': 'Andifumananga mpendulo yaloo nto kwirekhodi.',
+  'karabo.errNotConfigured': 'Andixhunyiwe kolu hlobo, ngoko andinakuphendula okwangoku.',
+  'karabo.errSignIn':
+    'Ngena ukuze undibuze imibuzo. Kolu hlobo ndiphendula abasebenzi beSebe nabamaziko kuphela.',
+  'karabo.errRate': 'Yimibuzo emininzi leyo ngexesha elifutshane. Linda umzuzu uze ubuze kwakhona.',
+  'karabo.errInvalid':
+    'Andikwazanga ukuwufunda loo mbuzo. Wugcine ungaphantsi kweempawu eziyi-1 000 uze uzame kwakhona.',
+  'karabo.errFiltered':
+    'Andinakuwuphendula loo mbuzo. Zama ukubuza ngeziko, inani okanye ixesha lokugqibela.',
+  'karabo.errTimeout':
+    'Oko kuthathe ixesha elide kakhulu ukuphendula. Zama kwakhona, okanye ubuze into encinci.',
+  'karabo.errProvider':
+    'Andikwazanga ukuphendula ngoku. Akukho nto itshintshiweyo. Zama kwakhona kamva kancinci.',
+  'karabo.errOffline':
+    'Awuxhunyanga, kwaye ndifuna unxibelelwano ukuze ndiphendule. Umbuzo wakho awuthunyelwanga.',
+  'karabo.footLive':
+    'UKarabo uphendula ngeerekhodi zikaVuka kuphela, ngokufikelela kwakho, kwaye usenokuphazama. Jonga umthombo phantsi kwempendulo nganye.',
+  'karabo.footOff': 'UKarabo akaxhunyiwe kolu hlobo. Akukho mpendulo apha iyilweyo.',
   /* ---------------------------------------------------------------- Microsoft 365 mirroring */
   'ms.column': 'Microsoft 365',
   'ms.stateSynced': 'kuvumelaniswe',

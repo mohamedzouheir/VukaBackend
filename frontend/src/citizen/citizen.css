@@ -93,6 +93,7 @@ a:focus-visible, button:focus-visible, input:focus-visible {
 }
 .c-flag { display: inline-flex; width: 20px; height: 20px; border-radius: 50%; overflow: hidden; transform: rotate(-20deg); }
 .c-flag i { flex: 1; }
+.c-logo { display: block; flex: none; height: 22px; width: auto; margin-right: -4px; }
 .c-brand { font-weight: 800; letter-spacing: -0.01em; font-size: 18px; }
 .c-wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px 48px; }
 

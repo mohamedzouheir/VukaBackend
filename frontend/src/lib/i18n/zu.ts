@@ -399,8 +399,6 @@ export const zu: Record<Key, string> = {
   'karabo.placeholder': 'Buza ngenhlangano, isibalo noma umnqamulajuqu...',
   'karabo.trySome': 'Zama okukodwa kwalokhu',
   'karabo.thinking': 'Kufundwa irekhodi',
-  'karabo.notConnected':
-    'UKarabo uwumklamo. Ayikho imodeli exhunyiwe futhi ayikho impendulo lapha eyiqiniso. Uma esexhunyiwe, uzofunda amaphoyinti afanayo nawe, ngakho ngeke akutshele lutho i-akhawunti yakho ebingeke ilubone.',
 
   'outcome.clean': 'Ukuhlolwa okuhlanzekile',
   'outcome.unqualifiedFindings': 'Okungenamibandela kodwa kunokutholakele',
@@ -558,27 +556,10 @@ export const zu: Record<Key, string> = {
 
   'karabo.greeting':
     'NginguKarabo. Ngibuze nganoma iyiphi inhlangano exhaswa uMnyango, ngamagama ajwayelekile, futhi ngizophendula ngesibalo nalapho sivela khona.',
-  'karabo.disclaimer':
-    'Angikaxhunywa, ngakho angikwazi ukuphendula ngempela. Konke engizophendula kusukela kukho sekuvele kukhona ohlelweni: ukwabiwa, imigomo, okubikiwe, ubufakazi obunamathiselwe nokuthi ngubani oqinisekisile. Zama umbuzo ngizokutshela ukuthi bengizofunda ini.',
   'karabo.q1': 'Yiziphi izinhlangano ezephuze kule kota?',
   'karabo.q2': 'Kwabiwa kanjani ku-Iziko kulo nyaka?',
   'karabo.q3': 'Kungani i-Robben Island ikalwe njengebucayi?',
   'karabo.q4': 'Ngibonise izibalo ezingenabo ubufakazi obunamathiselwe',
-  'karabo.aLate':
-    'Bengizophendula lokhu ngisuka kusignali yokuthumela sekwephuzile kunhlangano ngayinye, egcina izinsuku ezephuzile nokuthi yimuphi umnqamulajuqu ebiwulinganisa. Lowo mehluko ubalulekile: umyalelo woMnyango nosuku olubekwe umthetho we-PFMA akufani.',
-  'karabo.sLate': 'Bekungafundwa: amasignali obungozi, izikhathi zokubika nesisekelo somnqamulajuqu wazo',
-  'karabo.aMoney':
-    'Bengizokunika isibalo nomugqa esivela kuwo, okuthi kokwabiwa kube yi-Estimates of National Expenditure 2026, iVote 37, iThebula 37.3. Inhlangano engenayo irekhodi yokwabiwa ibizobuya njengengenayo esikhundleni sokuba ngu-zero.',
-  'karabo.sMoney': 'Bekungafundwa: ukwabiwa konyaka wezimali wamanje',
-  'karabo.aRisk':
-    'Bengizofunda amasignali amahlanu agciniwe angemuva kwamaphuzu ngikunike wona nezisindo zawo neminikelo yawo, ngamagama afanayo nalawo asetshenziswa iphaneli yobungozi. Amaphuzu ayizibalo kunokuba abe yisibikezelo, ngakho ngingakukhombisa ukuthi afinyelelwe kanjani kunokuba ngicele ukuthi uwethembe.',
-  'karabo.sRisk': 'Bekungafundwa: amaphuzu obungozi agciniwe namasignali awo kuleso sikhathi',
-  'karabo.aEvidence':
-    'Bengizobhala uhlu lwezibalo ezibikiwe ezingenalo idokhumenti elinamathiselwe. Lezo zivela kuMnyango njengezingeke ziqinisekiswe, okuyigama likaMcwaningimabhuku-Jikelele futhi okungafani nokungaqinisekisiwe.',
-  'karabo.sEvidence': 'Bekungafundwa: imiphumela yemigomo namadokhumenti anamathiselwe kuyo',
-  'karabo.aFallback':
-    'Uma sengixhunyiwe bengizophendula lokho ngisuka kurekhodi yokubika ngikukhombise lapho isibalo sivela khona. Okwamanje impendulo efanayo isezikrinini uqobo: iphothifoliyo yokuthi ngubani osengozini, ikhasi lenhlangano ngokwabiwa nemigomo yayo, nomkhondo wokuhlola wokuthi ngubani owenzeni.',
-  'karabo.sFallback': 'Akuxhunyiwe. Asikho isibalo esiqanjiwe kule mpendulo',
 
   'tasks.what': 'imisebenzi yakho',
   'tasks.notUpdated': 'Umsebenzi awubuyekezwanga.',
@@ -1455,6 +1436,32 @@ export const zu: Record<Key, string> = {
   'signin.roleAdmin': 'Umlawuli',
   'signin.roleReporter': 'Umbiki wenhlangano',
 
+  /* ---------------------------------------------------------------- karabo, connected */
+  'karabo.checking': 'Ngihlola ukuthi ngingaphendula yini...',
+  'karabo.introStaff':
+    'Ngiphendula ngamarekhodi kaVuka uqobo, ngalokho kanye i-akhawunti yakho engakubona. Ngaphansi kwempendulo ngayinye ngibonisa ukuthi isibalo sivelaphi. Uma irekhodi lingakukhombisi okuthile, ngizokusho kunokuba ngiqagele.',
+  'karabo.introPublic':
+    'Ngiphendula ngalokho uMnyango okushicilele: ukwabiwa kwezimali nokuthi inhlangano ngayinye ifeze okuhlosiwe okungaki. Ngaphansi kwempendulo ngayinye ngibonisa ukuthi isibalo sivelaphi. Abasebenzi abangenayo bangabuza nangemingqamulajuqu, ingozi nobufakazi.',
+  'karabo.introOff':
+    'Angixhunyiwe kulolu hlelo, ngakho angikwazi ukuphendula okwamanje. Uma sengixhunyiwe, ngizophendula ngamarekhodi kaVuka futhi ngibonise ukuthi isibalo ngasinye sivelaphi.',
+  'karabo.sourcesLabel': 'Lapho lokhu kuvela khona',
+  'karabo.empty': 'Angitholanga mpendulo yalokho erekhodini.',
+  'karabo.errNotConfigured': 'Angixhunyiwe kulolu hlelo, ngakho angikwazi ukuphendula okwamanje.',
+  'karabo.errSignIn':
+    'Ngena ukuze ungibuze imibuzo. Kulolu hlelo ngiphendula abasebenzi boMnyango nabezinhlangano kuphela.',
+  'karabo.errRate': 'Leyo imibuzo eminingi ngesikhathi esifushane. Linda umzuzu bese ubuza futhi.',
+  'karabo.errInvalid':
+    'Angikwazanga ukufunda lowo mbuzo. Wugcine ungaphansi kwezinhlamvu eziyi-1 000 bese uzama futhi.',
+  'karabo.errFiltered':
+    'Angikwazi ukuphendula lowo mbuzo. Zama ukubuza ngenhlangano, isibalo noma umnqamulajuqu.',
+  'karabo.errTimeout':
+    'Lokho kuthathe isikhathi eside kakhulu ukuphendula. Zama futhi, noma ubuze okuthile okuncane.',
+  'karabo.errProvider': 'Angikwazanga ukuphendula manje. Akukho okushintshiwe. Zama futhi emzuzwini.',
+  'karabo.errOffline':
+    'Awuxhunyiwe, futhi ngidinga uxhumano ukuze ngiphendule. Umbuzo wakho awuthunyelwanga.',
+  'karabo.footLive':
+    'UKarabo uphendula ngamarekhodi kaVuka kuphela, ngokufinyelela kwakho, futhi usengaphazama. Hlola umthombo ngaphansi kwempendulo ngayinye.',
+  'karabo.footOff': 'UKarabo akaxhunyiwe kulolu hlelo. Ayikho impendulo lapha eqanjiwe.',
   /* ---------------------------------------------------------------- Microsoft 365 mirroring */
   'ms.column': 'Microsoft 365',
   'ms.stateSynced': 'kuvunyelaniswe',
