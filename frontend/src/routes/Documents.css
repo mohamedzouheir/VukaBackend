@@ -1,0 +1,94 @@
+/* Documents: a filter bar, a file list with a type badge per row, and a right rail. */
+
+.doc-filters {
+  margin-top: var(--space-4);
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  flex-wrap: wrap;
+  padding: var(--space-4) var(--space-5);
+}
+.doc-search { flex: 1 1 18rem; }
+.doc-filters select { min-width: 9.5rem; }
+
+.doc-list-card { padding: 0; margin-top: var(--space-4); }
+.doc-list-card > .section-head {
+  padding: var(--space-4) var(--space-5) 0;
+  align-items: center;
+}
+.doc-list-card > .section-head h2 { margin: 0; }
+.doc-sort { display: flex; align-items: center; gap: 8px; font-size: 0.8125rem; color: var(--ink-muted); }
+
+.doc-list { list-style: none; margin: 0; padding: 0; }
+
+.doc-row {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 2.2fr) minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 0.9fr) auto;
+  gap: var(--space-4);
+  align-items: center;
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--rule);
+}
+
+/* The file type badge, coloured by extension the way the office suite colours it. */
+.doc-badge {
+  display: inline-flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: 32px;
+  height: 40px;
+  padding-bottom: 5px;
+  border-radius: 4px 12px 4px 4px;
+  background: var(--ink-muted);
+  color: #fff;
+  font-size: 0.5625rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+.doc-badge-pdf { background: #C8372D; }
+.doc-badge-xls { background: #1E7A45; }
+.doc-badge-doc { background: #2458B3; }
+.doc-badge-ppt { background: #C2531B; }
+
+.doc-name { display: block; font-weight: 600; color: var(--navy-ink); }
+.doc-meta { display: block; font-size: 0.8125rem; color: var(--ink-muted); margin-top: 2px; }
+.doc-meta .chip { margin-right: 6px; }
+
+.doc-cell { font-size: 0.8125rem; }
+.doc-cell > * + * { margin-top: 4px; }
+.doc-cell .muted { display: block; }
+
+.doc-when { font-size: 0.8125rem; color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+.doc-when span { display: flex; align-items: center; gap: 6px; }
+.doc-when span + span { margin-top: 4px; }
+
+.doc-open { white-space: nowrap; }
+
+@media (max-width: 1100px) {
+  .doc-row {
+    grid-template-columns: 40px minmax(0, 1fr) auto;
+    row-gap: var(--space-2);
+  }
+  .doc-row > .doc-cell,
+  .doc-row > .doc-when { grid-column: 2 / 4; }
+  .doc-row > .doc-open { grid-column: 3; grid-row: 1; }
+}
+
+/* ---------- right rail ---------- */
+
+.doc-help { display: flex; gap: var(--space-3); align-items: flex-start; }
+.doc-help h2 { margin: 0 0 var(--space-2); font-size: 1rem; }
+.doc-help p { margin: 0; font-size: 0.875rem; color: var(--ink-muted); }
+
+.doc-recent { list-style: none; margin: 0; padding: 0; }
+.doc-recent li {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-3) 0;
+}
+.doc-recent li + li { border-top: 1px solid var(--rule); }
+.doc-recent .doc-badge { width: 26px; height: 32px; font-size: 0.5rem; padding-bottom: 4px; }
+.doc-recent strong { display: block; font-size: 0.8125rem; color: var(--navy-ink); overflow-wrap: anywhere; }
+.doc-recent span { font-size: 0.75rem; color: var(--ink-muted); }

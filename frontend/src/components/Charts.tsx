@@ -352,3 +352,173 @@ export function Dumbbells({
     </div>
   );
 }
+
+/* ------------------------------------------------------------------ */
+/* ring: parts of a whole, when the whole is the headline              */
+/* ------------------------------------------------------------------ */
+
+/**
+ * A ring, for the one place a part of a whole is the headline: the executive's portfolio, where
+ * the question is how much of it is in good standing. The figure in the middle says that in words,
+ * and the legend beside it carries every segment's count and share, so the ring is a picture of
+ * numbers already printed rather than the only place they appear.
+ *
+ * Segments are separated by a gap of surface, as in the stacked bar, so two neighbours of similar
+ * colour never read as one.
+ */
+export function Ring({
+  slices, label, centre, centreSub, size = 150,
+}: {
+  slices: Slice[];
+  label: string;
+  centre: string;
+  centreSub: string;
+  size?: number;
+}) {
+  const hover = useHover();
+  const total = slices.reduce((n, s) => n + s.value, 0);
+  const stroke = 18;
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const present = slices.filter((s) => s.value > 0);
+  // A gap only exists between two segments. One segment is a whole ring.
+  const gap = present.length > 1 ? 3 : 0;
+  let offset = 0;
+
+  return (
+    <div className="viz-plot viz-ring" onMouseLeave={hover.hide} style={{ width: size, height: size }}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label={label}>
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--surface-sunk)" strokeWidth={stroke} />
+        {total > 0
+          ? present.map((s) => {
+              const len = (s.value / total) * c;
+              const dash = Math.max(0.5, len - gap);
+              const el = (
+                <circle
+                  key={s.key}
+                  cx={size / 2}
+                  cy={size / 2}
+                  r={r}
+                  fill="none"
+                  stroke={s.colour}
+                  strokeWidth={stroke}
+                  strokeDasharray={`${dash} ${c - dash}`}
+                  strokeDashoffset={-offset}
+                  transform={`rotate(-90 ${size / 2} ${size / 2})`}
+                  onMouseMove={(e) => hover.show(e, s.label + ': ' + s.value)}
+                >
+                  <title>{s.label + ': ' + s.value}</title>
+                </circle>
+              );
+              offset += len;
+              return el;
+            })
+          : null}
+      </svg>
+      <span className="viz-ring-centre" aria-hidden="true">
+        <strong>{centre}</strong>
+        <em>{centreSub}</em>
+      </span>
+      {hover.tip}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* line: one rate across periods                                       */
+/* ------------------------------------------------------------------ */
+
+/**
+ * One rate across a handful of periods, on a fixed nought to a hundred scale.
+ *
+ * A period with no value draws no point and the line breaks there rather than bridging it: a line
+ * drawn across a year nobody audited would claim a trend through data that does not exist. The
+ * gap carries its own words on the axis instead.
+ */
+export function Line({
+  data, colour = VIZ.cat[0], height = 170, label,
+}: {
+  data: Datum[];
+  colour?: string;
+  height?: number;
+  label: string;
+}) {
+  const { t } = useI18n();
+  const hover = useHover();
+  const w = 320;
+  const padL = 34;
+  const padR = 14;
+  const padT = 16;
+  const padB = 8;
+  const plotH = height - padT - padB;
+  const step = data.length > 1 ? (w - padL - padR) / (data.length - 1) : 0;
+  const x = (i: number) => (data.length > 1 ? padL + i * step : (w + padL - padR) / 2);
+  const y = (v: number) => padT + plotH - (Math.max(0, Math.min(100, v)) / 100) * plotH;
+
+  // Runs of consecutive present values, each drawn as its own line so an absent period breaks it.
+  const runs: { i: number; v: number }[][] = [];
+  data.forEach((d, i) => {
+    if (d.value === null) return;
+    const last = runs.at(-1);
+    if (last && last.at(-1)!.i === i - 1) last.push({ i, v: d.value });
+    else runs.push([{ i, v: d.value }]);
+  });
+
+  return (
+    <div className="viz-plot" onMouseLeave={hover.hide}>
+      <svg
+        className="viz-line"
+        viewBox={`0 0 ${w} ${height}`}
+        preserveAspectRatio="none"
+        role="img"
+        aria-label={label}
+        style={{ height }}
+      >
+        {[0, 25, 50, 75, 100].map((g) => (
+          <g key={g}>
+            <line x1={padL} x2={w - padR} y1={y(g)} y2={y(g)} className="viz-grid" />
+            <text x={padL - 6} y={y(g) + 3.5} className="viz-tick" textAnchor="end">{g}%</text>
+          </g>
+        ))}
+        {runs.map((run, k) => (
+          <polyline
+            key={k}
+            fill="none"
+            stroke={colour}
+            strokeWidth={2.5}
+            strokeLinejoin="round"
+            strokeLinecap="round"
+            vectorEffect="non-scaling-stroke"
+            points={run.map((p) => x(p.i) + ',' + y(p.v)).join(' ')}
+          />
+        ))}
+      </svg>
+      {/* Points and their figures are HTML over the SVG, so they stay round and legible when the
+          plot stretches to the width of its card. */}
+      <div className="viz-line-marks" style={{ height }}>
+        {data.map((d, i) =>
+          d.value === null ? null : (
+            <span
+              key={d.key}
+              className="viz-line-point"
+              style={{ left: (x(i) / w) * 100 + '%', top: y(d.value), borderColor: colour }}
+              title={d.detail}
+              onMouseMove={(e) => hover.show(e, d.detail)}
+            >
+              {d.note ? <span className="viz-line-note">{d.note}</span> : null}
+            </span>
+          ),
+        )}
+      </div>
+      <div className="viz-line-axis" aria-hidden="true">
+        {data.map((d, i) => (
+          <span key={d.key} style={{ left: (x(i) / w) * 100 + '%' }} className={d.emphasis ? 'viz-col-on' : undefined}>
+            {d.label}
+            {d.value === null ? <em>{d.absentText ?? t('viz.notAvailable')}</em> : null}
+          </span>
+        ))}
+      </div>
+      {hover.tip}
+    </div>
+  );
+}

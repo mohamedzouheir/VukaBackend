@@ -5,17 +5,15 @@
  * password with a reveal, remember me against forgot password, a full width dark green button,
  * the contact line and the POPIA notice.
  *
- * <h2>What the screenshot does not have, and why these are here anyway</h2>
+ * <h2>What the screenshot does not have, and why it is here anyway</h2>
  *
- * Two additions, both demonstration affordances, both labelled as such.
+ * One addition: the seeded accounts, a demonstration affordance labelled as such. They sit below
+ * the POPIA notice, so the screen above them is the screenshot, and they only render where the
+ * development sign in is enabled, because they print working passwords and credentials do not
+ * belong on a page that might be real.
  *
- * The employee button, because the Department runs on Microsoft 365 and somebody will ask how
- * staff get in. It does not federate: nothing in this system does. The Microsoft integration is
- * a Graph client for SharePoint and Teams, which is documents rather than identity. In
- * demonstration mode it signs in with the administrator role and the caption says exactly that.
- *
- * The seeded accounts, which only render where the development sign in is enabled, because they
- * print working passwords and credentials do not belong on a page that might be real.
+ * The employee single sign on lives on the landing page's employee card rather than here, so this
+ * screen stays the one form the screenshot shows.
  *
  * <h2>POPIA</h2>
  *
@@ -79,9 +77,6 @@ const DEMO_ACCOUNTS: {
   },
 ];
 
-/** Iziko, which the wireframes use and which carries twenty registered targets. */
-const DEMO_ENTITY_ID = '7594b805-3ea9-49ec-a124-852adc5a86c0';
-
 export function SignIn() {
   const { signIn, signInAsDev, devAuth, error: authError } = useAuth();
   const { t } = useI18n();
@@ -117,23 +112,14 @@ export function SignIn() {
     }
   }
 
-  async function employeeSso() {
-    if (!devAuth) return;
-    setPending('sso');
-    setError(null);
-    try {
-      await signInAsDev('ADMIN', null, 'Thandi Mthembu');
-    } finally {
-      setPending(null);
-    }
-  }
-
   async function useDemo(a: (typeof DEMO_ACCOUNTS)[number]) {
     setError(null);
     if (devAuth) {
       setPending(a.role);
       try {
-        await signInAsDev(a.role, a.role === 'ENTITY_REPORTER' ? DEMO_ENTITY_ID : null, a.name);
+        // No entity id: an entity's id is new on every reset, so a fixed one names nothing. The
+        // backend binds a dev reporter with no entity to the demo reporter's entity, Iziko.
+        await signInAsDev(a.role, null, a.name);
       } finally {
         setPending(null);
       }
@@ -148,6 +134,7 @@ export function SignIn() {
 
   return (
     <AuthShell
+      brand={false}
       headline={
         <>
           {t('auth.h1a')}
@@ -256,44 +243,15 @@ export function SignIn() {
           </button>
         </form>
 
-        {/* Departmental staff. Not in the screenshot, and the caption says what it is. */}
-        <div className="si-or">
-          <span>{t('signin.or')}</span>
-        </div>
-
-        <button
-          type="button"
-          className="si-sso"
-          onClick={() => void employeeSso()}
-          disabled={!devAuth || pending !== null}
-        >
-          {pending === 'sso' ? <IconSpinner size={18} className="spin" /> : <IconShield size={18} />}
-          <span>
-            {t('signin.employee')}
-            <b className="si-sso-tag">SSO</b>
-          </span>
-        </button>
-        <p className="si-sso-note">
-          {devAuth ? t('signin.ssoNote') : t('signin.ssoNotConfigured')}
-        </p>
-
+        {/* As the screenshot has it: the question between two rules, the link under it. */}
         <div className="si-contact">
           <p>{t('signin.noAccount')}</p>
           <a href="/public">{t('signin.contact')}</a>
         </div>
 
-        {/* The two surfaces their work added. Neither is reachable from the rail, because
-            neither is for the person signing in here, so this is the only place they are named. */}
-        <p className="si-surfaces">
-          {t('signin.phoneNote')} <a href="/m">/m</a>. {t('signin.citizenNote')}{' '}
-          <a href="/public">/public</a>.
-        </p>
-
         <p className="si-popia">
           <IconShield size={18} />
-          <span>
-{t('signin.popia')}
-          </span>
+          <span>{t('signin.popia')}</span>
         </p>
 
         {devAuth ? (

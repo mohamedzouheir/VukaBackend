@@ -1123,7 +1123,29 @@ Ordered by how much it costs us if it is not done.
 18. **Look at the rebuilt Analytics screen, the Ask Vuka panel and the reviewer footer in a
    browser.** They typecheck, they build, and their data was verified against a running backend, but
    no person has seen them render. Label collision, overflow and layout at phone width are exactly
-   what a build does not catch. This enlarges item 3 rather than reducing it.
+   what a build does not catch. This enlarges item 3 rather than reducing it. Partly done on 19
+   September: every screen in the user manual was driven in headless Chrome at 1440 wide, and the
+   phone and citizen pages at 390, and the captures were read. Nothing was found overlapping. Layout
+   of the dashboard at phone width is still unchecked.
+19. **One Attach click stores the evidence twice.** On the reporter's confirmation screen, attaching
+   one PDF to HER-1.3 through the row's **attach** dialog left two `Attendance-register-Q2.pdf` rows,
+   both version 1, and the home tile counted two evidence documents. Reproduced on two fresh
+   databases. The user manual shows the doubled chip; retake `j1-11` once it is fixed.
+20. **The audit trail has no way in.** `/logs` is routed and works for every role, reporters scoped
+   to their own entity, but no menu item or link reaches it. The manual tells people to type the
+   address.
+21. **Documents cannot be approved or returned from the dashboard.** `api.decideDocument` exists and
+   nothing calls it, while the reviewer's Today screen offers "Decide on documents" and requirement
+   (d) asks for approval on receipt. The presenting chapter of the manual states it as a limit.
+22. **A Q1 dispute shows on the Q2 filing.** `ReportingViewService.commentsFor` returns every comment
+   for the entity, and a target is the same row across the financial year, so an open dispute on
+   Q1's HER-1.1 labels HER-1.1 on the Q2 confirmation screen "The Department disputed this figure".
+   Seen in the manual's reporter journey, step 7. Filter comments to the submission's period, or
+   anchor disputes to the result rather than the target.
+23. **Answering a return resets the lateness.** `SubmissionService` sets `submittedAt` to now on
+   every submit, so Iziko's Q1, first filed 11 days late, reads 51 days late once the reporter
+   answers the returned figure, and the lateness signal moves with it. Keep the first submission
+   date for lateness and record the resubmission separately.
 
 ---
 

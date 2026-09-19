@@ -16,16 +16,19 @@ import { useSearchParams } from 'react-router-dom';
 import { api, openFile } from '../lib/api';
 import { useAsync } from '../lib/useAsync';
 import { useAuth, isDsac, can } from '../lib/auth';
-import { dateTime, fileSize, num } from '../lib/format';
+import { date, dateTime, fileSize, num } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import type { Key } from '../lib/i18n';
 import { useLabels } from '../lib/labels';
 import { PageHead } from '../components/AppShell';
+import { SearchField } from '../components/SearchField';
 import { EmptyState, ErrorState, Loading, Tile } from '../components/Shell';
 import type { WorkspaceDocument } from '../lib/types';
 import {
-  IconCheckCircle, IconExternal, IconFolder, IconPaperclip, IconRefresh, IconShield, IconSpinner,
+  IconCalendar, IconCheckCircle, IconDownload, IconExternal, IconFolder, IconHelp, IconPaperclip,
+  IconRefresh, IconShield, IconSpinner,
 } from '../icons';
+import './Documents.css';
 
 export function Documents() {
   const { t } = useI18n();
@@ -79,101 +82,265 @@ export function Documents() {
     [rows],
   );
 
+  const [query, setQuery] = useState('');
+  const [type, setType] = useState('');
+  const [decision, setDecision] = useState('');
+  const [year, setYear] = useState('');
+  const [sort, setSort] = useState<'newest' | 'oldest' | 'name'>('newest');
+  const filtered = query !== '' || type !== '' || decision !== '' || year !== '';
+
+  // Offer only the types and years actually on record, so no option leads to an empty list.
+  const types = useMemo(
+    () => [...new Set(rows.map((d) => d.documentType).filter((v): v is string => Boolean(v)))].sort(),
+    [rows],
+  );
+  const years = useMemo(
+    () => [...new Set(rows.map((d) => d.uploadedAt?.slice(0, 4)).filter((v): v is string => Boolean(v)))].sort().reverse(),
+    [rows],
+  );
+
+  const shown = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return rows
+      .filter((d) =>
+        q === ''
+          ? true
+          : (d.fileName ?? '').toLowerCase().includes(q) || (d.uploadedBy ?? '').toLowerCase().includes(q),
+      )
+      .filter((d) => (type === '' ? true : d.documentType === type))
+      .filter((d) => (decision === '' ? true : (d.approvalStatus ?? 'PENDING') === decision))
+      .filter((d) => (year === '' ? true : d.uploadedAt?.startsWith(year)))
+      .slice()
+      .sort((a, b) =>
+        sort === 'name'
+          ? (a.fileName ?? '').localeCompare(b.fileName ?? '')
+          : sort === 'oldest'
+            ? (a.uploadedAt ?? '').localeCompare(b.uploadedAt ?? '')
+            : (b.uploadedAt ?? '').localeCompare(a.uploadedAt ?? ''),
+      );
+  }, [rows, query, type, decision, year, sort]);
+
+  // The mockup's "Recent downloads" is not counted anywhere. What is recorded is receipt, so the
+  // rail lists the files the Department most recently acknowledged holding.
+  const recent = useMemo(
+    () =>
+      rows
+        .filter((d) => d.receivedAt)
+        .slice()
+        .sort((a, b) => (b.receivedAt ?? '').localeCompare(a.receivedAt ?? ''))
+        .slice(0, 5),
+    [rows],
+  );
+
+  function clearFilters() {
+    setQuery('');
+    setType('');
+    setDecision('');
+    setYear('');
+  }
+
   return (
-    <div>
-      <PageHead
-        icon={<IconFolder size={26} />}
-        title={t('docs.title')}
-        subtitle={t('docs.sub')}
-      >
-        {dsac ? (
-          <select
-            aria-label={t('entities.colEntity')}
-            style={{ minWidth: '18rem' }}
-            value={chosen ?? ''}
-            onChange={(e) => setEntityId(e.target.value || null)}
-          >
-            <option value="">{t('docs.chooseEntity')}</option>
-            {(portfolio.data ?? [])
-              .slice()
-              .sort((a, b) => a.name.localeCompare(b.name))
-              .map((r) => (
-                <option key={r.entityId} value={r.entityId}>
-                  {r.name}
-                </option>
-              ))}
-          </select>
-        ) : null}
-      </PageHead>
+    <div className="with-aside">
+      <div>
+        <PageHead
+          icon={<IconFolder size={26} />}
+          title={t('docs.title')}
+          subtitle={t('docs.sub')}
+        >
+          {dsac ? (
+            <select
+              aria-label={t('entities.colEntity')}
+              style={{ minWidth: '18rem' }}
+              value={chosen ?? ''}
+              onChange={(e) => setEntityId(e.target.value || null)}
+            >
+              <option value="">{t('docs.chooseEntity')}</option>
+              {(portfolio.data ?? [])
+                .slice()
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .map((r) => (
+                  <option key={r.entityId} value={r.entityId}>
+                    {r.name}
+                  </option>
+                ))}
+            </select>
+          ) : null}
+        </PageHead>
 
-      {!chosen ? (
-        <EmptyState>
-          {t('docs.chooseNote')}
-        </EmptyState>
-      ) : docs.loading ? (
-        <Loading what={t('docs.what')} />
-      ) : docs.notFound ? (
-        <EmptyState>{t('docs.notYours')}</EmptyState>
-      ) : docs.error ? (
-        <ErrorState message={docs.error} onRetry={docs.reload} />
-      ) : (
-        <>
-          <div className="tiles">
-            <Tile icon={<IconFolder size={22} />} value={num(counts.total)} label={t('docs.title')} sub={t('docs.allVersions')} />
-            <Tile icon={<IconPaperclip size={22} />} tone="purple" value={num(counts.current)} label={t('docs.currentVersions')} sub={t('docs.supersededStay')} />
-            <Tile icon={<IconShield size={22} />} tone="ok" value={num(counts.receipted)} label={t('docs.receipted')} sub={t('docs.receiptedSub')} />
-            <Tile icon={<IconCheckCircle size={22} />} tone="ok" value={num(counts.approved)} label={t('docs.approved')} sub={t('docs.decidedBy')} />
-          </div>
-
-          <div className="card" style={{ marginTop: 'var(--space-4)' }}>
-            <div className="section-head">
-              <h2>{t('docs.files')}</h2>
-              {canSync ? (
-                <div className="row" style={{ gap: 8, alignItems: 'center' }}>
-                  <button type="button" disabled={syncing} onClick={() => void syncNow()}>
-                    {syncing ? <IconSpinner size={16} className="spin" /> : <IconRefresh size={16} />} {t('ms.syncNow')}
-                  </button>
-                  {syncMessage ? <span className="small muted">{syncMessage}</span> : null}
-                </div>
-              ) : null}
+        {!chosen ? (
+          <EmptyState>
+            {t('docs.chooseNote')}
+          </EmptyState>
+        ) : docs.loading ? (
+          <Loading what={t('docs.what')} />
+        ) : docs.notFound ? (
+          <EmptyState>{t('docs.notYours')}</EmptyState>
+        ) : docs.error ? (
+          <ErrorState message={docs.error} onRetry={docs.reload} />
+        ) : (
+          <>
+            <div className="tiles">
+              <Tile icon={<IconFolder size={22} />} value={num(counts.total)} label={t('docs.title')} sub={t('docs.allVersions')} />
+              <Tile icon={<IconPaperclip size={22} />} tone="purple" value={num(counts.current)} label={t('docs.currentVersions')} sub={t('docs.supersededStay')} />
+              <Tile icon={<IconShield size={22} />} tone="ok" value={num(counts.receipted)} label={t('docs.receipted')} sub={t('docs.receiptedSub')} />
+              <Tile icon={<IconCheckCircle size={22} />} tone="ok" value={num(counts.approved)} label={t('docs.approved')} sub={t('docs.decidedBy')} />
             </div>
-            {syncFailure ? <p className="field-error" role="alert">{syncFailure}</p> : null}
 
-            {rows.length === 0 ? (
-              <EmptyState>
-                No documents held for this entity. That is an empty shelf rather than a filing with
-                nothing outstanding.
-              </EmptyState>
-            ) : (
-              <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>{t('docs.colFile')}</th>
-                      <th className="num">{t('docs.colVersion')}</th>
-                      <th>{t('docs.colReceipt')}</th>
-                      <th>{t('docs.colDecision')}</th>
-                      <th>{t('docs.colSatisfies')}</th>
-                      <th>{t('ms.column')}</th>
-                      <th />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rows.map((d) => (
-                      <DocumentRow key={d.id} doc={d} />
-                    ))}
-                  </tbody>
-                </table>
+            <div className="card doc-filters">
+              <div className="doc-search">
+                <SearchField
+                  label={t('docs.searchLabel')}
+                  placeholder={t('docs.searchPlaceholder')}
+                  value={query}
+                  onChange={setQuery}
+                />
               </div>
-            )}
-          </div>
+              <select aria-label={t('docs.filterType')} value={type} onChange={(e) => setType(e.target.value)}>
+                <option value="">{t('docs.allTypes')}</option>
+                {types.map((ty) => (
+                  <option key={ty} value={ty}>
+                    {typeLabel(t, ty)}
+                  </option>
+                ))}
+              </select>
+              <select aria-label={t('docs.colDecision')} value={decision} onChange={(e) => setDecision(e.target.value)}>
+                <option value="">{t('docs.allDecisions')}</option>
+                <option value="APPROVED">{t('docs.approved')}</option>
+                <option value="PENDING">{t('docs.pending')}</option>
+                <option value="REJECTED">{t('docs.returned')}</option>
+              </select>
+              <select aria-label={t('docs.filterYear')} value={year} onChange={(e) => setYear(e.target.value)}>
+                <option value="">{t('docs.allYears')}</option>
+                {years.map((y) => (
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
+                ))}
+              </select>
+              <button type="button" className="link small" disabled={!filtered} onClick={clearFilters}>
+                {t('docs.clearFilters')}
+              </button>
+            </div>
 
-          <p className="small muted" style={{ marginTop: 'var(--space-4)' }}>
-            {t('docs.criterionNote')}
-          </p>
-        </>
-      )}
+            <div className="card doc-list-card">
+              <div className="section-head">
+                <h2>{t('docs.filesCount', num(shown.length) ?? '')}</h2>
+                <span className="spacer" />
+                {canSync ? (
+                  <>
+                    {syncMessage ? <span className="small muted">{syncMessage}</span> : null}
+                    <button type="button" disabled={syncing} onClick={() => void syncNow()}>
+                      {syncing ? <IconSpinner size={16} className="spin" /> : <IconRefresh size={16} />} {t('ms.syncNow')}
+                    </button>
+                  </>
+                ) : null}
+                <label className="doc-sort">
+                  {t('docs.sortBy')}
+                  <select value={sort} onChange={(e) => setSort(e.target.value as typeof sort)}>
+                    <option value="newest">{t('docs.sortNewest')}</option>
+                    <option value="oldest">{t('docs.sortOldest')}</option>
+                    <option value="name">{t('docs.sortName')}</option>
+                  </select>
+                </label>
+              </div>
+              {syncFailure ? (
+                <p className="field-error" role="alert" style={{ padding: '0 var(--space-5)' }}>{syncFailure}</p>
+              ) : null}
+
+              {rows.length === 0 ? (
+                <div style={{ padding: 'var(--space-5)' }}>
+                  <EmptyState>
+                    No documents held for this entity. That is an empty shelf rather than a filing with
+                    nothing outstanding.
+                  </EmptyState>
+                </div>
+              ) : shown.length === 0 ? (
+                <div style={{ padding: 'var(--space-5)' }}>
+                  <EmptyState>{t('docs.noMatch')}</EmptyState>
+                </div>
+              ) : (
+                <ul className="doc-list">
+                  {shown.map((d) => (
+                    <DocumentRow key={d.id} doc={d} />
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <p className="small muted" style={{ marginTop: 'var(--space-4)' }}>
+              {t('docs.criterionNote')}
+            </p>
+          </>
+        )}
+      </div>
+
+      <aside className="aside">
+        <section className="card doc-help">
+          <span className="tile-icon" aria-hidden="true"><IconHelp size={20} /></span>
+          <div>
+            <h2>{t('docs.helpHead')}</h2>
+            <p>{t('docs.helpBody')}</p>
+          </div>
+        </section>
+
+        {chosen && !docs.loading && !docs.error ? (
+          <section className="card">
+            <h2>{t('docs.recentHead')}</h2>
+            {recent.length === 0 ? (
+              <p className="small muted" style={{ margin: 0 }}>{t('docs.recentEmpty')}</p>
+            ) : (
+              <ul className="doc-recent">
+                {recent.map((d) => (
+                  <li key={d.id}>
+                    <FileBadge name={d.fileName} />
+                    <div>
+                      <strong>{d.fileName ?? t('common.unnamedFile')}</strong>
+                      <span>{d.receiptNumber}, {date(d.receivedAt)}</span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        ) : null}
+
+        <section className="card card-sunk">
+          <p className="small" style={{ margin: 0 }}>{t('ws.bindingNote')}</p>
+        </section>
+      </aside>
     </div>
+  );
+}
+
+/** The seven filings the challenge lists, in words. An unknown value falls back to itself. */
+function typeLabel(t: (key: Key, ...args: (string | number)[]) => string, type: string | null): string {
+  switch (type) {
+    case 'STRATEGIC_PLAN': return t('docs.typeStrategicPlan');
+    case 'ANNUAL_PERFORMANCE_PLAN': return t('docs.typeApp');
+    case 'OPERATIONAL_PLAN': return t('docs.typeOperationalPlan');
+    case 'ANNUAL_REPORT': return t('docs.typeAnnualReport');
+    case 'QUARTERLY_REPORT': return t('docs.typeQuarterlyReport');
+    case 'FINANCIALS': return t('docs.typeFinancials');
+    case 'REPORTING_TEMPLATE': return t('docs.typeTemplate');
+    case null: return t('docs.typeUnstated');
+    default: return type;
+  }
+}
+
+/** A coloured badge from the file extension: PDF red, spreadsheet green, document blue. */
+function FileBadge({ name }: { name: string | null }) {
+  const ext = (name?.split('.').pop() ?? '').toLowerCase();
+  const kind =
+    ext === 'pdf' ? 'pdf'
+    : ['xls', 'xlsx', 'xlsm', 'csv'].includes(ext) ? 'xls'
+    : ['doc', 'docx', 'odt', 'rtf'].includes(ext) ? 'doc'
+    : ['ppt', 'pptx'].includes(ext) ? 'ppt'
+    : 'other';
+  const text = kind === 'other' ? (ext && ext.length <= 4 ? ext : 'file') : kind;
+  return (
+    <span className={'doc-badge doc-badge-' + kind} aria-hidden="true">
+      {text.toUpperCase()}
+    </span>
   );
 }
 
@@ -190,64 +357,57 @@ function DocumentRow({ doc: d }: { doc: WorkspaceDocument }) {
   const [showError, setShowError] = useState(false);
 
   return (
-    <tr>
-      <td>
-        <strong style={{ display: 'block', color: 'var(--navy-ink)' }}>
-          {d.fileName ?? t('common.unnamedFile')}
-        </strong>
-        <span className="small muted">
-          {fileSize(d.sizeBytes)}
-          {d.uploadedBy ? ', ' + d.uploadedBy : null}
-          {d.uploadedAt ? ', ' + dateTime(d.uploadedAt) : null}
+    <li className="doc-row">
+      <FileBadge name={d.fileName} />
+
+      <div>
+        <span className="doc-name">{d.fileName ?? t('common.unnamedFile')}</span>
+        <span className="doc-meta">
+          {typeLabel(t, d.documentType)}, v{d.version}
+          {d.current ? (
+            <span className="chip chip-ok" style={{ marginLeft: 6 }}>
+              {t('docs.current')}
+            </span>
+          ) : null}
         </span>
-      </td>
-      <td className="num">
-        v{d.version}
-        {d.current ? (
-          <span className="chip chip-ok" style={{ marginLeft: 6 }}>
-            {t('docs.current')}
-          </span>
-        ) : null}
-      </td>
-      <td className="small">
-        {d.receiptNumber ? (
-          <>
-            <span className="mono">{d.receiptNumber}</span>
-            <br />
-            <span className="muted">{dateTime(d.receivedAt)}</span>
-          </>
-        ) : (
-          <span className="chip chip-warn">{t('docs.awaitingReceipt')}</span>
-        )}
-      </td>
-      <td className="small">
-        {d.approvalStatus === 'APPROVED' ? (
-          <span className="chip chip-ok">{t('docs.approved')}</span>
-        ) : d.approvalStatus === 'REJECTED' ? (
-          <span className="chip chip-danger">{t('docs.returned')}</span>
-        ) : (
-          <span className="chip chip-muted">{t('docs.pending')}</span>
-        )}
-        {d.decidedBy ? (
-          <span className="muted"> {t('docs.by', d.decidedBy)}</span>
-        ) : null}
-      </td>
-      <td className="small muted">
-        {d.agsaCriterion ? L.criterion(d.agsaCriterion) : t('docs.notStated')}
-      </td>
-      <td className="small">
+        <span className="doc-meta">
+          {t('docs.colSatisfies')}: {d.agsaCriterion ? L.criterion(d.agsaCriterion) : t('docs.notStated')}
+          {d.uploadedBy ? ', ' + d.uploadedBy : null}
+        </span>
+      </div>
+
+      <div className="doc-cell">
+        <div>
+          {d.approvalStatus === 'APPROVED' ? (
+            <span className="chip chip-ok">{t('docs.approved')}</span>
+          ) : d.approvalStatus === 'REJECTED' ? (
+            <span className="chip chip-danger">{t('docs.returned')}</span>
+          ) : (
+            <span className="chip chip-muted">{t('docs.pending')}</span>
+          )}
+          {d.decidedBy ? <span className="muted">{t('docs.by', d.decidedBy)}</span> : null}
+        </div>
+        <div>
+          {d.receiptNumber ? (
+            <>
+              <span className="mono">{d.receiptNumber}</span>
+              <span className="muted">{dateTime(d.receivedAt)}</span>
+            </>
+          ) : (
+            <span className="chip chip-warn">{t('docs.awaitingReceipt')}</span>
+          )}
+        </div>
+      </div>
+
+      <div className="doc-cell">
         <MicrosoftStateChip state={d.microsoftState} />
         {d.microsoftWebUrl ? (
-          <>
-            <br />
-            <a href={d.microsoftWebUrl} target="_blank" rel="noreferrer">
-              {t('ms.openInSharePoint')} <IconExternal size={12} />
-            </a>
-          </>
+          <a href={d.microsoftWebUrl} target="_blank" rel="noreferrer" style={{ display: 'block' }}>
+            {t('ms.openInSharePoint')} <IconExternal size={12} />
+          </a>
         ) : null}
         {d.microsoftState === 'FAILED' && d.microsoftError ? (
           <>
-            <br />
             <button type="button" className="link small" onClick={() => setShowError((v) => !v)}>
               {showError ? t('ms.hideError') : t('ms.showError')}
             </button>
@@ -258,16 +418,21 @@ function DocumentRow({ doc: d }: { doc: WorkspaceDocument }) {
             ) : null}
           </>
         ) : null}
-      </td>
-      <td>
-        <a
-          href={api.documentContentUrl(d.id)}
-          onClick={(e) => openFile(e, api.documentContentUrl(d.id), d.fileName ?? 'document')}
-        >
-          {t('common.open')} <IconExternal size={13} />
-        </a>
-      </td>
-    </tr>
+      </div>
+
+      <div className="doc-when">
+        <span><IconCalendar size={14} /> {date(d.uploadedAt) ?? '—'}</span>
+        <span><IconPaperclip size={14} /> {fileSize(d.sizeBytes) ?? '—'}</span>
+      </div>
+
+      <a
+        className="btn doc-open"
+        href={api.documentContentUrl(d.id)}
+        onClick={(e) => openFile(e, api.documentContentUrl(d.id), d.fileName ?? 'document')}
+      >
+        <IconDownload size={15} /> {t('common.download')}
+      </a>
+    </li>
   );
 }
 

@@ -255,3 +255,72 @@
     print-color-adjust: exact;
   }
 }
+
+/* ---------- ring ---------- */
+
+.viz-ring { flex: none; }
+.viz-ring svg { display: block; }
+.viz-ring circle { transition: filter 0.12s ease; }
+.viz-ring circle:hover { filter: brightness(1.1); }
+.viz-ring-centre {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  pointer-events: none;
+}
+.viz-ring-centre strong {
+  font-size: 1.75rem;
+  line-height: 1.1;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--navy-ink);
+  font-variant-numeric: tabular-nums;
+}
+.viz-ring-centre em { font-style: normal; font-size: 0.75rem; color: var(--ink-muted); max-width: 7rem; }
+
+/* ---------- line ---------- */
+
+.viz-line { display: block; width: 100%; overflow: visible; }
+.viz-grid { stroke: var(--rule); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.viz-tick { font-size: 10px; fill: var(--ink-faint); font-variant-numeric: tabular-nums; }
+
+.viz-line-marks { position: absolute; inset: 0 0 auto 0; pointer-events: none; }
+.viz-line-point {
+  position: absolute;
+  width: 11px;
+  height: 11px;
+  margin: -5.5px 0 0 -5.5px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 2.5px solid;
+  pointer-events: auto;
+}
+.viz-line-note {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.viz-line-axis { position: relative; height: 2.4em; margin-top: var(--space-1); }
+.viz-line-axis > span {
+  position: absolute;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 0.6875rem;
+  color: var(--ink-muted);
+  white-space: nowrap;
+  line-height: 1.25;
+}
+.viz-line-axis em { font-style: italic; color: var(--ink-faint); font-size: 0.625rem; }

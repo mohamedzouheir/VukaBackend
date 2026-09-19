@@ -7,6 +7,27 @@
  * from the server just now or carries the date it was saved on, and there is no third case.
  */
 
+export type TargetStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'ACHIEVED' | 'MISSED';
+
+export type AuditOutcome =
+  | 'UNQUALIFIED' | 'UNQUALIFIED_WITH_FINDINGS' | 'QUALIFIED' | 'ADVERSE' | 'DISCLAIMER' | 'OUTSTANDING';
+
+export interface PublicTarget {
+  indicatorRef: string | null;
+  indicator: string | null;
+  unitOfMeasure: string | null;
+  annualTarget: number | null;
+  /** From approved submissions only. Null where nothing is approved yet, which is not zero. */
+  reported: number | null;
+  status: TargetStatus | null;
+}
+
+export interface PublicAudit {
+  financialYear: string;
+  outcome: AuditOutcome;
+  source: string | null;
+}
+
 export interface CitizenEntity {
   entityId: string;
   name: string;
@@ -22,6 +43,14 @@ export interface CitizenEntity {
   targetsMissed: number;
   targetsNotStarted: number;
   lastReportedAt: string | null;
+  lastReportedPeriod: string | null;
+  allocationSource: string | null;
+  targetsSource: string | null;
+  /* The four below are filled on the single entity record and null in the list. */
+  programmes: string[] | null;
+  targets: PublicTarget[] | null;
+  targetsReported: number | null;
+  audits: PublicAudit[] | null;
 }
 
 export interface Strings {
@@ -76,6 +105,29 @@ export function rand(n: number): string {
 /** South African English rather than the browser's default English, so dates read 2 August 2026 as the light view does. */
 function locale(lang: string) {
   return lang === 'en' ? 'en-ZA' : lang;
+}
+
+/**
+ * A rand amount in words a reader takes in at a glance, R 25.4 million, in the page's language
+ * where the browser knows it. The exact figure is always one tap away on the entity's record.
+ */
+export function randShort(n: number, lang: string): string {
+  if (Math.abs(n) < 1_000_000) return rand(n);
+  try {
+    return 'R ' + new Intl.NumberFormat(locale(lang), {
+      notation: 'compact', compactDisplay: 'long', maximumFractionDigits: 1,
+    }).format(n);
+  } catch {
+    return rand(n);
+  }
+}
+
+export function num(n: number, lang: string): string {
+  try {
+    return new Intl.NumberFormat(locale(lang), { maximumFractionDigits: 2 }).format(n);
+  } catch {
+    return String(n);
+  }
 }
 
 export function longDate(iso: string, lang: string): string {
