@@ -33,18 +33,20 @@ interface Props {
   features?: { icon: ReactNode; label: string }[];
   /** Shown top right, as the registration screen has it. */
   backHome?: boolean;
+  /** The Vuka mark beside the Department's. The sign in screenshot carries the Department alone. */
+  brand?: boolean;
   children: ReactNode;
 }
 
-export function AuthShell({ eyebrow, headline, lede, features, backHome, children }: Props) {
+export function AuthShell({ eyebrow, headline, lede, features, backHome, brand = true, children }: Props) {
   const { t, withLang } = useI18n();
 
   return (
     <div className="au">
       <header className="au-top">
-        <Link to="/" className="au-dept">
+        <Link to="/" className={'au-dept' + (brand ? '' : ' au-dept-large')}>
           <span className="au-arms">
-            <Arms size={44} />
+            <Arms size={brand ? 44 : 64} />
           </span>
           <span className="au-dept-text">
             <strong>{t('dept.name')}</strong>
@@ -57,10 +59,12 @@ export function AuthShell({ eyebrow, headline, lede, features, backHome, childre
 
           {/* The product's mark beside the Department's, as on the landing page. Decorative:
               the name is written beside it. */}
-          <span className="au-brand">
-            <img src="/img/vuka-logo.png" alt="" aria-hidden="true" width={52} height={42} draggable={false} />
-            <span>Vuka</span>
-          </span>
+          {brand ? (
+            <span className="au-brand">
+              <img src="/img/vuka-logo.png" alt="" aria-hidden="true" width={52} height={42} draggable={false} />
+              <span>Vuka</span>
+            </span>
+          ) : null}
         </Link>
 
         <div className="au-top-right">

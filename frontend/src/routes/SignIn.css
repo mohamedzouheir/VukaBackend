@@ -6,7 +6,7 @@
 
 .si-title {
   font-family: "Playfair Display", Georgia, "Times New Roman", serif;
-  font-size: clamp(2.25rem, 3.4vw, 3rem);
+  font-size: clamp(2.25rem, 4vw, 3.75rem);
   font-weight: 700;
   line-height: 1.05;
   letter-spacing: -0.025em;
@@ -140,73 +140,30 @@
 /* The arrow points forward. Reusing the back icon and turning it saves an export. */
 .si-submit-arrow { transform: rotate(180deg); }
 
-/* ---------------------------------------------------------------- employee sso */
-
-.si-or {
-  display: flex; align-items: center; gap: var(--space-3);
-  margin: var(--space-5) 0;
-  color: #9B9483;
-  font-size: 0.75rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-.si-or::before, .si-or::after { content: ""; flex: 1 1 auto; height: 1px; background: var(--au-field-line); }
-
-.si-sso {
-  --btn-hover-bg: #fff;
-  width: 100%;
-  min-height: 52px;
-  gap: var(--space-3);
-  font-size: 0.9375rem;
-  font-weight: 600;
-  background: var(--au-field);
-  border: 1px solid var(--au-field-line);
-  border-radius: var(--radius-sm);
-  color: var(--au-ink);
-}
-.si-sso:hover:not(:disabled) { border-color: var(--au-green); }
-.si-sso > span { display: inline-flex; align-items: center; gap: 10px; }
-.si-sso-tag {
-  font-size: 0.625rem;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  padding: 3px 8px;
-  border-radius: var(--radius-pill);
-  background: #E7EDE8;
-  color: var(--au-green);
-}
-.si-sso:disabled .si-sso-tag { background: #EDEAE1; color: #9B9483; }
-.si-sso-note { margin: 10px 0 0; font-size: 0.6875rem; line-height: 1.55; color: var(--au-ink-soft); }
-
 /* ---------------------------------------------------------------- contact and popia */
 
+/* "Don't have an admin account?" sits between two rules, the link centred under it. */
 .si-contact {
   margin: var(--space-6) 0 0;
-  padding-top: var(--space-5);
-  border-top: 1px solid var(--au-field-line);
   text-align: center;
 }
-.si-contact p { margin: 0 0 6px; font-size: 0.875rem; color: var(--au-ink-soft); }
-.si-contact a { font-size: 0.9375rem; font-weight: 600; color: var(--au-green); text-decoration: underline; }
+.si-contact p {
+  display: flex; align-items: center; gap: var(--space-4);
+  margin: 0 0 6px;
+  font-size: 0.9375rem;
+  color: var(--au-ink);
+}
+.si-contact p::before, .si-contact p::after { content: ""; flex: 1 1 auto; height: 1px; background: var(--au-field-line); }
+.si-contact a { font-size: 0.9375rem; font-weight: 500; color: var(--au-green); text-decoration: underline; }
 
 .si-popia {
   display: flex; align-items: flex-start; gap: var(--space-3);
-  margin: var(--space-5) 0 0;
+  margin: var(--space-6) 0 0;
   font-size: 0.75rem;
   line-height: 1.55;
   color: var(--au-ink-soft);
 }
 .si-popia svg { flex: none; margin-top: 1px; color: var(--au-gold); }
-
-/* The phone and citizen pointers. Quieter than the POPIA line above it, which is a legal
-   notice, where this is a signpost for somebody who is on the wrong screen. */
-.si-surfaces {
-  margin: var(--space-5) 0 0;
-  font-size: 0.75rem;
-  line-height: 1.55;
-  color: var(--au-ink-soft);
-}
-.si-surfaces a { color: inherit; text-decoration: underline; }
 
 /* ---------------------------------------------------------------- demo accounts */
 

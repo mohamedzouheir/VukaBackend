@@ -23,8 +23,8 @@
  * <h2>The two things it gained</h2>
  *
  * It can leave the building: the whole view downloads as a CSV, and the page prints to a committee
- * pack with the charts intact. And it can be asked a question, through Ask Vuka, which matches a
- * typed question against the figures already on this screen rather than against a model.
+ * pack with the charts intact. And it can be asked a question: the button opens Karabo, which
+ * answers from Vuka's records with the reader's own access and lists its sources.
  *
  * <h2>Language</h2>
  *
@@ -32,7 +32,6 @@
  * headers of the CSV. An export is a document somebody hands to somebody else, so a reader who
  * chose isiZulu should not be handed an English spreadsheet.
  */
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useAsync } from '../lib/useAsync';
@@ -44,7 +43,7 @@ import { useLabels } from '../lib/labels';
 import type { Labels } from '../lib/labels';
 import { EmptyState, ErrorState, Loading, Tile } from '../components/Shell';
 import { PageHead } from '../components/AppShell';
-import { AskVuka } from '../components/AskVuka';
+import { openKarabo } from '../components/AskKarabo';
 import { Bars, Columns, Dumbbells, Figure, Legend, Stack, VIZ, type Datum, type Slice } from '../components/Charts';
 import { IconChart, IconCheckCircle, IconClock, IconDownload, IconHelp, IconInfo, IconSheet, IconTrend } from '../icons';
 import './Analytics.css';
@@ -83,7 +82,6 @@ export function Analytics() {
   const i18n = useI18n();
   const { t } = i18n;
   const L = useLabels();
-  const [asking, setAsking] = useState(false);
 
   if (data.loading) return <Loading what={t('an.what')} />;
   if (data.error || !data.data) {
@@ -107,8 +105,8 @@ export function Analytics() {
           put it in front of a committee. They belong at the top, beside the title, rather than
           at the bottom of a page they may never scroll to. */}
       <div className="an-tools no-print">
-        <button type="button" className="primary" onClick={() => setAsking(true)}>
-          <IconHelp size={16} /> {t('ask.open')}
+        <button type="button" className="primary" onClick={openKarabo}>
+          <IconHelp size={16} /> {t('karabo.ask')}
         </button>
         <button type="button" onClick={() => downloadCsv(a, i18n, L)}>
           <IconSheet size={16} /> {t('an.downloadCsv')}
@@ -182,7 +180,6 @@ export function Analytics() {
         <p>{t('an.sourcesB')}</p>
       </details>
 
-      {asking ? <AskVuka onClose={() => setAsking(false)} /> : null}
     </div>
   );
 }

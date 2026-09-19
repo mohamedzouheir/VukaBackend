@@ -126,7 +126,7 @@ is what is actually served, and gzip is on in `application.yml` with a 512 byte 
 | `mobile-comments.html` | 5KB | **2 357 B** | 1 061 B | every comment thread for the entity, open ones first. New |
 | `mobile-thread.html` | 5KB | **4 908 B** | 2 092 B | one thread of three comments, reply form, inline poller. New |
 | React dashboard | 250KB gzipped | 137KB | | office users only, never on the reporter path |
-| Full citizen view | not in the document | 55KB | | served only where the connection can carry it; the light view is the budgeted page |
+| Full citizen view | not in the document | 60KB, plus lazily loaded card pictures (8KB to 20KB each) and one large photograph on screens 720px and wider | | served only where the connection can carry it; the light view is the budgeted page. Remeasured 19 September 2026 after the portal layout |
 
 Eight surfaces now, not six. Figures include the hidden CSRF field injected into every form, which
 costs about 96 bytes.

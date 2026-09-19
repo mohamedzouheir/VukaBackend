@@ -2,6 +2,9 @@
 
 [Back to the manual](README.md)
 
+> **In short:** On a phone, Vuka asks one question per page. Each answer is saved as you go, even with no signal.
+> Submit at the end.
+
 **Who this is for:** the person at a small entity who reports on a phone, often on mobile data,
 and is not a finance specialist.
 

@@ -2,6 +2,9 @@
 
 [Back to the manual](README.md)
 
+> **In short:** See all 28 entities on one page, open any one to see why it scores as it does, follow the trends
+> over the years, and ask Karabo. Nothing on these screens changes a figure.
+
 **Who this is for:** the Director-General and other DSAC executives who need the whole portfolio at
 a glance and must be able to explain any one entity, for example before a portfolio committee
 meeting.
@@ -17,13 +20,15 @@ This view is read only. Nothing on these screens changes a figure.
 
 Sign in. You land on **Portfolio**, for the quarter under review.
 
-![Portfolio page with the totals and the risk bands marked](img/j4-01-portfolio.png)
+![Portfolio page with the totals, the risk bands and Ask Karabo marked](img/j4-01-portfolio.png)
 
-1. The totals across the top: the rands **allocated this year**, the **funded bodies**, how many
+1. The totals across the top, starting with the allocation: the rands **allocated this year**, the **funded bodies**, how many
    **submitted this quarter**, **targets reported** against those registered, **outstanding
    submissions**, and **critical entities** (a score of 70 or above).
 2. **By risk band**: every entity, grouped by band, with its score and its allocation. Use **By
    sector** to narrow it to arts, heritage, libraries, sport or language.
+3. **Ask Karabo**, to ask a question in ordinary words (step 6). **Analytics, charts and export**
+   beside it opens step 5.
 
 The allocations are the published figures from the Estimates of National Expenditure 2026, Vote
 37, Table 37.3.
@@ -36,7 +41,7 @@ Click an entity's name (1). Click **why** in its corner for the score explanatio
 
 The entity page follows the accountability chain from left to right: what it was **allocated**,
 what it **promised** (targets in its Annual Performance Plan), what it **reported**, and how much
-of that is **verified** with evidence. Under it are the allocation by year and its audit history
+of that is **verified** with evidence. Each figure names the document it comes from. Under it are the allocation by year and its audit history
 from the Auditor-General.
 
 ![Boxing South Africa: the chain, the allocation trajectory and the audit history](img/j4-03-drilldown.png)
@@ -73,7 +78,7 @@ not comparable outputs, so there is no screen that does it.
 
 ## 5. Is the portfolio getting better?
 
-Click **Analytics** in the menu. Four headline measures across the top, then the portfolio drawn
+Click **Analytics & Insights** in the menu. Four headline measures across the top, then the portfolio drawn
 rather than tabulated:
 
 - **Money and delivery, year on year.** Two charts side by side: what was allocated each year, and
@@ -88,7 +93,7 @@ rather than tabulated:
 - **Who moved.** One row per entity, showing where it was in the earlier audited year and where it
   is now, across only the entities with published counts in both years.
 
-![Analytics & Insights: headline measures and the year on year table](img/j4-08-analytics.png)
+![Analytics & Insights with Ask Karabo, Download as CSV and Print or save as PDF marked](img/j4-08-analytics.png)
 
 A year the Auditor-General has not yet audited draws **no bar** and says why. It never draws a bar
 of zero.
@@ -98,33 +103,28 @@ That is the table to quote from: the picture is for the glance, the table is the
 
 ## 6. Ask a question in the meeting
 
-Click **Ask Vuka** at the top of Analytics, type a question in ordinary words and press enter. For
-example:
+Click **Ask Karabo** at the top of Analytics or the Portfolio. Karabo opens beside the page. Click a
+suggested question or type your own, for example *Why is Robben Island scored critical?*
 
-- *Which entities are critical?*
-- *How much money sits with entities at risk?*
-- *Who has not filed this quarter?*
-- *Is the portfolio getting better?*
-- *Which sector is doing best?*
-- Or simply the name of an entity, for example *How is Iziko doing?*
+![Karabo answering the executive: Robben Island is scored 45, medium, with its five signals and the source](img/k-05-exec-risk.png)
 
-Every answer carries the **source of the figure** and a link to the screen that shows the working,
-so it can be checked in the same minute it is given.
+The answer gives the figure, the reasons, and underneath, **where this came from**. Here Karabo
+also corrects the question: Robben Island is medium, not critical. Follow up in the same
+conversation, for example *How is Iziko doing this quarter?*
 
-Ask it in whichever of the five languages you have chosen. It is not a chatbot in the sense you may
-be used to. There is no language model behind it and
-nothing leaves the building. It matches your question against the set of questions this system can
-answer and then reads the same figures the screens are drawn from. If it cannot match your
-question it says so and lists what it can answer, rather than producing a confident sentence
-nobody can check. That restraint is deliberate: a figure quoted in a portfolio committee has to be
-defensible.
+![Karabo summarising Iziko's quarter, with its sources](img/k-06-exec-iziko.png)
+
+Karabo answers only from Vuka's records, with your own access, so it tells an executive nothing the
+Portfolio would not. If the record does not hold the answer it says so rather than guessing. It can
+still be wrong, which is why the source is under every answer: a figure quoted in a portfolio
+committee has to be defensible. More in [Asking Karabo](karabo.md).
 
 ## Taking it to a meeting
 
 Two buttons at the top of **Analytics**:
 
-- **Download as CSV** saves the whole view — years, quarters, sectors, movement and the sources —
-  as one spreadsheet. A blank cell means *not published* or *not yet due*, and the file says so on
+- **Download as CSV** saves the whole view (years, quarters, sectors, movement and the sources)
+  as one spreadsheet, headed in the language you have chosen. A blank cell means *not published* or *not yet due*, and the file says so on
   its fifth line. It never means zero.
 - **Print or save as PDF** lays the screen out as a committee pack: the menu and the buttons come
   off, the charts keep their fill, and nothing carrying a figure breaks across a page.

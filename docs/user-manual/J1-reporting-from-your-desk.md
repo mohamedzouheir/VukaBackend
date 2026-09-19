@@ -2,6 +2,9 @@
 
 [Back to the manual](README.md)
 
+> **In short:** Download the template, fill in your figures, upload it, attach the document behind each figure,
+> confirm, and submit. If the Department doubts a figure, it comes back to you with a reason.
+
 **Who this is for:** the reporting officer at an entity who keeps the quarter's figures in a
 spreadsheet and reports from a computer.
 
@@ -17,9 +20,18 @@ Nothing is filed until you confirm it. Uploading only reads the file.
 
 ## 1. Sign in and find your quarter
 
-Sign in with your email address and password. You land on **My reporting**.
+Sign in with your email address and password (see [Getting in](getting-in.md)).
 
-![My reporting home page with the entity name, due date, Download template and Upload completed file marked](img/j1-01-home.png)
+**If a quarter is due within 30 days, or already late, Vuka warns you first.** The warning says
+which quarter, when it is due, and that reminders go to your inbox at thirty days, fifteen days and
+on the last day. Click **Report Q2 2026/27 now** to go straight to it, or **Later** to close it.
+It appears once each time you sign in, and again only if the dates change.
+
+![Warning: Q2 2026/27 is due in 20 days](img/j1-00-deadline-warning.png)
+
+You land on **My reporting**.
+
+![My reporting with the entity name, due date, Download template and Upload completed file marked](img/j1-01-home.png)
 
 1. Your entity's name. It comes from your account, so there is nothing to choose.
 2. The open quarter's due date and how many days are left. **Not a statutory date** means the
@@ -27,8 +39,12 @@ Sign in with your email address and password. You land on **My reporting**.
 3. **Download template**, for step 2.
 4. **Upload completed file**, for step 3.
 
-If you would rather type figures straight into Vuka, click **Enter figures** and go to step 4. To
-report on a phone instead, see [J2](J2-reporting-from-a-phone.md).
+The line under the quarter says what is waiting on you and what to do next. **Prior periods**
+lists earlier quarters with how late each was filed; those rows are what the lateness part of your
+risk score is worked out from.
+
+If you would rather type figures straight into Vuka, click **Enter figures** and go to step 4.
+**Capture on a phone** opens the phone pages; see [J2](J2-reporting-from-a-phone.md).
 
 ## 2. Download the template and fill it in
 
@@ -72,30 +88,33 @@ Each target has its own row.
 3. **attach**, for step 5.
 
 Most rows need nothing from you. Vuka stops you on three kinds of row, and each one says what it
-needs. (In the demonstration data there is exactly one such row, so the screen can be walked in a
-minute; a real file usually has a few.)
+needs. In the demonstration template there is exactly one such row, so the screen can be walked in
+a minute; a real file usually has a few.
 
-**A value that is not a number.** The cell held text such as "approx 8". Type the number into
-**Reported figure**, or tick **No result this quarter, because** and give the reason.
+**No value found.** The file had nothing for this indicator, and the row says **Not parsed**. Its
+**Confirm** button stays off.
 
-![Row flagged Not a number, with the cell text approx 8](img/j1-05-not-a-number.png)
+![HER-1.3 flagged Not parsed, with Confirm off](img/j1-07-not-parsed.png)
 
-**A shortfall of more than 20 percent with no reason.** The **Confirm** button stays off until you
-write a reason in **Reason for the variance (required)**.
+Either type the figure into **Reported figure**, or tick **No result this quarter, because** and say
+why. With no result ticked, the button reads **Record no result**.
 
-![Row with a 67 percent shortfall asking for a reason](img/j1-06-variance.png)
+![The same row with No result ticked and a reason given](img/j1-09-no-result.png)
+
+**A shortfall of more than 20 percent with no reason.** If the figure you type is more than 20
+percent under the quarter target, the note becomes **Reason for the variance (required)** and
+**Confirm** stays off until you write one. Here 2 was typed against a quarter target of 6.
+
+![HER-1.3 with 2 typed, asking for a reason for the variance](img/j1-06-variance.png)
 
 Give the reason now. A shortfall without one is the most common reason the Department returns a
 submission, and a return costs about two weeks.
 
-![The same row with a reason written in](img/j1-08-variance-fixed.png)
+![The same row with a reason written in and Confirm turned on](img/j1-08-variance-fixed.png)
 
-**No value found.** The file had nothing for this indicator (**Not parsed**). Type the figure, or
-tick **No result this quarter, because** and say why. The button then reads **Record no result**.
-
-![Row flagged Not parsed](img/j1-07-not-parsed.png)
-
-![The same row with No result ticked and a reason given](img/j1-09-no-result.png)
+**A value that is not a number.** The cell held text such as "approx 8". The row says **Not a
+number** and shows the text. Type the number into **Reported figure**, or record no result with a
+reason, as above.
 
 ## 5. Attach evidence
 
@@ -111,9 +130,10 @@ Auditor-General's reliability test.
 
 ![Attach evidence dialog with the file, the test checkboxes and Attach marked](img/j1-10-evidence.png)
 
-The document now shows under the figure with a green shield.
+The document now shows under the figure with a green shield, and the parts of the test it
+satisfies.
 
-![Row with the attendance register attached](img/j1-11-evidence-attached.png)
+![HER-1.3 with the attendance register attached](img/j1-11-evidence-attached.png)
 
 To attach several files at once, use **Attach evidence files** at the top of the page.
 
@@ -123,14 +143,17 @@ figure with nothing attached shows to the Department as **unverifiable**.
 ## 6. Confirm your figures
 
 Confirm one row at a time with its **Confirm** button, or every row that is ready at once with the
-button at the bottom of the page. That button reads **Confirm all *n*** while every outstanding row
-is ready, and **Confirm *n* ready** while some still need a figure or a reason.
+button at the bottom of the page (1). That button reads **Confirm all *n*** while every outstanding
+row is ready, and **Confirm *n* ready** while some still need a figure or a reason.
+
+![The bar at the bottom: 0 of 20 confirmed, with Confirm all 20 marked](img/j1-12a-footer.png)
 
 Only one of the two buttons at the bottom is the next step at any moment, and it is the highlighted
 one. While figures are outstanding, that is the bulk confirm. Once nothing is outstanding, it
 becomes **Submit to the Department**.
 
-Vuka shows every figure you are about to confirm, with the cell it came from.
+Vuka shows every figure you are about to confirm, with the cell it came from. A figure you typed
+in yourself says **entered by hand**.
 
 ![Confirm 20 figures dialog listing each figure and its source cell](img/j1-12-confirm-modal.png)
 
@@ -144,7 +167,7 @@ record.
 When every target has a confirmed figure or a recorded reason for having none, **Submit to the
 Department** (1) turns on.
 
-![Footer showing 20 of 20 confirmed with Submit to the Department marked](img/j1-13-all-confirmed.png)
+![20 of 20 confirmed, with Submit to the Department marked](img/j1-13-all-confirmed.png)
 
 Click it. Vuka summarises what you are sending: how many targets, how many with a result, how many
 with no result and a reason, how many with evidence and how many without, and how many days before
@@ -168,10 +191,11 @@ be told if any figure comes back to you. You can still attach evidence.
 A reviewer who disputes a figure returns it with a comment against that figure. Only the disputed
 figures are reopened. Everything else stays as you filed it.
 
-Your home page shows who returned it, when, and each comment in the reviewer's words. Click
-**Answer the disputed figure** (1).
+A returned quarter sits at the top of your home page, whichever quarter it is: who returned it,
+when, and each disputed figure with the reviewer's comment in their words. It appears without
+reloading the page. Click **Answer the disputed figure** (1).
 
-![Home page with the returned notice and Answer the disputed figure marked](img/j1-16-returned.png)
+![Home page with Q1 returned by L. Dlamini and Answer the disputed figure marked](img/j1-16-returned.png)
 
 The disputed figure opens with the Department's comment above it. Correct the figure or explain it
 in the note, attach evidence if you have it, confirm it, and submit again. **Show all 20 figures**
