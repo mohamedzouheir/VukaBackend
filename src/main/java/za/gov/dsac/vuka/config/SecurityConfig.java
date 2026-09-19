@@ -111,10 +111,11 @@ public class SecurityConfig {
                 // explanation. Note that /admin/entities/** is the dashboard's own route and not
                 // an API path: the administration endpoints live under /api/admin and carry a
                 // method level ADMIN check.
-                .requestMatchers("/", "/index.html", "/favicon.ico", "/assets/**",
-                                 "/signin", "/entity/**", "/review/**", "/portfolio/**",
+                .requestMatchers("/", "/index.html", "/favicon.ico", "/assets/**", "/img/**",
+                                 "/signin", "/register", "/forgot-password",
+                                 "/entity/**", "/review/**", "/portfolio/**",
                                  "/admin/entities/**", "/entities", "/risk", "/analytics",
-                                 "/workspaces", "/documents", "/tasks").permitAll()
+                                 "/workspaces", "/documents", "/tasks", "/logs").permitAll()
 
                 // The offline layer: the service worker, the page that enrols the phone surface
                 // in it, and the full citizen view's page. Static files with no data in them. The

@@ -18,12 +18,12 @@
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '../lib/auth';
+import { can, useAuth } from '../lib/auth';
 import { useI18n } from '../lib/i18n';
 import type { Key } from '../lib/i18n';
 import type { MeView, Role } from '../lib/types';
 import {
-  IconAlert, IconBell, IconChart, IconChevronDown, IconChevronRight, IconCitation,
+  IconAlert, IconBell, IconChart, IconChevronRight, IconCitation, IconClock,
   IconExternal,
   IconFolder, IconGauge, IconHome, IconLandmark, IconList, IconMenu, IconSettings, IconSignOut,
   IconTasks, IconWorkspaces,
@@ -81,6 +81,10 @@ function railFor(
   const documents: NavItem = { to: '/documents', label: 'nav.documents', icon: <IconFolder size={19} /> };
   const analytics: NavItem = { to: '/analytics', label: 'nav.analytics', icon: <IconChart size={19} /> };
   const tasks: NavItem = { to: '/tasks', label: 'nav.tasks', icon: <IconTasks size={19} />, badge: openTaskCount ?? null };
+  /* Every role reads the audit trail, scoped by the API to what that role may see: a reporter
+     their own entity's record, the Department everything. It was on the rail before the per-role
+     lists replaced the shared one, and lost in that change rather than taken off on purpose. */
+  const audit: NavItem = { to: '/logs', label: 'nav.audit', icon: <IconClock size={19} /> };
 
   switch (role) {
     case 'ENTITY_REPORTER':
@@ -89,6 +93,7 @@ function railFor(
         documents,
         workspaces,
         tasks,
+        audit,
         citizen,
       ];
     case 'DSAC_REVIEWER':
@@ -100,12 +105,14 @@ function railFor(
         documents,
         workspaces,
         tasks,
+        audit,
       ];
     case 'DSAC_EXECUTIVE':
       return [
         { to: '/', label: 'nav.portfolio', icon: <IconGauge size={19} /> },
         { to: '/entities', label: 'nav.entities', icon: <IconLandmark size={19} /> },
         analytics,
+        audit,
         citizen,
       ];
     case 'ADMIN':
@@ -113,6 +120,7 @@ function railFor(
         { to: '/', label: 'nav.administration', icon: <IconSettings size={19} /> },
         workspaces,
         tasks,
+        audit,
         citizen,
       ];
     default:
@@ -261,16 +269,20 @@ export function AppShell({
             <IconMenu size={20} />
           </button>
 
-          {/* Present because every screen in the designs has it. It is not wired to a search
-              endpoint, because there is not one: it routes to the entity register, which is the
-              only list the API can actually search over today. */}
+          {/* There is no search endpoint: this routes to the entity register, the one list the API
+              can search today. So it is offered only to the roles that can open that register,
+              and says it searches entities, which is all it does. A reporter has one entity and
+              nothing to search across; for them the space stays empty rather than holding a box
+              that leads to a page they are refused. */}
           <div className="topbar-search">
-            <SearchField
-              pill
-              label={t('nav.searchLabel')}
-              placeholder={t('nav.search')}
-              onSubmit={(q) => navigate('/entities?q=' + encodeURIComponent(q))}
-            />
+            {can(me, 'VIEW_PORTFOLIO') ? (
+              <SearchField
+                pill
+                label={t('nav.searchLabel')}
+                placeholder={t('nav.search')}
+                onSubmit={(q) => navigate('/entities?q=' + encodeURIComponent(q))}
+              />
+            ) : null}
           </div>
 
           <div className="topbar-right">
@@ -278,12 +290,19 @@ export function AppShell({
                 way in should not have to go back out to the landing page to change their mind. */}
             <LanguagePicker compact />
 
-            <button type="button" className="topbar-bell" aria-label={t('nav.alerts')}>
+            {/* The alerts are the risk screen for the Department, where the critical count comes
+                from, and their own reporting for a reporter, where their deadline warnings are. */}
+            <Link
+              to={can(me, 'VIEW_PORTFOLIO') ? '/risk' : '/'}
+              className="topbar-bell"
+              aria-label={t('nav.alerts')}
+              title={t('nav.alerts')}
+            >
               <IconBell size={20} />
               {typeof criticalCount === 'number' && criticalCount > 0 ? (
                 <span className="rail-badge">{criticalCount}</span>
               ) : null}
-            </button>
+            </Link>
 
             <div className="topbar-user">
               <span className="topbar-avatar">{initials(me)}</span>
@@ -300,7 +319,8 @@ export function AppShell({
               >
                 <IconSignOut size={18} />
               </button>
-              <IconChevronDown size={16} className="muted" />
+              {/* No chevron here: there is no menu behind the name, and an arrow that opens
+                  nothing is a control that does not work. Sign out is the button beside it. */}
             </div>
           </div>
         </header>

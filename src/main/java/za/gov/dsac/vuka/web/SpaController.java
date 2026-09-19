@@ -42,8 +42,8 @@ public class SpaController {
      * falls back to its saved copy of this shell for a navigation it cannot reach, and it can only
      * have saved a shell the server was willing to return.
      */
-    @GetMapping({"/signin", "/entity", "/review", "/portfolio", "/entities", "/risk", "/analytics",
-                 "/workspaces", "/documents", "/tasks"})
+    @GetMapping({"/signin", "/register", "/forgot-password", "/entity", "/review", "/portfolio",
+                 "/entities", "/risk", "/analytics", "/workspaces", "/documents", "/tasks", "/logs"})
     public String shell() {
         return SHELL;
     }

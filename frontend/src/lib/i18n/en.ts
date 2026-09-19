@@ -45,8 +45,8 @@ export const en = {
   'nav.backHome': 'Back to Home',
   'nav.language': 'Language',
   'nav.tagline': 'Transparent. Accountable. Impactful.',
-  'nav.search': 'Search entities, reports, documents...',
-  'nav.searchLabel': 'Search entities, reports and documents',
+  'nav.search': 'Search entities...',
+  'nav.searchLabel': 'Search entities by name',
   'nav.signOut': 'Sign out',
   'nav.alerts': 'Alerts',
   'nav.openNav': 'Open the navigation',
@@ -629,9 +629,9 @@ export const en = {
   'ws.noEntityId':
     'This account carries no entity id, so it has no workspace. An administrator sets the entityId claim on a reporter account.',
   'ws.designNote':
-    'The design for this screen shows workspace templates, member counts and last-accessed times. A workspace here is the binding between an entity and where its documents live, and the schema records no membership, no template and no access time, so {0} are shown as what they actually are.',
-  'ws.oneWorkspace': '1 workspace is',
-  'ws.nWorkspaces': '{0} workspaces are',
+    'The design for this screen shows workspace templates, member counts and last-accessed times. A workspace here is the binding between an entity and where its documents live, and the schema records no membership, no template and no access time, so {0}.',
+  'ws.oneWorkspace': 'the 1 workspace is shown as what it actually is',
+  'ws.nWorkspaces': 'the {0} workspaces are shown as what they actually are',
 
   'docs.what': 'documents',
   'docs.notYours': 'No such entity, or it is not yours to read.',

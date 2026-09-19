@@ -12,6 +12,7 @@
  * The design's "1,248 views" and "856 downloads" are not here. Nothing counts either.
  */
 import { useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { api, openFile } from '../lib/api';
 import { useAsync } from '../lib/useAsync';
 import { useAuth, isDsac, can } from '../lib/auth';
@@ -32,7 +33,14 @@ export function Documents() {
   const dsac = isDsac(me?.role);
 
   const portfolio = useAsync(() => api.portfolio(), [], dsac);
-  const [entityId, setEntityId] = useState<string | null>(me?.entityId ?? null);
+  /* A workspace card links here as /documents?entity=<id>, so the entity it names is the one that
+     opens. Without this the link landed on the bare picker and the click appeared to do nothing.
+     A reporter's entity still comes off their token: the parameter can only choose among the
+     entities the picker already offers, and the API refuses any other. */
+  const [params] = useSearchParams();
+  const [entityId, setEntityId] = useState<string | null>(
+    (dsac ? params.get('entity') : null) ?? me?.entityId ?? null,
+  );
 
   const chosen = entityId ?? me?.entityId ?? null;
   const docs = useAsync(() => api.workspaceDocuments(chosen!), [chosen], Boolean(chosen));

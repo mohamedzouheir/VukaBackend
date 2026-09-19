@@ -140,6 +140,13 @@
   border: 0; background: none; color: var(--ink-muted);
 }
 .topbar-bell:hover { background: var(--canvas); }
+/* The bell is a link now; the sign out beside it is still a button. Both look the same. */
+a.topbar-bell {
+  display: inline-grid; place-items: center;
+  border-radius: var(--radius);
+  text-decoration: none;
+}
+a.topbar-bell:hover { text-decoration: none; color: var(--ink); }
 .topbar-bell .rail-badge {
   position: absolute; top: 0; right: 0;
   transform: translate(25%, -25%);

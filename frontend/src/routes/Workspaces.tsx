@@ -33,7 +33,10 @@ export function Workspaces() {
   const dsac = isDsac(me?.role);
 
   const portfolio = useAsync(() => api.portfolio(), [], dsac);
-  const ms = useAsync(() => api.microsoftStatus(), []);
+  /* The Microsoft binding is the Department's to manage, and the API refuses a reporter the
+     status. Asking anyway made every reporter's screen say the build "does not report" it, which
+     was the refusal showing through. A reporter is not asked and not shown the card. */
+  const ms = useAsync(() => api.microsoftStatus(), [], dsac);
   const [query, setQuery] = useState('');
 
   /* A reporter has exactly one workspace, their own. There is no selector, for the same reason
@@ -76,7 +79,8 @@ export function Workspaces() {
         ) : null}
       </PageHead>
 
-      {/* The Microsoft binding, stated rather than assumed. */}
+      {/* The Microsoft binding, stated rather than assumed. Department only; see above. */}
+      {dsac ? (
       <div className="card card-sunk ws-status">
         <IconInfo size={18} />
         <div>
@@ -94,6 +98,7 @@ export function Workspaces() {
           </p>
         </div>
       </div>
+      ) : null}
 
       {dsac && portfolio.loading ? (
         <Loading what={t('ws.what')} />
@@ -132,7 +137,9 @@ export function Workspaces() {
                   <span>{t('nav.tasks')}</span>
                   <IconChevronRight size={15} className="muted" />
                 </Link>
-                <Link to={'/portfolio/entity/' + e.entityId} className="ws-link">
+                {/* The Department's entity page is refused to a reporter; their own entity's
+                    page is their reporting home. */}
+                <Link to={dsac ? '/portfolio/entity/' + e.entityId : '/'} className="ws-link">
                   <IconExternal size={16} />
                   <span>{t('ws.entityProfile')}</span>
                   <IconChevronRight size={15} className="muted" />
